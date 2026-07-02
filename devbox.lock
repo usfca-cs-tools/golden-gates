@@ -79,7 +79,7 @@
     },
     "nodejs@22": {
       "last_modified": "2026-05-21T08:15:18Z",
-      "plugin_version": "0.0.3",
+      "plugin_version": "0.0.4",
       "resolved": "github:NixOS/nixpkgs/4a29d733e8a7d5b824c3d8c958a946a9867b3eb2#nodejs_22",
       "source": "devbox-search",
       "version": "22.22.3",
@@ -128,7 +128,7 @@
     },
     "python@3.12": {
       "last_modified": "2026-05-21T08:15:18Z",
-      "plugin_version": "0.0.4",
+      "plugin_version": "0.0.5",
       "resolved": "github:NixOS/nixpkgs/4a29d733e8a7d5b824c3d8c958a946a9867b3eb2#python312",
       "source": "devbox-search",
       "version": "3.12.13",
@@ -180,54 +180,6 @@
             }
           ],
           "store_path": "/nix/store/lpgczl8hqnjlkicsphcylqfgds7dqc13-python3-3.12.13"
-        }
-      }
-    },
-    "uv@latest": {
-      "last_modified": "2026-05-31T16:57:23Z",
-      "resolved": "github:NixOS/nixpkgs/3109eaae18e09d0b8aef23dc2579e7d94b8d4b4e#uv",
-      "source": "devbox-search",
-      "version": "0.11.17",
-      "systems": {
-        "aarch64-darwin": {
-          "outputs": [
-            {
-              "name": "out",
-              "path": "/nix/store/vac3cff9gy7gwsc7fkvq6xam9y6pyfis-uv-0.11.17",
-              "default": true
-            }
-          ],
-          "store_path": "/nix/store/vac3cff9gy7gwsc7fkvq6xam9y6pyfis-uv-0.11.17"
-        },
-        "aarch64-linux": {
-          "outputs": [
-            {
-              "name": "out",
-              "path": "/nix/store/44ca5s53vkly9vz5rmb6f9m4v562ilqj-uv-0.11.17",
-              "default": true
-            }
-          ],
-          "store_path": "/nix/store/44ca5s53vkly9vz5rmb6f9m4v562ilqj-uv-0.11.17"
-        },
-        "x86_64-darwin": {
-          "outputs": [
-            {
-              "name": "out",
-              "path": "/nix/store/qnird3c2xrh089mwjir4hb756awibiiz-uv-0.11.17",
-              "default": true
-            }
-          ],
-          "store_path": "/nix/store/qnird3c2xrh089mwjir4hb756awibiiz-uv-0.11.17"
-        },
-        "x86_64-linux": {
-          "outputs": [
-            {
-              "name": "out",
-              "path": "/nix/store/9yd6g2f18vlqqmj38rdgm3ih5q8022d4-uv-0.11.17",
-              "default": true
-            }
-          ],
-          "store_path": "/nix/store/9yd6g2f18vlqqmj38rdgm3ih5q8022d4-uv-0.11.17"
         }
       }
     }
