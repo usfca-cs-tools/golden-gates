@@ -42,6 +42,7 @@
             :circuitManager="circuitManager"
             :autosave="autosave"
             @selectionChanged="handleSelectionChanged"
+            @editSubcircuit="handleEditSubcircuit"
           />
         </div>
 
@@ -136,9 +137,9 @@ export default {
       runSimulation,
       stopSimulation,
       saveCircuit,
-      openCircuit,
-      initFileAssociation,
+      openProject: openProjectInternal,
       loadCircuitData,
+      openSubcircuitTab,
       handleDroppedFile,
       handleInspectorAction,
       showConfirmation,
@@ -177,9 +178,9 @@ export default {
       runSimulation,
       stopSimulation,
       saveCircuit,
-      openCircuit,
-      initFileAssociation,
+      openProjectInternal,
       loadCircuitData,
+      openSubcircuitTab,
       handleDroppedFile,
       handleInspectorAction,
       showConfirmation,
@@ -255,6 +256,10 @@ export default {
     handleCloseTab(circuitId) {
       // Close tab directly - confirmation logic now handled by CircuitTabsBar
       this.closeTab(circuitId)
+    },
+
+    handleEditSubcircuit(circuitId) {
+      this.openSubcircuitTab(this.$refs.canvas, circuitId)
     },
 
     handleSelectionChanged(selection) {
@@ -353,8 +358,8 @@ export default {
       await this.saveCircuit(this.$refs.canvas)
     },
 
-    async openCircuitFile() {
-      await this.openCircuit(this.$refs.canvas)
+    async openProject(dirPath) {
+      await this.openProjectInternal(this.$refs.canvas, dirPath)
     },
 
     handleDragEnter(event) {
@@ -552,15 +557,17 @@ export default {
     // Set up keyboard shortcuts with command actions
     this.setCommandActions(commandActions)
 
-    // Handle circuit files opened via OS file association (Electron)
-    this.initFileAssociation(this.$refs.canvas)
+    // Handle project directories opened via OS file association (Electron)
+    if (window.electronAPI?.onOpenProject) {
+      window.electronAPI.onOpenProject(dirPath => this.openProject(dirPath))
+    }
 
     // Handle native menu bar File actions (Electron)
     if (window.electronAPI?.onMenuNewCircuit) {
       window.electronAPI.onMenuNewCircuit(() => this.createNewCircuit())
     }
     if (window.electronAPI?.onMenuSaveCircuit) {
-      window.electronAPI.onMenuSaveCircuit(() => this.saveCircuitFile())
+      window.electronAPI.onMenuSaveCircuit(() => this.saveCircuit(this.$refs.canvas))
     }
   },
 

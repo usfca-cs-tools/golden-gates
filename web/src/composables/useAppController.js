@@ -10,10 +10,11 @@ import { usePythonEngine } from './usePythonEngine'
 export function useAppController(circuitManager) {
   const { t } = useI18n()
   const {
+    buildCircuitData,
     saveCircuit: saveCircuitFile,
-    openCircuit: openCircuitFile,
-    parseAndValidateJSON,
-    initFileAssociation: registerFileAssociationHandler
+    openProject: openProjectDir,
+    readCircuitFile,
+    parseAndValidateJSON
   } = useFileService()
   const {
     initialize: initializePyodide,
@@ -45,41 +46,6 @@ export function useAppController(circuitManager) {
   function createNewCircuit() {
     const circuitCount = circuitManager.allCircuits.value.size + 1
     circuitManager.createCircuit(`Circuit${circuitCount}`)
-  }
-
-  /**
-   * Handle inspector actions (like Save Component button)
-   */
-  function handleInspectorAction(actionData) {
-    const { action, circuit, component } = actionData
-
-    switch (action) {
-      case 'saveAsComponent':
-        if (circuit) {
-          const success = circuitManager.saveCircuitAsComponent(circuit.id)
-          if (success) {
-            showConfirmation({
-              title: 'Component Saved',
-              message: `"${circuit.name}" has been saved as a reusable component and is now available in the Insert menu.`,
-              type: 'info',
-              acceptLabel: 'OK',
-              showCancel: false,
-              onAccept: () => {}
-            })
-          } else {
-            showConfirmation({
-              title: 'Error',
-              message: 'Failed to save circuit as component. Please try again.',
-              type: 'danger',
-              showCancel: false,
-              onAccept: () => {}
-            })
-          }
-        }
-        break
-      default:
-        console.warn(`Unknown action: ${action}`)
-    }
   }
 
   /**
@@ -593,16 +559,39 @@ export function useAppController(circuitManager) {
         }
       }
 
-      await saveCircuitFile(
-        components,
-        wires,
-        wireJunctions,
-        circuitMetadata,
-        allSchematicComponents,
-        circuitManager.exportState().nextCircuitId
-      )
+      const projectDir = circuitManager.currentProjectDir.value
+      const nextCircuitId = circuitManager.exportState().nextCircuitId
 
-      // Mark the active circuit as saved (no unsaved changes)
+      if (projectDir && activeCircuit) {
+        const filename = `${activeCircuit.name}.ggc`
+        const circuitData = buildCircuitData(
+          components,
+          wires,
+          wireJunctions,
+          circuitMetadata,
+          allSchematicComponents,
+          nextCircuitId
+        )
+        const jsonString = JSON.stringify(circuitData, null, 2)
+        await window.electronAPI.writeCircuitFile(projectDir, filename, jsonString)
+
+        if (!circuitManager.projectCircuitFiles.value.includes(filename)) {
+          circuitManager.projectCircuitFiles.value = [
+            ...circuitManager.projectCircuitFiles.value,
+            filename
+          ]
+        }
+      } else {
+        await saveCircuitFile(
+          components,
+          wires,
+          wireJunctions,
+          circuitMetadata,
+          allSchematicComponents,
+          nextCircuitId
+        )
+      }
+
       if (activeCircuit) {
         circuitManager.markCircuitAsSaved(activeCircuit.id)
       }
@@ -612,54 +601,170 @@ export function useAppController(circuitManager) {
     }
   }
 
-  /**
-   * Register handler for OS file association (double-click .ggc etc.)
-   */
-  function initFileAssociation(canvasRef) {
-    registerFileAssociationHandler(circuitData => {
-      const hasExistingCircuit =
-        canvasRef?.components?.length > 0 || canvasRef?.wires?.length > 0
+  async function openProject(canvasRef, dirPath = null) {
+    try {
+      const project = await openProjectDir(dirPath)
+      if (!project) return  // user cancelled
+  
+      const { dirPath: resolvedDirPath, topLevelFilename, topLevelContent, allFiles } = project
 
-      if (hasExistingCircuit) {
+      // Store project state on circuitManager
+      circuitManager.currentProjectDir.value = resolvedDirPath
+      circuitManager.projectCircuitFiles.value = allFiles
+  
+      const hasExistingWork = canvasRef?.components?.length > 0 || canvasRef?.wires?.length > 0
+  
+      const doLoad = () => {
+        if (topLevelContent) {
+          // Parse and load the top-level circuit
+          const circuitData = parseAndValidateJSON(topLevelContent)
+          loadCircuitData(canvasRef, circuitData)
+        } else {
+          // Empty repo — create a blank circuit named after the top-level file
+          const circuitName = topLevelFilename.replace('.ggc', '')
+          circuitManager.createCircuit(circuitName)
+        }
+      }
+  
+      if (hasExistingWork) {
         showConfirmation({
-          title: 'Replace Circuit?',
-          message: 'This will replace your current circuit. Are you sure you want to continue?',
+          title: 'Open Project?',
+          message: 'This will replace your current work. Are you sure?',
           type: 'warning',
-          onAccept: () => loadCircuitData(canvasRef, circuitData)
+          onAccept: doLoad
         })
       } else {
-        loadCircuitData(canvasRef, circuitData)
+        doLoad()
       }
-    })
+    } catch (error) {
+      console.error('Error opening project:', error)
+      alert('Error opening project: ' + error.message)
+    }
+  }
+
+
+
+  /**
+   * Load circuit file data into a specific subcircuit tab (preserves circuit ID)
+   */
+  function loadSubcircuitData(canvasRef, circuitId, circuitData) {
+    if (!canvasRef) return
+
+    circuitManager.navigateToCircuit(circuitId)
+
+    if (canvasRef.setLoadingState) {
+      canvasRef.setLoadingState(true)
+    }
+
+    if (
+      circuitData.schematicComponents &&
+      Object.keys(circuitData.schematicComponents).length > 0
+    ) {
+      Object.entries(circuitData.schematicComponents).forEach(([nestedId, data]) => {
+        try {
+          if (data.circuit) {
+            circuitManager.allCircuits.value.set(nestedId, {
+              ...data.circuit,
+              id: nestedId
+            })
+          }
+          if (data.definition) {
+            circuitManager.availableComponents.value.set(nestedId, data.definition)
+          }
+        } catch (error) {
+          console.warn(`Failed to restore schematic component ${nestedId}:`, error)
+        }
+      })
+    }
+
+    if (circuitData.nextCircuitId) {
+      const currentState = circuitManager.exportState()
+      currentState.nextCircuitId = Math.max(currentState.nextCircuitId, circuitData.nextCircuitId)
+      circuitManager.importState(currentState)
+    }
+
+    const targetCircuit = circuitManager.getCircuit(circuitId)
+    if (!targetCircuit) {
+      if (canvasRef.setLoadingState) {
+        canvasRef.setLoadingState(false)
+      }
+      return
+    }
+
+    if (circuitData.name) {
+      targetCircuit.name = circuitData.name
+    }
+    if (circuitData.label) {
+      targetCircuit.label = circuitData.label
+    }
+    if (circuitData.interface) {
+      targetCircuit.properties = targetCircuit.properties || {}
+      targetCircuit.properties.interface = circuitData.interface
+    }
+
+    canvasRef.clearCircuit()
+
+    if (circuitData.components) {
+      circuitData.components.forEach(component => {
+        canvasRef.loadComponent(component)
+      })
+    }
+
+    if (circuitData.wires) {
+      circuitData.wires.forEach(wire => {
+        canvasRef.addWire(wire)
+      })
+    }
+
+    if (circuitData.wireJunctions) {
+      circuitData.wireJunctions.forEach(junction => {
+        canvasRef.addWireJunction(junction)
+      })
+    }
+
+    if (canvasRef.setLoadingState) {
+      canvasRef.setLoadingState(false)
+    }
   }
 
   /**
-   * Open circuit from file
+   * Open a subcircuit tab — load from project disk file when available
    */
-  async function openCircuit(canvasRef) {
-    try {
-      const fileContent = await openCircuitFile()
-      if (!fileContent) return
-
-      const circuitData = parseAndValidateJSON(fileContent)
-
-      // Check if current circuit has any components
-      const hasExistingCircuit = canvasRef?.components?.length > 0 || canvasRef?.wires?.length > 0
-
-      if (hasExistingCircuit) {
-        showConfirmation({
-          title: 'Replace Circuit?',
-          message: 'This will replace your current circuit. Are you sure you want to continue?',
-          type: 'warning',
-          onAccept: () => loadCircuitData(canvasRef, circuitData)
-        })
-      } else {
-        loadCircuitData(canvasRef, circuitData)
-      }
-    } catch (error) {
-      console.error('Error opening circuit:', error)
-      alert('Error opening circuit: ' + error.message)
+  async function openSubcircuitTab(canvasRef, circuitId) {
+    const circuit = circuitManager.getCircuit(circuitId)
+    if (!circuit) {
+      console.warn(`Circuit ${circuitId} not found`)
+      return false
     }
+
+    const projectDir = circuitManager.currentProjectDir.value
+    const projectFiles = circuitManager.projectCircuitFiles.value
+
+    if (!projectDir || !window.electronAPI) {
+      circuitManager.navigateToCircuit(circuitId)
+      return true
+    }
+
+    const filename = `${circuit.name}.ggc`
+    const fileExists = projectFiles.includes(filename)
+
+    circuitManager.navigateToCircuit(circuitId)
+
+    if (fileExists) {
+      try {
+        const content = await readCircuitFile(projectDir, filename)
+        if (content) {
+          const circuitData = parseAndValidateJSON(content)
+          loadSubcircuitData(canvasRef, circuitId, circuitData)
+          circuitManager.markCircuitAsSaved(circuitId)
+        }
+      } catch (error) {
+        console.error('Error reading subcircuit file:', error)
+        alert('Error reading circuit file: ' + error.message)
+      }
+    }
+
+    return true
   }
 
   /**
@@ -936,9 +1041,10 @@ export function useAppController(circuitManager) {
     runCircuitSimulationWithHierarchy,
     stopSimulation,
     saveCircuit,
-    openCircuit,
-    initFileAssociation,
+    openProject,
     loadCircuitData,
+    loadSubcircuitData,
+    openSubcircuitTab,
     handleDroppedFile,
     handleInspectorAction,
 

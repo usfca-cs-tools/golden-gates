@@ -21,6 +21,10 @@ export function useCircuitModel() {
   // Counter for generating unique circuit IDs
   const nextCircuitId = ref(1)
 
+  // Open project directory state (Electron desktop app)
+  const currentProjectDir = ref(null)       // absolute path to open project directory
+  const projectCircuitFiles = ref([])       // list of .ggc filenames known in the project
+
   // Initialize with a default circuit
   const initializeDefaultCircuit = () => {
     if (allCircuits.value.size === 0) {
@@ -518,6 +522,8 @@ export function useCircuitModel() {
     openTabs,
     activeTabId,
     navigationHistory,
+    currentProjectDir,
+    projectCircuitFiles,
 
     // Computed (renamed for clarity)
     activeCircuit,

@@ -2,24 +2,45 @@
 // registered with the OS for double-click open. Older circuits were saved as
 // `.json`, so opening still accepts both.
 const CIRCUIT_EXT = 'ggc'
-const OPEN_EXTS = ['ggc', 'json']
 
-export function useFileService() {
-  const saveCircuit = async (
-    components,
-    wires,
-    wireJunctions,
-    circuitMetadata = {},
-    schematicComponents = {},
-    nextCircuitId = 1
-  ) => {
-    try {
-      // Filter out transient properties that should not be persisted
-      const sanitizedComponents = (components || []).map(component => {
-        // Remove js_id from all components (it's generated fresh each simulation)
+
+// Getting the top level filename from the directory path 
+function deriveTopLevelFilename(dirPath) {
+  const dirName = dirPath.split('/').pop()       
+  const baseName = dirName.split('-')[0]        
+  return `${baseName}.ggc`
+}
+
+
+function buildCircuitData(
+  components,
+  wires,
+  wireJunctions,
+  circuitMetadata = {},
+  schematicComponents = {},
+  nextCircuitId = 1
+) {
+  const sanitizedComponents = (components || []).map(component => {
+    const { js_id, ...componentWithoutJsId } = component || {}
+
+    if (component.type === 'input' || component.type === 'output') {
+      const { value, lastUpdate, ...propsWithoutTransient } = component.props || {}
+      return {
+        ...componentWithoutJsId,
+        props: propsWithoutTransient
+      }
+    }
+
+    return componentWithoutJsId
+  })
+
+  const sanitizedSchematicComponents = {}
+  for (const [circuitId, schematicData] of Object.entries(schematicComponents || {})) {
+    let sanitizedCircuit = schematicData.circuit
+    if (sanitizedCircuit && sanitizedCircuit.components) {
+      const sanitizedSubComponents = sanitizedCircuit.components.map(component => {
         const { js_id, ...componentWithoutJsId } = component || {}
 
-        // Remove transient properties from input/output components
         if (component.type === 'input' || component.type === 'output') {
           const { value, lastUpdate, ...propsWithoutTransient } = component.props || {}
           return {
@@ -31,59 +52,51 @@ export function useFileService() {
         return componentWithoutJsId
       })
 
-      // Also sanitize schematic components (sub-circuit definitions)
-      const sanitizedSchematicComponents = {}
-      for (const [circuitId, schematicData] of Object.entries(schematicComponents || {})) {
-        // Sanitize components in the circuit property (where the actual components are stored)
-        let sanitizedCircuit = schematicData.circuit
-        if (sanitizedCircuit && sanitizedCircuit.components) {
-          const sanitizedComponents = sanitizedCircuit.components.map(component => {
-            // Remove js_id from all components
-            const { js_id, ...componentWithoutJsId } = component || {}
-
-            // Remove transient properties from input/output components
-            if (component.type === 'input' || component.type === 'output') {
-              const { value, lastUpdate, ...propsWithoutTransient } = component.props || {}
-              return {
-                ...componentWithoutJsId,
-                props: propsWithoutTransient
-              }
-            }
-
-            return componentWithoutJsId
-          })
-
-          sanitizedCircuit = {
-            ...sanitizedCircuit,
-            components: sanitizedComponents
-          }
-        }
-
-        sanitizedSchematicComponents[circuitId] = {
-          ...schematicData,
-          circuit: sanitizedCircuit
-        }
+      sanitizedCircuit = {
+        ...sanitizedCircuit,
+        components: sanitizedSubComponents
       }
+    }
 
-      // Create the circuit data object with consistent top-level structure
-      const circuitData = {
-        version: '1.3', // Bump version to include nextCircuitId
-        timestamp: new Date().toISOString(),
-        // Circuit-level properties at top level for consistency with version/timestamp
-        name: circuitMetadata.name || 'Untitled Circuit',
-        label: circuitMetadata.label || circuitMetadata.name || 'Untitled Circuit',
-        interface: circuitMetadata.interface,
-        // Circuit ID counter for unique ID generation
-        nextCircuitId: nextCircuitId,
-        // Component instances and structure
-        components: sanitizedComponents,
-        wires: wires || [],
-        wireJunctions: wireJunctions || [],
-        // Schematic component definitions for hierarchical circuits
-        schematicComponents: sanitizedSchematicComponents
-      }
+    sanitizedSchematicComponents[circuitId] = {
+      ...schematicData,
+      circuit: sanitizedCircuit
+    }
+  }
 
-      // Convert to JSON string with nice formatting
+  return {
+    version: '1.3',
+    timestamp: new Date().toISOString(),
+    name: circuitMetadata.name || 'Untitled Circuit',
+    label: circuitMetadata.label || circuitMetadata.name || 'Untitled Circuit',
+    interface: circuitMetadata.interface,
+    nextCircuitId,
+    components: sanitizedComponents,
+    wires: wires || [],
+    wireJunctions: wireJunctions || [],
+    schematicComponents: sanitizedSchematicComponents
+  }
+}
+
+export function useFileService() {
+  const saveCircuit = async (
+    components,
+    wires,
+    wireJunctions,
+    circuitMetadata = {},
+    schematicComponents = {},
+    nextCircuitId = 1,
+    projectContext = null
+  ) => {
+    try {
+      const circuitData = buildCircuitData(
+        components,
+        wires,
+        wireJunctions,
+        circuitMetadata,
+        schematicComponents,
+        nextCircuitId
+      )
       const jsonString = JSON.stringify(circuitData, null, 2)
 
       // Check if File System Access API is supported
@@ -93,7 +106,17 @@ export function useFileService() {
       if (window.electronAPI) {
         const circuitName = circuitMetadata.name || 'circuit'
         const timestamp = new Date().toISOString().slice(0, 19).replace(/:/g, '-')
-        await window.electronAPI.saveCircuit(jsonString, `${circuitName}_${timestamp}.${CIRCUIT_EXT}`)
+        const defaultName = `${circuitName}_${timestamp}.${CIRCUIT_EXT}`
+
+        if (projectContext?.dirPath && projectContext?.filename) {
+          await window.electronAPI.writeCircuitFile(
+            projectContext.dirPath,
+            projectContext.filename,
+            jsonString
+          )
+        } else {
+          await window.electronAPI.saveCircuitAs(jsonString, defaultName)
+        }
       } else if ('showSaveFilePicker' in window) {
         try {
           // Use the File System Access API for better UX
@@ -143,79 +166,40 @@ export function useFileService() {
     }
   }
 
-  const openCircuit = async () => {
-    try {
-      let fileContent = null
+  const openProject = async (dirPath = null) => {
+    if (!window.electronAPI) return null
 
-      // Check if File System Access API is supported
-      // if ('showOpenFilePicker' in window) {
-      
-      // Check if running in Electron
-      if (window.electronAPI) {
-        const content = await window.electronAPI.openCircuit()
-        return content
-      } else if ('showOpenFilePicker' in window) {
-        try {
-          // Use the File System Access API
-          const [fileHandle] = await window.showOpenFilePicker({
-            types: [
-              {
-                description: 'Golden Gates Circuit',
-                accept: { 'application/json': OPEN_EXTS.map(ext => `.${ext}`) }
-              }
-            ],
-            multiple: false
-          })
-
-          const file = await fileHandle.getFile()
-          fileContent = await file.text()
-        } catch (err) {
-          // User cancelled the open dialog
-          if (err.name === 'AbortError') {
-            return null
-          }
-          throw err
-        }
-      } else {
-        // Fallback to input element
-        const input = document.createElement('input')
-        input.type = 'file'
-        input.accept = `${OPEN_EXTS.map(ext => `.${ext}`).join(',')},application/json`
-
-        const filePromise = new Promise((resolve, reject) => {
-          const handleChange = async e => {
-            const file = e.target.files[0]
-            if (file) {
-              try {
-                const content = await file.text()
-                resolve(content)
-              } catch (err) {
-                reject(err)
-              }
-            } else {
-              resolve(null)
-            }
-
-            // Clean up the input element and event listener
-            input.removeEventListener('change', handleChange)
-            input.remove()
-          }
-
-          input.addEventListener('change', handleChange)
-
-          // Simulate click
-          input.click()
-        })
-
-        fileContent = await filePromise
-        if (!fileContent) return null
-      }
-
-      return fileContent
-    } catch (error) {
-      console.error('Error opening file:', error)
-      throw error
+    let resolvedDirPath = dirPath
+    if (!resolvedDirPath) {
+      resolvedDirPath = await window.electronAPI.pickProjectDirectory()
+      if (!resolvedDirPath) return null
     }
+
+    const { files } = await window.electronAPI.openProject(resolvedDirPath)
+    const topLevelFilename = deriveTopLevelFilename(resolvedDirPath)
+
+    // Read top-level circuit (create blank if it doesn't exist yet)
+    let topLevelContent = null
+    if (files.includes(topLevelFilename)) {
+      topLevelContent = await window.electronAPI.readCircuitFile(resolvedDirPath, topLevelFilename)
+    }
+
+    return {
+      dirPath: resolvedDirPath,
+      topLevelFilename,
+      topLevelContent,  // null if new/empty project
+      allFiles: files
+    }
+  }
+
+  const readCircuitFile = async (dirPath, filename) => {
+    if (!window.electronAPI) return null
+    return window.electronAPI.readCircuitFile(dirPath, filename)
+  }
+
+  const saveCircuitFile = async (dirPath, filename, content) => {
+    if (!window.electronAPI) return false
+    return window.electronAPI.writeCircuitFile(dirPath, filename, content)
   }
 
   const validateCircuitData = circuitData => {
@@ -382,24 +366,12 @@ export function useFileService() {
     }
   }
 
-  const initFileAssociation = (onCircuitLoaded) => {
-    if (!window.electronAPI?.onOpenFile) return
-  
-    window.electronAPI.onOpenFile((fileContent) => {
-      try {
-        const circuitData = parseAndValidateJSON(fileContent)
-        onCircuitLoaded(circuitData)
-      } catch (error) {
-        console.error('Error loading circuit from file association:', error)
-      }
-    })
-  }
-
-
   return {
+    buildCircuitData,
     saveCircuit,
-    openCircuit,
-    parseAndValidateJSON, 
-    initFileAssociation
+    openProject,
+    readCircuitFile,
+    saveCircuitFile,
+    parseAndValidateJSON
   }
 }

@@ -22,10 +22,10 @@ This is a single-page application built with Vue.js 3, Vite, and PrimeVue. The a
 - **No Backend Required**: Everything runs client-side in the browser
 
 ### File Management
-- **Save/Load Circuits**: Export and import circuit designs as `.ggc` files (Golden Gates Circuit format)
+- **Project-based Workflow**: Open a cloned git repository as a project directory; each `.ggc` file in the directory is a circuit
+- **Save Circuits**: Cmd+S (or File → Save) writes the active circuit directly to the project directory — no dialog
 - **Component Library**: Save custom circuits as reusable components
-- **Browser Storage**: Persistent storage of circuit designs between sessions
-- **Desktop File Association**: On macOS and Windows, double-clicking a `.ggc` file launches the app and opens the circuit automatically
+- **Desktop File Association**: On macOS and Windows, double-clicking a `.ggc` file opens its parent directory as the project automatically
 
 ## Setup Instructions
 
@@ -164,10 +164,11 @@ npm run electron:dev
 ### How It Works
 
 Electron wraps the compiled Vue app in a Chromium window with a Node.js backend running alongside it. This enables:
-- **Native menu bar**: A File menu (New Circuit, Open..., Save) appears in the OS menu bar with standard keyboard shortcuts (Cmd+N, Cmd+O, Cmd+S). Save and Open are not in the command palette. Now using the menu bar or shortcuts instead.
-- **Native file dialogs**: Save and open circuits using the OS file picker instead of browser APIs
+- **Native menu bar**: A File menu (New Circuit, Open..., Save) appears in the OS menu bar with standard keyboard shortcuts (Cmd+N, Cmd+O, Cmd+S). Save and Open are not in the command palette.
+- **Project-based open**: File → Open... picks a directory (e.g. a cloned student repo). The app derives the top-level circuit name from the directory name by stripping the `-githubID` suffix — so `project05-jsmith/` loads `project05.ggc` as the top-level circuit.
+- **Silent save**: Cmd+S writes the active circuit directly to the project directory as `<CircuitName>.ggc` with no dialog. If no project is open, a save-as dialog appears as fallback.
 - **Direct filesystem access**: Circuit files are written directly to disk via Node's `fs` module
-- **Custom file type**: Circuits are saved as `.ggc` (Golden Gates Circuit) files. On macOS and Windows, double-clicking a `.ggc` file launches the app and loads the circuit automatically. Opening via File → Open also accepts legacy `.json` circuit files.
+- **Custom file type**: Circuits are saved as `.ggc` (Golden Gates Circuit) files. On macOS and Windows, double-clicking a `.ggc` file opens its parent directory as the project automatically.
 
 The browser version continues to work unchanged. `useFileService.js` detects whether `window.electronAPI` is available and uses native file I/O if so, falling back to the existing browser behavior otherwise.
 

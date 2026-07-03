@@ -9,7 +9,7 @@ const path = require('path')
 app.name = 'Golden Gates'
 
 let mainWindow = null
-let pendingFilePath = null  // file opened before the renderer is ready
+let pendingFilePath = null  // project dir opened before the renderer is ready
 
 // Windows/Linux pass the path of an associated file as a command-line argument
 // when the app is launched (or re-launched) by double-clicking it. Pick out the
@@ -21,19 +21,13 @@ function getFilePathFromArgv(argv) {
   )
 }
 
-// Read a circuit file and hand its contents to the renderer, or queue it if the
-// window isn't ready yet. Shared by macOS (open-file event) and Windows/Linux
-// (command-line argument).
-function openCircuitFile(filePath) {
-  if (!filePath) return
+// Send a project directory path instead of file content 
+function openProjectDir(dirPath) {
+  if (!dirPath) return
   if (mainWindow && !mainWindow.isDestroyed()) {
-    try {
-      mainWindow.webContents.send('open-file', fs.readFileSync(filePath, 'utf8'))
-    } catch (err) {
-      console.error('Failed to read circuit file:', filePath, err)
-    }
+    mainWindow.webContents.send('open-project', dirPath)
   } else {
-    pendingFilePath = filePath  // window not ready yet, queue it
+    pendingFilePath = dirPath
   }
 }
 
@@ -48,7 +42,8 @@ if (!gotTheLock) {
   // user double-clicked a .ggc file while the app was already running. The new
   // process's argv carries the file path.
   app.on('second-instance', (_event, argv) => {
-    openCircuitFile(getFilePathFromArgv(argv))
+    const filePath = getFilePathFromArgv(argv)
+    if (filePath) openProjectDir(path.dirname(filePath))
     if (mainWindow) {
       if (mainWindow.isMinimized()) mainWindow.restore()
       mainWindow.focus()
@@ -58,13 +53,14 @@ if (!gotTheLock) {
   // macOS: capture double-click open-file events
   app.on('open-file', (event, filePath) => {
     event.preventDefault()
-    openCircuitFile(filePath)
+    openProjectDir(path.dirname(filePath))
   })
 
   app.whenReady().then(() => {
     // Windows/Linux cold start: the double-clicked file is on our command line.
     if (process.platform !== 'darwin' && !pendingFilePath) {
-      pendingFilePath = getFilePathFromArgv(process.argv)
+      const filePath = getFilePathFromArgv(process.argv)
+      if (filePath) pendingFilePath = path.dirname(filePath)
     }
 
     // Native menu bar with File menu for Open/Save
@@ -86,11 +82,10 @@ if (!gotTheLock) {
             accelerator: 'CmdOrCtrl+O',
             click: async () => {
               const { filePaths } = await dialog.showOpenDialog({
-                filters: [{ name: 'Golden Gates Circuit', extensions: ['ggc', 'json'] }],
-                properties: ['openFile']
+                properties: ['openDirectory']
               })
               if (filePaths.length > 0) {
-                openCircuitFile(filePaths[0])
+                openProjectDir(filePaths[0])
               }
             }
           },
@@ -131,12 +126,12 @@ function createWindow() {
   })
   mainWindow.loadFile('dist/index.html')
 
-  // Once renderer is ready, send any queued file
+  // Once renderer is ready, send any queued project directory
   mainWindow.webContents.on('did-finish-load', () => {
     if (pendingFilePath) {
-      const filePath = pendingFilePath
+      const dirPath = pendingFilePath
       pendingFilePath = null
-      openCircuitFile(filePath)
+      openProjectDir(dirPath)
     }
   })
 
@@ -148,7 +143,33 @@ function createWindow() {
 }
 
 
-// Save circuit to disk
+// Pick a project directory via dialog (used when no path is provided by the caller)
+ipcMain.handle('pick-project-directory', async () => {
+  const { canceled, filePaths } = await dialog.showOpenDialog({
+    properties: ['openDirectory']
+  })
+  if (canceled || filePaths.length === 0) return null
+  return filePaths[0]
+})
+
+// Open project: list all .ggc files in the directory
+ipcMain.handle('open-project', async (event, dirPath) => {
+  const files = fs.readdirSync(dirPath).filter(f => f.endsWith('.ggc'))
+  return { dirPath, files }
+})
+
+// Read one circuit file from the project directory
+ipcMain.handle('read-circuit-file', async (event, { dirPath, filename }) => {
+  return fs.readFileSync(path.join(dirPath, filename), 'utf8')
+})
+
+// Write one circuit file to the project directory
+ipcMain.handle('write-circuit-file', async (event, { dirPath, filename, content }) => {
+  fs.writeFileSync(path.join(dirPath, filename), content)
+  return true
+})
+
+// Save circuit to disk (fallback for no-project state)
 ipcMain.handle('save-circuit', async (event, { content, defaultName }) => {
   const { filePath } = await dialog.showSaveDialog({
     defaultPath: defaultName,
@@ -157,18 +178,6 @@ ipcMain.handle('save-circuit', async (event, { content, defaultName }) => {
   if (filePath) {
     fs.writeFileSync(filePath, content)
     return filePath
-  }
-  return null
-})
-
-// Open circuit from disk
-ipcMain.handle('open-circuit', async () => {
-  const { filePaths } = await dialog.showOpenDialog({
-    filters: [{ name: 'Golden Gates Circuit', extensions: ['ggc', 'json'] }],
-    properties: ['openFile']
-  })
-  if (filePaths.length > 0) {
-    return fs.readFileSync(filePaths[0], 'utf8')
   }
   return null
 })

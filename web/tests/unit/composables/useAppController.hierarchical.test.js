@@ -19,10 +19,10 @@ let savedData = null
 
 vi.mock('@/composables/useFileService', () => ({
   useFileService: () => ({
+    buildCircuitData: vi.fn(),
     saveCircuit: mockSaveCircuitFn,
-    openCircuit: vi.fn(),
-    parseAndValidateJSON: vi.fn(),
-    initFileAssociation: vi.fn()
+    openProject: vi.fn(),
+    parseAndValidateJSON: vi.fn()
   })
 }))
 
@@ -255,6 +255,7 @@ describe('useAppController - Hierarchical Circuit Saving', () => {
       ),
       activeTabId: ref('circuit_3'),
       activeCircuit: ref(circuit3),
+      currentProjectDir: ref(null),
       openTabs: ref([{ id: 'circuit_1' }, { id: 'circuit_2' }, { id: 'circuit_3' }]),
       getCircuit: vi.fn(id => {
         const circuits = new Map([
@@ -284,7 +285,9 @@ describe('useAppController - Hierarchical Circuit Saving', () => {
         },
         activeTabId: 'circuit_3',
         openTabs: [{ id: 'circuit_1' }, { id: 'circuit_2' }, { id: 'circuit_3' }]
-      }))
+      })),
+      markCircuitAsSaved: vi.fn(),
+      projectCircuitFiles: ref([])
     }
 
     // Mock canvas reference

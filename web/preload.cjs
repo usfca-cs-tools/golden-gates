@@ -5,11 +5,17 @@
 const { contextBridge, ipcRenderer } = require('electron')
 
 contextBridge.exposeInMainWorld('electronAPI', {
-  saveCircuit: (content, defaultName) =>
-    ipcRenderer.invoke('save-circuit', { content, defaultName }),
-  openCircuit: () =>
-    ipcRenderer.invoke('open-circuit'), 
-  onOpenFile: (callback) => ipcRenderer.on('open-file', (_event, filePath) => callback(filePath)),
+  // Project-based operations
+  pickProjectDirectory: () => ipcRenderer.invoke('pick-project-directory'),
+  openProject: (dirPath) => ipcRenderer.invoke('open-project', dirPath),
+  readCircuitFile: (dirPath, filename) => ipcRenderer.invoke('read-circuit-file', { dirPath, filename }),
+  writeCircuitFile: (dirPath, filename, content) => ipcRenderer.invoke('write-circuit-file', { dirPath, filename, content }),
+
+  // Fallback save-as for no-project state
+  saveCircuitAs: (content, defaultName) => ipcRenderer.invoke('save-circuit', { content, defaultName }),
+
+  // Events from main process
+  onOpenProject: (callback) => ipcRenderer.on('open-project', (_event, dirPath) => callback(dirPath)),
   onMenuNewCircuit: (callback) => ipcRenderer.on('menu-new-circuit', () => callback()),
   onMenuSaveCircuit: (callback) => ipcRenderer.on('menu-save-circuit', () => callback())
 })

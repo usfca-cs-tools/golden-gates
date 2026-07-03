@@ -222,7 +222,7 @@ export default {
       default: null
     }
   },
-  emits: ['selectionChanged'],
+  emits: ['selectionChanged', 'editSubcircuit'],
   setup(props, { emit }) {
     const container = ref(null)
     const scrollContainer = ref(null)
@@ -489,7 +489,7 @@ export default {
     }
 
     function handleEditSubcircuit(circuitId) {
-      navigateToCircuit(circuitId)
+      emit('editSubcircuit', circuitId)
     }
 
     // Computed property to get component instances
