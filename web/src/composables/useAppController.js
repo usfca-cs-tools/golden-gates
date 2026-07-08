@@ -216,8 +216,8 @@ export function useAppController(circuitManager) {
 
     window.__vueUpdateCallback = (eventType, componentId, value) => {
       if (eventType === 'batch') {
-        // value is a list of [event, js_id, payload] coalesced by one settle().
-        for (const [event, jid, payload] of toNative(value)) {
+        // value is a JSON string of [event, js_id, payload] coalesced by one settle().
+        for (const [event, jid, payload] of JSON.parse(value)) {
           queueUpdate(event, jid, payload)
         }
         return
