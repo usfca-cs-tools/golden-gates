@@ -30,6 +30,11 @@ export function usePythonEngine() {
         indexURL: new URL('pyodide/', document.baseURI).href
       })
 
+      // Dev-only: expose the runtime so the console can drive Python directly.
+      if (import.meta.env.DEV) {
+        window.pyodide = pyodideInstance.value
+      }
+
       // GGL engine files are served at /ggl/ by vite-plugin-static-copy,
       // sourced from the `ggl` submodule (web/ggl-engine/src/ggl) — see vite.config.js.
       const gglBaseUrl = new URL('ggl/', document.baseURI).href
