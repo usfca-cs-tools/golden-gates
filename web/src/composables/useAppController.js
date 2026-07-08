@@ -154,17 +154,16 @@ export function useAppController(circuitManager) {
       }
     }
 
-    window.__vueUpdateCallback = (eventType, componentId, value) => {
+    // Apply one update to the canvas / reactive state.
+    const applyUpdate = (eventType, componentId, value) => {
       if (!canvasRef) {
         console.error('No canvasRef available')
         return
       }
 
-      // First, try to find the component in the main circuit
       const component = canvasRef.components.find(c => c.id === componentId)
 
       if (component) {
-        // This is a top-level component - handle normally
         switch (eventType) {
           case 'value':
             handleValueUpdate(canvasRef, component, value)
@@ -182,22 +181,52 @@ export function useAppController(circuitManager) {
             console.warn(`Unknown event type: ${eventType}`)
         }
       } else {
-        // Check if it's a wire ID
         const wireIdPattern = /^wire_\d+$/
         if (wireIdPattern.test(componentId) && eventType === 'step') {
           handleWireStepUpdate(canvasRef, componentId, value)
-        } else {
-          // Handle nested component callbacks that don't have parent mapping yet
-          // TODO: When we implement per-instance subcircuit views, route these callbacks
-          // to the appropriate instance view instead of logging
-          if (eventType === 'error') {
-            // Keep error messages visible as they're important for debugging
-            console.log(`Nested component error: ${componentId} = ${value} (no parent mapped)`)
-          }
-          // Suppress value and step updates to reduce console clutter - the values are
-          // still being calculated correctly, just no UI destination yet
+        } else if (eventType === 'error') {
+          console.log(`Nested component error: ${componentId} = ${value} (no parent mapped)`)
         }
       }
+    }
+
+    // Coalesce updates and apply at most once per animation frame, so a fast
+    // free-running clock renders at ~60 Hz instead of once per settle.
+    const pendingUpdates = new Map()
+    let flushHandle = null
+    const flushUpdates = () => {
+      flushHandle = null
+      const updates = Array.from(pendingUpdates.values())
+      pendingUpdates.clear()
+      for (const u of updates) applyUpdate(u.eventType, u.componentId, u.value)
+    }
+    const queueUpdate = (eventType, componentId, value) => {
+      // Keep memory writes to distinct addresses; collapse the rest by id.
+      const key =
+        eventType === 'memory'
+          ? `memory:${componentId}:${value?.address}`
+          : `${eventType}:${componentId}`
+      pendingUpdates.set(key, { eventType, componentId, value })
+      if (flushHandle === null) flushHandle = requestAnimationFrame(flushUpdates)
+    }
+
+    // Pyodide passes dicts/lists as proxies; convert to plain JS once here.
+    const toNative = v =>
+      v && typeof v.toJs === 'function' ? v.toJs({ dict_converter: Object.fromEntries }) : v
+
+    window.__vueUpdateCallback = (eventType, componentId, value) => {
+      if (eventType === 'batch') {
+        // value is a list of [event, js_id, payload] coalesced by one settle().
+        for (const [event, jid, payload] of toNative(value)) {
+          queueUpdate(event, jid, payload)
+        }
+        return
+      }
+      if (eventType === 'error') {
+        applyUpdate('error', componentId, toNative(value))
+        return
+      }
+      queueUpdate(eventType, componentId, toNative(value))
     }
 
     // Handle legacy callback format for backward compatibility
