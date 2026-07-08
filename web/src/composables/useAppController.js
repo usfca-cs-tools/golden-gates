@@ -190,43 +190,23 @@ export function useAppController(circuitManager) {
       }
     }
 
-    // Coalesce updates and apply at most once per animation frame, so a fast
-    // free-running clock renders at ~60 Hz instead of once per settle.
-    const pendingUpdates = new Map()
-    let flushHandle = null
-    const flushUpdates = () => {
-      flushHandle = null
-      const updates = Array.from(pendingUpdates.values())
-      pendingUpdates.clear()
-      for (const u of updates) applyUpdate(u.eventType, u.componentId, u.value)
-    }
-    const queueUpdate = (eventType, componentId, value) => {
-      // Keep memory writes to distinct addresses; collapse the rest by id.
-      const key =
-        eventType === 'memory'
-          ? `memory:${componentId}:${value?.address}`
-          : `${eventType}:${componentId}`
-      pendingUpdates.set(key, { eventType, componentId, value })
-      if (flushHandle === null) flushHandle = requestAnimationFrame(flushUpdates)
-    }
-
     // Pyodide passes dicts/lists as proxies; convert to plain JS once here.
     const toNative = v =>
       v && typeof v.toJs === 'function' ? v.toJs({ dict_converter: Object.fromEntries }) : v
 
     window.__vueUpdateCallback = (eventType, componentId, value) => {
-      if (eventType === 'batch') {
-        // value is a JSON string of [event, js_id, payload] coalesced by one settle().
-        for (const [event, jid, payload] of JSON.parse(value)) {
-          queueUpdate(event, jid, payload)
+      try {
+        if (eventType === 'batch') {
+          // value is a JSON string of [event, js_id, payload] coalesced by one settle().
+          for (const [event, jid, payload] of JSON.parse(value)) {
+            applyUpdate(event, jid, payload)
+          }
+          return
         }
-        return
+        applyUpdate(eventType, componentId, toNative(value))
+      } catch (e) {
+        console.error('updateCallback failed:', eventType, e)
       }
-      if (eventType === 'error') {
-        applyUpdate('error', componentId, toNative(value))
-        return
-      }
-      queueUpdate(eventType, componentId, toNative(value))
     }
 
     // Handle legacy callback format for backward compatibility
