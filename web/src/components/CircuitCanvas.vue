@@ -205,6 +205,7 @@ import { useSelectionController } from '../composables/useSelectionController'
 import { useDragController } from '../composables/useDragController'
 import { useCanvasController } from '../composables/useCanvasController'
 import { useCodeGenController } from '../composables/useCodeGenController'
+import { useUndoHistory } from '../composables/useUndoHistory'
 
 export default {
   name: 'CircuitCanvas',
@@ -227,6 +228,9 @@ export default {
     const container = ref(null)
     const scrollContainer = ref(null)
     const componentRefs = ref({})
+
+    // Undo history — snapshot-based, max 50 entries
+    const undoHistory = useUndoHistory(props.circuitManager)
 
     // Canvas operations
     const {
@@ -311,6 +315,7 @@ export default {
         wires: wires,
         wireJunctions: wireJunctions,
         addWire: wire => {
+          undoHistory.pushSnapshot()
           if (props.autosave) {
             props.autosave.immediateAutosave()
           }
@@ -410,7 +415,8 @@ export default {
       { getMousePos, snapToGrid, gridSize, panX, panY, isPanning },
       wireManagement,
       selection,
-      dragAndDrop
+      dragAndDrop,
+      { pushSnapshot: () => undoHistory.pushSnapshot(), undo: () => undoHistory.undo() }
     )
 
     const {
@@ -434,6 +440,7 @@ export default {
     } = canvasInteractions
 
     const addComponentAtSmartPositionAndScroll = (type, customProps = {}) => {
+      undoHistory.pushSnapshot()
       const newComponent = addComponentAtSmartPosition(type, customProps)
       if (newComponent && scrollContainer.value) {
         const targetX = newComponent.x * gridSize.value - containerWidth.value / 2
@@ -485,6 +492,7 @@ export default {
     }
 
     function handleStartDrag(dragInfo) {
+      undoHistory.pushSnapshot()
       startDrag(dragInfo)
     }
 
@@ -712,6 +720,7 @@ export default {
 
     // Clear current circuit
     function clearCircuit() {
+      undoHistory.pushSnapshot()
       clearCurrentCircuit()
       clearSelection()
     }
@@ -808,7 +817,10 @@ export default {
       zoomOut,
 
       // Circuit hierarchy methods
-      navigateToCircuit
+      navigateToCircuit,
+
+      // Undo
+      undo: () => undoHistory.undo()
     }
   }
 }

@@ -12,7 +12,8 @@ export function useCanvasController(
   canvasOperations,
   wireManagement,
   selection,
-  dragAndDrop
+  dragAndDrop,
+  undoCallbacks = {}
 ) {
   const { getMousePos, snapToGrid, gridSize, panX, panY, isPanning } = canvasOperations
   const { clearSelection, selectComponent, deleteSelected, checkAndClearJustFinished } = selection
@@ -193,6 +194,9 @@ export function useCanvasController(
       return false
     }
 
+    // Save state before paste so it can be undone
+    undoCallbacks.pushSnapshot?.()
+
     if (!clipboardController.hasClipboardData.value) {
       // Try to get data from OS clipboard
       const osData = await getFromOSClipboard()
@@ -258,6 +262,9 @@ export function useCanvasController(
       return false
     }
 
+    // Save state before duplication so it can be undone
+    undoCallbacks.pushSnapshot?.()
+
     const selectedElements = getSelectedElements()
 
     if (selectedElements.components.length === 0 && selectedElements.wires.length === 0) {
@@ -315,6 +322,9 @@ export function useCanvasController(
     if (selectedElements.components.length === 0 && selectedElements.wires.length === 0) {
       return false
     }
+
+    // Save state before deletion so it can be undone
+    undoCallbacks.pushSnapshot?.()
 
     try {
       // Delete selected components
@@ -630,6 +640,13 @@ export function useCanvasController(
     // Only handle keyboard shortcuts if not typing in an input
     if (!isInputFocused) {
       const isCtrlOrCmd = event.ctrlKey || event.metaKey
+
+      // Undo
+      if (isCtrlOrCmd && event.key === 'z') {
+        event.preventDefault()
+        undoCallbacks.undo?.()
+        return
+      }
 
       // Clipboard operations
       if (isCtrlOrCmd && event.key === 'c') {
