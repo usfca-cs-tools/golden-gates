@@ -58,8 +58,8 @@ export default {
     const isValid = ref(true)
     const errorMessage = ref('')
 
-    // Python identifier regex: letter or underscore followed by letters, digits, or underscores
-    const pythonIdentifierRegex = /^[a-zA-Z_][a-zA-Z0-9_]*$/
+    // Circuit name regex: letter or digit, followed by letters, digits, underscores, or hyphens
+    const pythonIdentifierRegex = /^[a-zA-Z0-9_][a-zA-Z0-9_-]*$/
 
     // Reserved Python keywords
     const pythonKeywords = new Set([
@@ -114,13 +114,10 @@ export default {
       // Check for invalid characters by finding the first invalid one
       for (let i = 0; i < value.length; i++) {
         const char = value[i]
-        const validChar = i === 0 ? /[a-zA-Z_]/.test(char) : /[a-zA-Z0-9_]/.test(char)
+        const validChar = i === 0 ? /[a-zA-Z0-9_]/.test(char) : /[a-zA-Z0-9_-]/.test(char)
 
         if (!validChar) {
-          if (i === 0 && /[0-9]/.test(char)) {
-            return { valid: false, error: `Cannot start with digit '${char}'` }
-          }
-          return { valid: false, error: `'${char}' is not valid` }
+          return { valid: false, error: `'${char}' is not valid (use letters, digits, - or _)` }
         }
       }
 

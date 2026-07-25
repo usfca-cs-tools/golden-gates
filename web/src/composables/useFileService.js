@@ -105,8 +105,7 @@ export function useFileService() {
       // Check if running in Electron
       if (window.electronAPI) {
         const circuitName = circuitMetadata.name || 'circuit'
-        const timestamp = new Date().toISOString().slice(0, 19).replace(/:/g, '-')
-        const defaultName = `${circuitName}_${timestamp}.${CIRCUIT_EXT}`
+        const defaultName = `${circuitName}.${CIRCUIT_EXT}` // Removing timestamp from filename
 
         if (projectContext?.dirPath && projectContext?.filename) {
           await window.electronAPI.writeCircuitFile(
@@ -121,9 +120,8 @@ export function useFileService() {
         try {
           // Use the File System Access API for better UX
           const circuitName = circuitMetadata.name || 'circuit'
-          const timestamp = new Date().toISOString().slice(0, 19).replace(/:/g, '-')
           const handle = await window.showSaveFilePicker({
-            suggestedName: `${circuitName}_${timestamp}.${CIRCUIT_EXT}`,
+            suggestedName: `${circuitName}.${CIRCUIT_EXT}`,
             types: [
               {
                 description: 'Golden Gates Circuit',
@@ -149,10 +147,9 @@ export function useFileService() {
         const url = URL.createObjectURL(blob)
 
         const circuitName = circuitMetadata.name || 'circuit'
-        const timestamp = new Date().toISOString().slice(0, 19).replace(/:/g, '-')
         const link = document.createElement('a')
         link.href = url
-        link.download = `${circuitName}_${timestamp}.${CIRCUIT_EXT}`
+        link.download = `${circuitName}.${CIRCUIT_EXT}`
         document.body.appendChild(link)
         link.click()
 

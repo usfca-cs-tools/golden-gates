@@ -6,7 +6,6 @@ import { BaseComponentGenerator } from './BaseComponentGenerator'
  */
 export class PriorityEncoderGenerator extends BaseComponentGenerator {
   private selectorBits: number
-  private label: string
 
   constructor(componentData: any) {
     super(componentData)

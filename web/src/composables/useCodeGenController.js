@@ -8,6 +8,16 @@ export function useCodeGenController() {
   // All components now use TypeScript mixins for code generation
   // No fallback logic needed - every component implements generate() via mixins
 
+  // Convert a circuit display name (which may contain hyphens or start with a digit)
+  // into a valid Python identifier for use in generated code
+  function toPythonIdentifier(name) {
+    let identifier = name.replace(/-/g, '_')
+    if (/^[0-9]/.test(identifier)) {
+      identifier = '_' + identifier
+    }
+    return identifier
+  }
+
   // Helper function to get component connections (unified with validator logic)
   function getComponentConnections(component, circuitManager) {
     const config = componentRegistry[component.type]
@@ -134,7 +144,8 @@ export function useCodeGenController() {
         const componentDef = circuitManager?.getComponentDefinition?.(circuitId)
         if (componentDef) {
           // Create meaningful variable name based on the circuit name
-          const baseName = componentDef.name.toLowerCase()
+          const pyName = toPythonIdentifier(componentDef.name)
+          const baseName = pyName.toLowerCase()
           const instanceCount =
             componentOrder
               .filter(
@@ -145,7 +156,7 @@ export function useCodeGenController() {
               .indexOf(component) + 1
           varName = `${baseName}_${instanceCount}`
           componentVarNames[component.id] = varName
-          sections.push(`${varName} = ${componentDef.name}()`)
+          sections.push(`${varName} = ${pyName}()`)
         } else {
           console.error(`Schematic component definition not found for ${circuitId}`)
           varName = `comp_${component.id.replace(/-/g, '_')}`
@@ -349,6 +360,7 @@ export function useCodeGenController() {
    * Wrap a GGL program as an importable Python component module
    */
   function wrapGglProgramAsComponentModule(componentName, gglProgram, requiredImports) {
+    const pyComponentName = toPythonIdentifier(componentName)
     return `from ggl import arithmetic, circuit, logic, io, wires, plexers
 
 # Import other components this circuit uses
@@ -358,7 +370,7 @@ ${requiredImports}
 ${gglProgram}
 
 # Export as a reusable component
-${componentName} = circuit.Component(circuit0)
+${pyComponentName} = circuit.Component(circuit0)
 `
   }
 
@@ -373,7 +385,8 @@ ${componentName} = circuit.Component(circuit0)
         const circuitId = comp.props?.circuitId || comp.circuitId
         const componentDef = circuitManager.getComponentDefinition(circuitId)
         if (componentDef && componentDef.name !== excludeComponentName) {
-          imports.add(`from ${componentDef.name} import ${componentDef.name}`)
+          const pyName = toPythonIdentifier(componentDef.name)
+          imports.add(`from ${pyName} import ${pyName}`)
         }
       }
     })

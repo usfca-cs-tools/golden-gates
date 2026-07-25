@@ -15,7 +15,6 @@ export class SplitterGenerator extends WireComponentGenerator {
 
   generate(): GeneratedStatement {
     const varName = this.generateVarName('splitter')
-    const splits = this.formatRanges()
 
     // Format splits as tuples: [(0,1), (2,3), (4,5), (6,7)]
     const splitsString = `[${this.ranges.map(range => `(${range.start},${range.end})`).join(', ')}]`
