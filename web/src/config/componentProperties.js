@@ -500,7 +500,14 @@ export const componentPropertySchema = {
     title: 'Test',
     properties: [
       { ...commonProperties.label, default: 'TEST' },
-      { name: 'table', type: 'truth-table', label: 'Truth table' }
+      { name: 'table', type: 'truth-table', label: 'Truth table' },
+      {
+        name: 'stop_enabled',
+        type: 'boolean',
+        label: 'Stop when output reaches value (clocked)'
+      },
+      { name: 'stop_output_name', type: 'text', label: 'Stop output' },
+      { name: 'stop_output_value', type: 'number', label: 'Stop value', default: 1 }
     ]
   },
 

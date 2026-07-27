@@ -53,11 +53,20 @@ export class TestGenerator extends BaseComponentGenerator {
     const outputNames = `output_names=${this.buildNameList(this.table.outputNames)}`
     const rows = `rows=${this.buildRows(this.table.rows)}`
 
-    // Insert the table params just before js_id (which buildGglParams places last)
-    const paramString = baseParams.replace(
-      /, js_id=/,
-      `, ${inputNames}, ${outputNames}, ${rows}, js_id=`
-    )
+    const parts = [inputNames, outputNames, rows]
+
+    // Clocked "stop when an output reaches a value" mode. Only emitted when
+    // enabled; otherwise the engine defaults to combinational settling.
+    if (this.props.stop_enabled) {
+      const stopName = String(this.props.stop_output_name || '').replace(/"/g, '\\"')
+      const stopValue = Number(this.props.stop_output_value) || 0
+      parts.push('stop_enabled=True')
+      parts.push(`stop_output_name="${stopName}"`)
+      parts.push(`stop_output_value=${stopValue}`)
+    }
+
+    // Insert the table (+ optional stop) params just before js_id (last)
+    const paramString = baseParams.replace(/, js_id=/, `, ${parts.join(', ')}, js_id=`)
 
     return {
       varName,

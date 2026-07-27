@@ -235,7 +235,9 @@
       "testOutputNotFound": "Test output '{name}' not found",
       "testAmbiguousLabel": "Test refers to '{name}', but multiple components share that label",
       "testRowWidth": "Test row {row} has {actual} values, expected {expected}",
-      "testFailed": "For {inputs}: expected {output}={expected}, got {actual}"
+      "testFailed": "For {inputs}: expected {output}={expected}, got {actual}",
+      "testNoClock": "This test uses 'stop when output reaches value', but the circuit has no clock",
+      "testStopNotReached": "Output '{name}' did not reach {value} within {cycles} cycles"
     },
     "warnings": {
       "unusedInput": "Input '{inputName}' is not used",

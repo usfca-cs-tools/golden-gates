@@ -893,7 +893,11 @@ export const componentRegistry = {
     defaultProps: {
       label: 'TEST',
       table: { inputNames: [], outputNames: [], rows: [] },
-      status: 'pending'
+      status: 'pending',
+      // Clocked "stop when an output reaches a value" mode (off by default)
+      stop_enabled: false,
+      stop_output_name: '',
+      stop_output_value: 1
     },
     connections: {
       inputs: [],

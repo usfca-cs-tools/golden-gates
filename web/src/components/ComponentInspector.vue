@@ -145,6 +145,14 @@
             class="property-input"
           />
 
+          <!-- Boolean checkbox (binary mode) -->
+          <Checkbox
+            v-else-if="prop.type === 'boolean'"
+            :modelValue="getPropValue(prop.name, false)"
+            :binary="true"
+            @update:modelValue="updateProp(prop.name, $event)"
+          />
+
           <!-- Truth table editor for Test components -->
           <TruthTableEditor
             v-else-if="prop.type === 'truth-table'"
@@ -185,6 +193,7 @@ import PythonIdentifierInput from './PythonIdentifierInput.vue'
 import MemoryDataTable from './MemoryDataTable.vue'
 import Textarea from 'primevue/textarea'
 import Dropdown from 'primevue/dropdown'
+import Checkbox from 'primevue/checkbox'
 
 export default {
   name: 'ComponentInspector',
@@ -198,7 +207,8 @@ export default {
     PythonIdentifierInput,
     MemoryDataTable,
     Textarea,
-    Dropdown
+    Dropdown,
+    Checkbox
   },
   props: {
     component: {
