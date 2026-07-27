@@ -26,6 +26,22 @@ export function useUndoHistory(circuitManager) {
     }
   }
 
+  /**
+   * A Test's pass/fail badge reflects the last run, so any edit to the circuit
+   * makes it stale. pushSnapshot() runs before every mutating action, so reset
+   * Test badges to 'pending' here — one chokepoint, no per-editor code — which
+   * also prevents a stale green check from being mistaken for a current pass.
+   */
+  function clearTestStatuses() {
+    const circuit = circuitManager.activeCircuit?.value
+    if (!circuit?.components) return
+    for (const comp of circuit.components) {
+      if (comp.type === 'test' && comp.props?.status && comp.props.status !== 'pending') {
+        comp.props = { ...comp.props, status: 'pending' }
+      }
+    }
+  }
+
   /** Save a snapshot of the current circuit state onto the history stack. */
   function pushSnapshot() {
     const s = takeSnapshot()
@@ -34,6 +50,7 @@ export function useUndoHistory(circuitManager) {
     if (history.value.length > MAX_HISTORY) {
       history.value.shift()
     }
+    clearTestStatuses()
   }
 
   /** Restore the most recent snapshot from the history stack. */
