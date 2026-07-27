@@ -177,6 +177,9 @@ export function useAppController(circuitManager) {
           case 'memory':
             handleMemoryUpdate(canvasRef, component, value)
             break
+          case 'test':
+            handleTestUpdate(canvasRef, component, value)
+            break
           default:
             console.warn(`Unknown event type: ${eventType}`)
         }
@@ -231,6 +234,24 @@ export function useAppController(circuitManager) {
       }
       canvasRef.updateComponent(updatedComponent)
     }
+  }
+
+  /**
+   * Handle Test evaluation results.
+   * Payload: { label, passed, failures, errors }. Drive the Test component's
+   * pass/fail badge and stash failures/errors for a tooltip.
+   */
+  function handleTestUpdate(canvasRef, component, result) {
+    if (component.type !== 'test') return
+
+    // Just the pass/fail badge. Failure/error DETAIL is surfaced through the
+    // shared structured-error path (handleCircuitComponentError), same as
+    // open-input and bit-width errors — the engine raises a CircuitError.
+    const passed = !!(result && result.passed)
+    canvasRef.updateComponent({
+      ...component,
+      props: { ...component.props, status: passed ? 'pass' : 'fail', lastUpdate: Date.now() }
+    })
   }
 
   /**

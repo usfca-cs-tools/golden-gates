@@ -23,6 +23,7 @@ import Multiply from '../components/Multiply.vue'
 import Divide from '../components/Divide.vue'
 import Shift from '../components/Shift.vue'
 import Compare from '../components/Compare.vue'
+import TestNode from '../components/TestNode.vue'
 
 // Registry of all available circuit components
 export const componentRegistry = {
@@ -879,6 +880,40 @@ export const componentRegistry = {
     // Special handling for priority encoder creation
     onCreate: (instance, index) => {
       instance.props.label = instance.props.label || `PE${index}`
+    }
+  },
+
+  test: {
+    component: TestNode,
+    label: 'Test',
+    icon: 'pi pi-check-square',
+    category: 'io',
+    // A Test is a verification directive with NO connection ports.
+    // It holds a truth table over named Inputs/Outputs.
+    defaultProps: {
+      label: 'TEST',
+      table: { inputNames: [], outputNames: [], rows: [] },
+      status: 'pending'
+    },
+    connections: {
+      inputs: [],
+      outputs: []
+    },
+    // Dynamic size grows with the number of rows and total columns
+    getDimensions: props => {
+      const table = props.table || {}
+      const columnCount =
+        (table.inputNames?.length || 0) + (table.outputNames?.length || 0)
+      const rowCount = table.rows?.length || 0
+      const contentRows = (columnCount > 0 ? 1 : 0) + rowCount
+      return {
+        width: Math.max(GRID_SIZE * 5, GRID_SIZE * (columnCount * 1.5 + 1)),
+        height: Math.max(GRID_SIZE * 3, GRID_SIZE * (contentRows + 2))
+      }
+    },
+    // Give each new test a unique label: TEST0, TEST1, ...
+    onCreate: (instance, index) => {
+      instance.props.label = `TEST${index}`
     }
   },
 

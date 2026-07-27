@@ -145,6 +145,13 @@
             class="property-input"
           />
 
+          <!-- Truth table editor for Test components -->
+          <TruthTableEditor
+            v-else-if="prop.type === 'truth-table'"
+            :modelValue="getPropValue('table', { inputNames: [], outputNames: [], rows: [] })"
+            @update:modelValue="updateProp('table', $event)"
+          />
+
           <!-- Memory data table for ROM/RAM -->
           <MemoryDataTable
             v-else-if="prop.type === 'memory-data-table'"
@@ -173,6 +180,7 @@ import BaseSelector from './BaseSelector.vue'
 import RotationSelector from './RotationSelector.vue'
 import InvertedInputsSelector from './InvertedInputsSelector.vue'
 import BitRangeTable from './BitRangeTable.vue'
+import TruthTableEditor from './TruthTableEditor.vue'
 import PythonIdentifierInput from './PythonIdentifierInput.vue'
 import MemoryDataTable from './MemoryDataTable.vue'
 import Textarea from 'primevue/textarea'
@@ -186,6 +194,7 @@ export default {
     RotationSelector,
     InvertedInputsSelector,
     BitRangeTable,
+    TruthTableEditor,
     PythonIdentifierInput,
     MemoryDataTable,
     Textarea,

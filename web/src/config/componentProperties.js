@@ -495,6 +495,15 @@ export const componentPropertySchema = {
     ]
   },
 
+  // Test properties (verification directive - a truth table over named I/O)
+  test: {
+    title: 'Test',
+    properties: [
+      { ...commonProperties.label, default: 'TEST' },
+      { name: 'table', type: 'truth-table', label: 'Truth table' }
+    ]
+  },
+
   // Circuit properties
   circuit: {
     title: 'Circuit Properties',

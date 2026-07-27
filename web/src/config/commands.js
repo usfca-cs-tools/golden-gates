@@ -123,6 +123,13 @@ export const commandGroups = {
         componentType: 'clock',
         action: 'addComponent',
         params: ['clock']
+      },
+      {
+        id: 'insert-test',
+        labelKey: 'commands.insert.test',
+        componentType: 'test',
+        action: 'addComponent',
+        params: ['test']
       }
     ]
   },

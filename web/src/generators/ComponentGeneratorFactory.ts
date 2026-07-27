@@ -19,6 +19,7 @@ import { MultiplyGenerator } from './MultiplyGenerator'
 import { DivideGenerator } from './DivideGenerator'
 import { ShiftGenerator } from './ShiftGenerator'
 import { CompareGenerator } from './CompareGenerator'
+import { TestGenerator } from './TestGenerator'
 
 /**
  * Options for component generation
@@ -101,6 +102,9 @@ export function createComponentGenerator(
 
     case 'compare':
       return new CompareGenerator(componentData)
+
+    case 'test':
+      return new TestGenerator(componentData)
 
     default:
       throw new Error(`Unknown component type: ${componentData.type}`)

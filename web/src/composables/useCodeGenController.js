@@ -262,7 +262,23 @@ export function useCodeGenController() {
     // input updates via update_input(), until stop()); the bare run() is now the
     // synchronous settle used by the headless test suite.
     if (includeRun) {
-      sections.push(`await ${circuitVarName}.run_async()`)
+      // Collect Test components (verification directives) in component order.
+      // A Test drives named Inputs, settles the circuit, and checks named Outputs
+      // via <testvar>.evaluate(circuit0), which emits a 'test' callback per result.
+      const testVarNames = components
+        .filter(c => c.type === 'test')
+        .map(c => componentVarNames[c.id])
+        .filter(Boolean)
+
+      if (testVarNames.length > 0) {
+        // When the circuit contains Tests, run each test's evaluate() instead of
+        // the free-running run_async(): evaluate() itself settles the circuit.
+        for (const testVar of testVarNames) {
+          sections.push(`${testVar}.evaluate(${circuitVarName})`)
+        }
+      } else {
+        sections.push(`await ${circuitVarName}.run_async()`)
+      }
     }
 
     // Return both the generated code and any errors

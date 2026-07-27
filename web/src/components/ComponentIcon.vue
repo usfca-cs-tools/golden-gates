@@ -104,6 +104,27 @@
       </text>
     </template>
 
+    <!-- Test: a circle with a checkmark, matching the on-canvas status badge.
+         Uses a square (30x30) viewBox so it fills the icon like the others. -->
+    <template v-else-if="componentType === 'test'">
+      <circle
+        cx="15"
+        cy="15"
+        r="13"
+        fill="none"
+        :stroke="color"
+        :stroke-width="strokeWidth"
+      />
+      <path
+        d="M 9 16 L 13 20 L 22 9"
+        fill="none"
+        :stroke="color"
+        :stroke-width="strokeWidth"
+        stroke-linecap="round"
+        stroke-linejoin="round"
+      />
+    </template>
+
     <!-- Render other components as single path -->
     <template v-else>
       <path :d="componentPath" :fill="fillColor" :stroke="color" :stroke-width="strokeWidth" />
@@ -373,6 +394,8 @@ export default {
         return '0 0 95 30' // Wider to accommodate negation circle
       } else if (this.componentType === 'xor') {
         return '0 0 75 30' // Standard XOR width
+      } else if (this.componentType === 'test') {
+        return '0 0 30 30' // Square so the circle+check fills the icon
       }
       return '0 0 60 30' // Standard width for other gates
     },

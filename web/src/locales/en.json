@@ -176,6 +176,7 @@
       "output": "Output",
       "constant": "Constant",
       "clock": "Clock",
+      "test": "Test",
       "splitter": "Splitter",
       "merger": "Merger",
       "tunnel": "Tunnel",
@@ -229,7 +230,12 @@
       "multipleOutputs": "Multiple outputs connected to input '{inputName}'",
       "inputShortCircuit": "Input '{inputName}' is driven by more than one wire (short circuit); an input can have only one connection",
       "invalidComponentType": "Invalid component type: '{componentType}'",
-      "simulationTimeout": "Simulation timed out after {timeoutMs}ms"
+      "simulationTimeout": "Simulation timed out after {timeoutMs}ms",
+      "testInputNotFound": "Test input '{name}' not found",
+      "testOutputNotFound": "Test output '{name}' not found",
+      "testAmbiguousLabel": "Test refers to '{name}', but multiple components share that label",
+      "testRowWidth": "Test row {row} has {actual} values, expected {expected}",
+      "testFailed": "For {inputs}: expected {output}={expected}, got {actual}"
     },
     "warnings": {
       "unusedInput": "Input '{inputName}' is not used",
