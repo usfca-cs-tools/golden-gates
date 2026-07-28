@@ -808,7 +808,6 @@ export default {
       setLoadingState,
       getCircuitData,
       updateComponent,
-      updateWireEndpointsForPropertyChange: wireManagement.updateWireEndpointsForPropertyChange,
       loadComponent,
       addWire,
       addWireJunction,

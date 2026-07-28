@@ -158,23 +158,6 @@ describe('useDragController - Mixed Selection Drag Fix', () => {
       expect(wires.value[0].points[0].y).toBeCloseTo(initialWireY + expectedDeltaY)
     })
 
-    it('should handle connected wires when dragging mixed selection from wire', () => {
-      // Select comp1 and wire1, but wire1 is connected to comp1
-      selectedComponents.value.add('comp1')
-      selectedWires.value.add(1) // Select wire2 (not connected to comp1)
-
-      dragController.startWireDrag(1, {
-        id: 'wire2',
-        offsetX: 10,
-        offsetY: 10
-      })
-
-      // Should include wire1 as a connected wire (connected to selected comp1)
-      expect(dragController.dragging.value.connectedWires.length).toBe(1)
-      expect(dragController.dragging.value.connectedWires[0].index).toBe(0) // wire1
-      expect(dragController.dragging.value.connectedWires[0].startSelected).toBe(true)
-    })
-
     it('should maintain relative positions when dragging mixed selection', () => {
       // Set up selection with known positions
       selectedComponents.value.add('comp1') // at (2,2)

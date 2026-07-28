@@ -69,31 +69,6 @@ export function useDragController(
       }
     }
 
-    // Track wires that have endpoints connected to selected components
-    // but only move the specific endpoints, not the entire wire
-    const connectedWires = []
-    wires.value.forEach((wire, index) => {
-      if (!selectedWires.value.has(index)) {
-        const startSelected = selectedComponents.value.has(wire.startConnection.componentId)
-        const endSelected = selectedComponents.value.has(wire.endConnection.componentId)
-
-        if (startSelected || endSelected) {
-          connectedWires.push({
-            index: index,
-            startSelected,
-            endSelected,
-            initialStartPos: { x: wire.startConnection.pos.x, y: wire.startConnection.pos.y },
-            initialEndPos: { x: wire.endConnection.pos.x, y: wire.endConnection.pos.y },
-            initialFirstPoint: { x: wire.points[0].x, y: wire.points[0].y },
-            initialLastPoint: {
-              x: wire.points[wire.points.length - 1].x,
-              y: wire.points[wire.points.length - 1].y
-            }
-          })
-        }
-      }
-    })
-
     // Store initial positions of junctions that need to move with selected wires
     const draggedJunctions = []
     if (wireJunctions && wireJunctions.value) {
@@ -118,7 +93,6 @@ export function useDragController(
       hasMoved: false,
       components: draggedComponents,
       wires: draggedWires,
-      connectedWires: connectedWires,
       junctions: draggedJunctions
     }
   }
@@ -155,31 +129,6 @@ export function useDragController(
       }
     }
 
-    // Track wires that have endpoints connected to selected components
-    // but only move the specific endpoints, not the entire wire
-    const connectedWires = []
-    wires.value.forEach((wire, index) => {
-      if (!selectedWires.value.has(index)) {
-        const startSelected = selectedComponents.value.has(wire.startConnection.componentId)
-        const endSelected = selectedComponents.value.has(wire.endConnection.componentId)
-
-        if (startSelected || endSelected) {
-          connectedWires.push({
-            index: index,
-            startSelected,
-            endSelected,
-            initialStartPos: { x: wire.startConnection.pos.x, y: wire.startConnection.pos.y },
-            initialEndPos: { x: wire.endConnection.pos.x, y: wire.endConnection.pos.y },
-            initialFirstPoint: { x: wire.points[0].x, y: wire.points[0].y },
-            initialLastPoint: {
-              x: wire.points[wire.points.length - 1].x,
-              y: wire.points[wire.points.length - 1].y
-            }
-          })
-        }
-      }
-    })
-
     // Store initial positions of junctions that need to move with selected wires
     const draggedJunctions = []
     if (wireJunctions && wireJunctions.value) {
@@ -202,7 +151,6 @@ export function useDragController(
       hasMoved: false,
       components: draggedComponents, // Include selected components when dragging wires
       wires: draggedWires,
-      connectedWires: connectedWires, // Include connected wires when dragging from wire
       junctions: draggedJunctions,
       isWireDrag: true
     }
@@ -270,31 +218,6 @@ export function useDragController(
       }
     }
 
-    // Update connected wire endpoints (only the endpoints connected to selected components)
-    if (dragging.value.connectedWires) {
-      for (const wireInfo of dragging.value.connectedWires) {
-        const wire = wires.value[wireInfo.index]
-        if (wire) {
-          // Only update start connection if its component is selected
-          if (wireInfo.startSelected) {
-            wire.startConnection.pos.x = wireInfo.initialStartPos.x + deltaX
-            wire.startConnection.pos.y = wireInfo.initialStartPos.y + deltaY
-            // Update the first point of the wire
-            wire.points[0].x = wireInfo.initialFirstPoint.x + deltaX
-            wire.points[0].y = wireInfo.initialFirstPoint.y + deltaY
-          }
-
-          // Only update end connection if its component is selected
-          if (wireInfo.endSelected) {
-            wire.endConnection.pos.x = wireInfo.initialEndPos.x + deltaX
-            wire.endConnection.pos.y = wireInfo.initialEndPos.y + deltaY
-            // Update the last point of the wire
-            wire.points[wire.points.length - 1].x = wireInfo.initialLastPoint.x + deltaX
-            wire.points[wire.points.length - 1].y = wireInfo.initialLastPoint.y + deltaY
-          }
-        }
-      }
-    }
 
     // Update junction positions
     if (wireJunctions && wireJunctions.value && dragging.value.junctions) {
@@ -374,32 +297,6 @@ export function useDragController(
             wireInfo.initialPoints[wireInfo.initialPoints.length - 1].x + snappedDeltaX
           wire.endConnection.pos.y =
             wireInfo.initialPoints[wireInfo.initialPoints.length - 1].y + snappedDeltaY
-        }
-      }
-
-      // Apply the snapped delta to connected wire endpoints
-      if (dragging.value.connectedWires) {
-        for (const wireInfo of dragging.value.connectedWires) {
-          const wire = wires.value[wireInfo.index]
-          if (wire) {
-            // Only update start connection if its component is selected
-            if (wireInfo.startSelected) {
-              wire.startConnection.pos.x = wireInfo.initialStartPos.x + snappedDeltaX
-              wire.startConnection.pos.y = wireInfo.initialStartPos.y + snappedDeltaY
-              // Update the first point of the wire
-              wire.points[0].x = wireInfo.initialFirstPoint.x + snappedDeltaX
-              wire.points[0].y = wireInfo.initialFirstPoint.y + snappedDeltaY
-            }
-
-            // Only update end connection if its component is selected
-            if (wireInfo.endSelected) {
-              wire.endConnection.pos.x = wireInfo.initialEndPos.x + snappedDeltaX
-              wire.endConnection.pos.y = wireInfo.initialEndPos.y + snappedDeltaY
-              // Update the last point of the wire
-              wire.points[wire.points.length - 1].x = wireInfo.initialLastPoint.x + snappedDeltaX
-              wire.points[wire.points.length - 1].y = wireInfo.initialLastPoint.y + snappedDeltaY
-            }
-          }
         }
       }
 
