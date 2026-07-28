@@ -2,6 +2,7 @@ import { ref } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useFileService } from './useFileService'
 import { usePythonEngine } from './usePythonEngine'
+import { useCircuitValidator } from './useCircuitValidator'
 
 /**
  * Circuit Operations - Business logic for circuit management
@@ -49,6 +50,46 @@ export function useAppController(circuitManager) {
   }
 
   /**
+   * Find Output components (type === 'output') whose input port has no wire
+   * connected to it. An orphaned Output never gets wired into the generated
+   * program, so the engine silently ignores it and the user gets wrong results
+   * with no complaint. Scoped to outputs only: an Output's single input is never
+   * optional, so this cannot false-positive.
+   *
+   * @returns {string[]} labels (or ids) of orphaned Output components
+   */
+  function findOrphanedOutputs(canvasRef) {
+    const components = canvasRef?.components || []
+    const wires = circuitManager?.activeCircuit?.value?.wires || []
+
+    // Reuse the geometry-based validator (same logic used by code generation)
+    const validator = useCircuitValidator(ref(components), ref(wires), circuitManager)
+    const validConnections = validator.getValidConnections()
+
+    const orphaned = []
+    components.forEach(component => {
+      if (component.type !== 'output') return
+
+      const connections = validator.getComponentConnections(component)
+      const inputs = connections?.inputs || []
+
+      inputs.forEach(port => {
+        const portPos = validator.getPortPosition(component, port)
+        const hasConnection = validConnections.some(
+          conn =>
+            conn.wire.endConnection.pos.x === portPos.x &&
+            conn.wire.endConnection.pos.y === portPos.y
+        )
+        if (!hasConnection) {
+          orphaned.push(component.props?.label || component.id)
+        }
+      })
+    })
+
+    return orphaned
+  }
+
+  /**
    * Run simulation on the current circuit with support for hierarchical circuits
    */
   async function runCircuitSimulationWithHierarchy(canvasRef) {
@@ -79,6 +120,19 @@ export function useAppController(circuitManager) {
     }
 
     try {
+      // Guardrail: block the run if any Output component has an unconnected input.
+      // Detect via the geometry validator and abort BEFORE doing any real work
+      // (Pyodide init / code gen / execution). The finally clause resets state.
+      const orphanedOutputs = findOrphanedOutputs(canvasRef)
+      if (orphanedOutputs.length > 0) {
+        if (canvasRef?.showErrorNotification) {
+          orphanedOutputs.forEach(label => {
+            canvasRef.showErrorNotification(`Output "${label}" has no input connected`)
+          })
+        }
+        return // abort: do NOT execute the circuit
+      }
+
       // Initialize Pyodide if not already initialized
       if (!isPyodideReady.value) {
         await initializePyodide()
