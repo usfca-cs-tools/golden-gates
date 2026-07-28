@@ -133,14 +133,19 @@ describe('useAppController - subcircuit tab behavior', () => {
   })
 
   it('adds new filename to projectCircuitFiles on first save', async () => {
-    mockCircuitManager.currentProjectDir.value = '/projects/my-circuit'
-    mockCircuitManager.projectCircuitFiles.value = ['TopLevel.ggc']
-    mockCircuitManager.activeCircuit.value = {
+    const newCircuit = {
       id: 'circuit_2',
       name: 'NewComponent',
       label: 'New Component',
+      components: [],
+      wires: [],
+      wireJunctions: [],
       properties: {}
     }
+    mockCircuitManager.currentProjectDir.value = '/projects/my-circuit'
+    mockCircuitManager.projectCircuitFiles.value = ['TopLevel.ggc']
+    mockCircuitManager.activeCircuit.value = newCircuit
+    mockCircuitManager.allCircuits.value = new Map([['circuit_2', newCircuit]])
     mockCircuitManager.exportState.mockReturnValue({ nextCircuitId: 3 })
     mockBuildCircuitData.mockReturnValue({ version: '1.3', components: [], wires: [] })
 
