@@ -162,6 +162,7 @@
     },
     "simulation": {
       "run": "Run",
+      "runTests": "Run Tests",
       "stop": "Stop"
     },
     "insert": {
@@ -219,6 +220,7 @@
   "simulation": {
     "initializing": "Initializing simulation engine...",
     "running": "Running simulation...",
+    "noTests": "This circuit has no Test components to run.",
     "errors": {
       "bitWidthMismatch": "Input bit width ({actualBits}) does not match expected bit width ({expectedBits})",
       "inputNotConnected": "Input '{inputName}' is not connected",

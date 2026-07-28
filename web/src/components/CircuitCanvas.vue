@@ -513,7 +513,7 @@ export default {
       return instances
     })
 
-    function getCircuitData() {
+    function getCircuitData(mode = 'run') {
       // Clear all existing error states first
       components.value.forEach(component => {
         if (component.props?.hasError) {
@@ -537,7 +537,8 @@ export default {
         componentInstances.value,
         props.circuitManager,
         true, // includeRun
-        props.circuitManager.activeCircuit.value?.name // Pass active circuit name for error context
+        props.circuitManager.activeCircuit.value?.name, // Pass active circuit name for error context
+        mode // 'run' → run_async(); 'test' → evaluate() each Test
       )
 
       // Store the hierarchy mapping for callback handling

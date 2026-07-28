@@ -51,7 +51,19 @@ export function useAppController(circuitManager) {
   /**
    * Run simulation on the current circuit with support for hierarchical circuits
    */
-  async function runCircuitSimulationWithHierarchy(canvasRef) {
+  async function runCircuitSimulationWithHierarchy(canvasRef, mode = 'run') {
+    // Run Tests on a circuit with no Test components is a no-op; tell the user
+    // rather than silently doing nothing (a plain Run would run_async instead).
+    if (mode === 'test') {
+      const hasTests = (canvasRef?.components || []).some(c => c.type === 'test')
+      if (!hasTests) {
+        if (canvasRef?.showErrorNotification) {
+          canvasRef.showErrorNotification(t('simulation.noTests'))
+        }
+        return
+      }
+    }
+
     isRunning.value = true
 
     // Clear any existing error notifications when starting a new simulation
@@ -91,7 +103,7 @@ export function useAppController(circuitManager) {
       }
 
       // Generate GGL program for the current circuit
-      const mainCircuitGglProgram = generateGglProgramForCurrentCircuit(canvasRef)
+      const mainCircuitGglProgram = generateGglProgramForCurrentCircuit(canvasRef, mode)
 
       if (!mainCircuitGglProgram || mainCircuitGglProgram.trim() === '') {
         return
@@ -131,7 +143,7 @@ export function useAppController(circuitManager) {
   /**
    * Generate GGL program for the current circuit (with hierarchical support)
    */
-  function generateGglProgramForCurrentCircuit(canvasRef) {
+  function generateGglProgramForCurrentCircuit(canvasRef, mode = 'run') {
     if (!canvasRef) {
       console.error('No canvas reference provided to generateGglProgramForCurrentCircuit')
       return ''
@@ -142,7 +154,7 @@ export function useAppController(circuitManager) {
       return ''
     }
 
-    return canvasRef.getCircuitData()
+    return canvasRef.getCircuitData(mode)
   }
 
   /**
@@ -553,7 +565,16 @@ export function useAppController(circuitManager) {
    * Legacy simulation function for backwards compatibility
    */
   async function runSimulation(canvasRef) {
-    return await runCircuitSimulationWithHierarchy(canvasRef)
+    return await runCircuitSimulationWithHierarchy(canvasRef, 'run')
+  }
+
+  /**
+   * Run the circuit's Test components: evaluate each against the settled circuit,
+   * badging pass/fail. Distinct from runSimulation so the two are explicit commands
+   * (Run vs. Run Tests) rather than one command that guesses from circuit contents.
+   */
+  async function runTests(canvasRef) {
+    return await runCircuitSimulationWithHierarchy(canvasRef, 'test')
   }
 
 
@@ -1074,6 +1095,7 @@ export function useAppController(circuitManager) {
     // Circuit operations
     createNewCircuit,
     runSimulation,
+    runTests,
     runCircuitSimulationWithHierarchy,
     stopSimulation,
     saveCircuit,

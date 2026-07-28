@@ -9,6 +9,7 @@
   "commands": {
     "simulation": {
       "run": "Exécuter",
+      "runTests": "Exécuter les tests",
       "stop": "Arrêter"
     },
     "file": {

@@ -88,7 +88,8 @@ export function useCodeGenController() {
     componentInstances,
     circuitManager = null,
     includeRun = true,
-    circuitName = null
+    circuitName = null,
+    mode = 'run'
   ) {
     // Reset the global name registry for fresh sequential naming
     resetNameRegistry()
@@ -277,25 +278,24 @@ export function useCodeGenController() {
     // Note: Junction connections are automatically handled by the geometry-based validator
     // All connections are resolved purely from wire endpoint positions
 
-    // Only include the run call for main circuit execution, not for component definitions.
-    // run_async() is the long-running browser entry point (free-running clock + live
-    // input updates via update_input(), until stop()); the bare run() is now the
-    // synchronous settle used by the headless test suite.
+    // Only include the run/test tail for main circuit execution, not for component
+    // definitions (includeRun=false). The two entry points are chosen explicitly by
+    // `mode` — Run vs. Run Tests in the command palette — not inferred from whether a
+    // Test happens to be present, so the generated program's last line is predictable:
+    //   - 'run'  → await circuit0.run_async()  (free-running clock + live inputs
+    //             until stop(); Test components are inert during a plain run)
+    //   - 'test' → <testvar>.evaluate(circuit0) per Test, each settling the circuit
+    //             and emitting a 'test' pass/fail callback
     if (includeRun) {
-      // Collect Test components (verification directives) in component order.
-      // A Test drives named Inputs, settles the circuit, and checks named Outputs
-      // via <testvar>.evaluate(circuit0), which emits a 'test' callback per result.
-      const testVarNames = components
-        .filter(c => c.type === 'test')
-        .map(c => componentVarNames[c.id])
-        .filter(Boolean)
-
-      if (testVarNames.length > 0) {
-        // When the circuit contains Tests, run each test's evaluate() instead of
-        // the free-running run_async(): evaluate() itself settles the circuit.
+      if (mode === 'test') {
+        const testVarNames = components
+          .filter(c => c.type === 'test')
+          .map(c => componentVarNames[c.id])
+          .filter(Boolean)
         for (const testVar of testVarNames) {
           sections.push(`${testVar}.evaluate(${circuitVarName})`)
         }
+        // No Tests → no tail; the controller notifies the user before generating.
       } else {
         sections.push(`await ${circuitVarName}.run_async()`)
       }

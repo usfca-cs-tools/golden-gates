@@ -135,6 +135,7 @@ export default {
     const {
       createNewCircuit,
       runSimulation,
+      runTests,
       stopSimulation,
       saveCircuit,
       openProject: openProjectInternal,
@@ -176,6 +177,7 @@ export default {
       // Circuit operations
       createNewCircuit,
       runSimulation,
+      runTests,
       stopSimulation,
       saveCircuit,
       openProjectInternal,
@@ -231,6 +233,9 @@ export default {
           break
         case 'runSimulation':
           this.runSimulation(this.$refs.canvas)
+          break
+        case 'runTests':
+          this.runTests(this.$refs.canvas)
           break
         case 'stopSimulation':
           this.stopSimulation()
@@ -545,6 +550,9 @@ export default {
       },
       runSimulation: () => {
         this.runSimulation(this.$refs.canvas)
+      },
+      runTests: () => {
+        this.runTests(this.$refs.canvas)
       },
       stopSimulation: () => {
         this.stopSimulation()
