@@ -507,7 +507,13 @@ export const componentPropertySchema = {
         label: 'Stop when output reaches value (clocked)'
       },
       { name: 'stop_output_name', type: 'text', label: 'Stop output' },
-      { name: 'stop_output_value', type: 'number', label: 'Stop value', default: 1 }
+      { name: 'stop_output_value', type: 'number', label: 'Stop value', default: 1 },
+      {
+        name: 'reset_enabled',
+        type: 'boolean',
+        label: 'Pulse a reset input before running (clocked)'
+      },
+      { name: 'reset_input_name', type: 'text', label: 'Reset input' }
     ]
   },
 

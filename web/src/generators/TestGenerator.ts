@@ -65,7 +65,15 @@ export class TestGenerator extends BaseComponentGenerator {
       parts.push(`stop_output_value=${stopValue}`)
     }
 
-    // Insert the table (+ optional stop) params just before js_id (last)
+    // Reset pulse to initialize sequential circuits (e.g. CLR). Only emitted when
+    // enabled; otherwise the engine defaults to no reset.
+    if (this.props.reset_enabled) {
+      const resetName = String(this.props.reset_input_name || '').replace(/"/g, '\\"')
+      parts.push('reset_enabled=True')
+      parts.push(`reset_input_name="${resetName}"`)
+    }
+
+    // Insert the table (+ optional stop/reset) params just before js_id (last)
     const paramString = baseParams.replace(/, js_id=/, `, ${parts.join(', ')}, js_id=`)
 
     return {

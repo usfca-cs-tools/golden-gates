@@ -897,7 +897,10 @@ export const componentRegistry = {
       // Clocked "stop when an output reaches a value" mode (off by default)
       stop_enabled: false,
       stop_output_name: '',
-      stop_output_value: 1
+      stop_output_value: 1,
+      // Reset pulse to initialize sequential circuits before the run (off by default)
+      reset_enabled: false,
+      reset_input_name: ''
     },
     connections: {
       inputs: [],
