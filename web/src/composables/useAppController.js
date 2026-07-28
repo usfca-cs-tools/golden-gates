@@ -620,23 +620,36 @@ export function useAppController(circuitManager) {
       const nextCircuitId = circuitManager.exportState().nextCircuitId
 
       if (projectDir && activeCircuit) {
-        const filename = `${activeCircuit.name}.ggc`
-        const circuitData = buildCircuitData(
-          components,
-          wires,
-          wireJunctions,
-          circuitMetadata,
-          allSchematicComponents,
-          nextCircuitId
-        )
-        const jsonString = JSON.stringify(circuitData, null, 2)
-        await window.electronAPI.writeCircuitFile(projectDir, filename, jsonString)
-
-        if (!circuitManager.projectCircuitFiles.value.includes(filename)) {
-          circuitManager.projectCircuitFiles.value = [
-            ...circuitManager.projectCircuitFiles.value,
-            filename
-          ]
+        // Project mode: save EVERY circuit to its own file (no schematicComponents embedding)
+        for (const [, circuit] of circuitManager.allCircuits.value) {
+          const filename = circuit.sourceFilename || `${circuit.name}.ggc`
+          const circuitMetadata = {
+            name: circuit.name,
+            label: circuit.label,
+            interface: circuit.properties?.interface
+          }
+          const circuitData = buildCircuitData(
+            circuit.components,
+            circuit.wires,
+            circuit.wireJunctions,
+            circuitMetadata,
+            {},   // no embedded sub-circuits — each has its own file
+            circuitManager.exportState().nextCircuitId,
+            { standalone: true }   // ← omit schematicComponents block
+          )
+          const jsonString = JSON.stringify(circuitData, null, 2)
+          await window.electronAPI.writeCircuitFile(projectDir, filename, jsonString)
+      
+          // Track new filenames
+          if (!circuitManager.projectCircuitFiles.value.includes(filename)) {
+            circuitManager.projectCircuitFiles.value = [
+              ...circuitManager.projectCircuitFiles.value,
+              filename
+            ]
+          }
+          // Record the filename on the circuit for future saves
+          circuit.sourceFilename = circuit.sourceFilename || filename
+          circuitManager.markCircuitAsSaved(circuit.id)
         }
       } else {
         await saveCircuitFile(
@@ -658,26 +671,66 @@ export function useAppController(circuitManager) {
     }
   }
 
+
   async function openProject(canvasRef, dirPath = null) {
     try {
       const project = await openProjectDir(dirPath)
-      if (!project) return  // user cancelled
+      if (!project) return
   
-      const { dirPath: resolvedDirPath, topLevelFilename, topLevelContent, allFiles } = project
-
-      // Store project state on circuitManager
+      const { dirPath: resolvedDirPath, topLevelFilename, allFiles } = project
+  
       circuitManager.currentProjectDir.value = resolvedDirPath
       circuitManager.projectCircuitFiles.value = allFiles
   
       const hasExistingWork = canvasRef?.components?.length > 0 || canvasRef?.wires?.length > 0
   
-      const doLoad = () => {
-        if (topLevelContent) {
-          // Parse and load the top-level circuit
-          const circuitData = parseAndValidateJSON(topLevelContent)
-          loadCircuitData(canvasRef, circuitData)
-        } else {
-          // Empty repo — create a blank circuit named after the top-level file
+      const doLoad = async () => {
+        // Clear canvas and reset circuits
+        canvasRef?.clearCircuit?.()
+        circuitManager.allCircuits.value.clear()
+        circuitManager.availableComponents.value.clear()
+        circuitManager.openTabs.value = []
+  
+        // Load every .ggc file into memory
+        for (const filename of allFiles) {
+          try {
+            const content = await readCircuitFile(resolvedDirPath, filename)
+            if (!content) continue
+            const circuitData = parseAndValidateJSON(content)
+  
+            // Create the circuit (suppress auto-tab; we'll open the top-level manually)
+            const circuit = circuitManager.createCircuit(circuitData.name, {
+              sourceFilename: filename,
+              hasUnsavedChanges: false,
+              openTab: false             // don't auto-open every sub-circuit as a tab
+            })
+  
+            // Populate directly — canvas reads reactively from allCircuits
+            circuit.components = circuitData.components || []
+            circuit.wires = circuitData.wires || []
+            circuit.wireJunctions = circuitData.wireJunctions || []
+            if (circuitData.label) circuit.label = circuitData.label
+            if (circuitData.interface) {
+              circuit.properties = circuit.properties || {}
+              circuit.properties.interface = circuitData.interface
+            }
+  
+            // Make available as a draggable component in the sidebar (for all files)
+            circuitManager.saveCircuitAsComponent(circuit.id)
+          } catch (err) {
+            console.warn(`Failed to load ${filename}:`, err)
+          }
+        }
+  
+        // Resolve filename → circuitId cross-references
+        resolveFilenameReferences()
+  
+        // Open and navigate to the top-level circuit
+        const topCircuit = circuitManager.getCircuitByFilename(topLevelFilename)
+        if (topCircuit) {
+          circuitManager.openTab(topCircuit.id)
+        } else if (allFiles.length === 0) {
+          // Empty repo — create blank circuit named after the directory
           const circuitName = topLevelFilename.replace('.ggc', '')
           circuitManager.createCircuit(circuitName)
         }
@@ -691,13 +744,32 @@ export function useAppController(circuitManager) {
           onAccept: doLoad
         })
       } else {
-        doLoad()
+        await doLoad()
       }
     } catch (error) {
       console.error('Error opening project:', error)
       alert('Error opening project: ' + error.message)
     }
   }
+
+/**
+ * Walk every circuit in memory and resolve schematic-component filename props
+ * to their current in-memory circuitId. Call this after all .ggc files are loaded.
+ */
+function resolveFilenameReferences() {
+  for (const [, circuit] of circuitManager.allCircuits.value) {
+    for (const comp of circuit.components || []) {
+      if (comp.type === 'schematic-component' && comp.props?.filename) {
+        const referenced = circuitManager.getCircuitByFilename(comp.props.filename)
+        if (referenced) {
+          comp.props.circuitId = referenced.id
+        } else {
+          console.warn(`Cannot resolve schematic ref: "${comp.props.filename}" not found in project`)
+        }
+      }
+    }
+  }
+}
 
 
 

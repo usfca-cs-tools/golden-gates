@@ -299,9 +299,10 @@ if '.' not in sys.path:
 
     const pythonExecutionCode = `
 # Register the Vue update callback with the ggl engine.
+# The GGL engine reads this from builtins.updateCallback (see io.py Output.propagate).
 import js
-import ggl.callbacks
-ggl.callbacks.set_callback(js.window.__vueUpdateCallback)
+import builtins
+builtins.updateCallback = js.window.__vueUpdateCallback
 
 try:
     # Compile and execute with async support

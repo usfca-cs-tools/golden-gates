@@ -93,7 +93,8 @@ export function useCircuitModel() {
       // Track if circuit has unsaved changes
       hasUnsavedChanges:
         options.hasUnsavedChanges !== undefined ? options.hasUnsavedChanges : false,
-      // Circuit properties that appear in inspector
+      sourceFilename: options.sourceFilename || null,   // NEW: which .ggc file this came from
+        // Circuit properties that appear in inspector
       properties: {
         name: name || `Circuit${nextCircuitId.value - 1}`,
         label:
@@ -111,7 +112,9 @@ export function useCircuitModel() {
     }
 
     allCircuits.value.set(id, circuit)
-    openTab(id) // Automatically open new circuits in tabs
+    if (options.openTab !== false) { // NEW: allow suppressing auto-tab for batch loads
+      openTab(id) 
+    }
     return circuit
   }
 
@@ -448,6 +451,7 @@ export function useCircuitModel() {
       y: props.y || 0,
       props: {
         circuitId,
+        filename: `${referencedCircuit.name}.ggc`,   // NEW: stable cross-file reference
         label: props.label || referencedCircuit.label || referencedCircuit.name,
         ...props
       }
@@ -514,6 +518,15 @@ export function useCircuitModel() {
       code: componentCode
     }
   }
+  
+
+  function getCircuitByFilename(filename) {
+    for (const [, circuit] of allCircuits.value) {
+      if (circuit.sourceFilename === filename) return circuit
+    }
+    return null
+  }
+  
 
   return {
     // State (renamed for consistency)
@@ -582,6 +595,7 @@ export function useCircuitModel() {
     importState,
 
     // Legacy functions (from useCircuitData)
-    getCircuitData
+    getCircuitData, 
+    getCircuitByFilename
   }
 }

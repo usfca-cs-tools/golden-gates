@@ -18,7 +18,8 @@ function buildCircuitData(
   wireJunctions,
   circuitMetadata = {},
   schematicComponents = {},
-  nextCircuitId = 1
+  nextCircuitId = 1, 
+  { standalone = false } = {}  
 ) {
   const sanitizedComponents = (components || []).map(component => {
     const { js_id, ...componentWithoutJsId } = component || {}
@@ -74,7 +75,8 @@ function buildCircuitData(
     components: sanitizedComponents,
     wires: wires || [],
     wireJunctions: wireJunctions || [],
-    schematicComponents: sanitizedSchematicComponents
+    schematicComponents: sanitizedSchematicComponents, 
+    schematicComponents: standalone ? {} : sanitizedSchematicComponents
   }
 }
 
