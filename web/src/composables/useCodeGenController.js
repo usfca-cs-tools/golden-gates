@@ -238,6 +238,26 @@ export function useCodeGenController() {
       }
     }
 
+    // Declare any component wired to nothing so the engine still preflights it.
+    // connect() above registered every wired component; a component that appears
+    // in zero connections never reached connect() and would otherwise be invisible
+    // to the engine (so its open inputs would go unflagged — the dropped-wire bug).
+    // We emit add_orphan() only for those, so a correct circuit generates no extra
+    // lines and a lone add_orphan() is a visible smell. Tunnels and Tests are not
+    // simulation nodes (pure connectivity / verification directives), so skip them.
+    const NON_NODE_TYPES = new Set(['tunnel', 'test'])
+    const connectedIds = new Set()
+    for (const connection of validConnections) {
+      connectedIds.add(connection.sourceComponent.id)
+      connectedIds.add(connection.targetComponent.id)
+    }
+    for (const component of componentOrder) {
+      const varName = componentVarNames[component.id]
+      if (varName && !NON_NODE_TYPES.has(component.type) && !connectedIds.has(component.id)) {
+        sections.push(`${circuitVarName}.add_orphan(${varName})`)
+      }
+    }
+
     // Report any validation errors
     const validation = validator.validateCircuit()
     if (!validation.valid) {

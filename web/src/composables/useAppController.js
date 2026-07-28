@@ -2,7 +2,6 @@ import { ref } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useFileService } from './useFileService'
 import { usePythonEngine } from './usePythonEngine'
-import { useCircuitValidator } from './useCircuitValidator'
 
 /**
  * Circuit Operations - Business logic for circuit management
@@ -50,48 +49,6 @@ export function useAppController(circuitManager) {
   }
 
   /**
-   * Find every component input port with no wire connected to it. An open input
-   * is undefined logic: running the circuit gives wrong or silent results (and a
-   * fully-unconnected component is never even seen by the engine). Every input in
-   * this engine is required — an unconnected one always raises — so there are no
-   * optional inputs to false-positive on. Uses the same geometry validator as
-   * code generation, so it flags exactly the connections codegen would drop.
-   *
-   * @returns {Array<{label: string, type: string, port: string}>}
-   */
-  function findUnconnectedInputs(canvasRef) {
-    const components = canvasRef?.components || []
-    const wires = circuitManager?.activeCircuit?.value?.wires || []
-
-    const validator = useCircuitValidator(ref(components), ref(wires), circuitManager)
-    const validConnections = validator.getValidConnections()
-
-    const problems = []
-    components.forEach(component => {
-      const connections = validator.getComponentConnections(component)
-      const inputs = connections?.inputs || []
-
-      inputs.forEach((port, portIndex) => {
-        const portPos = validator.getPortPosition(component, port)
-        const hasConnection = validConnections.some(
-          conn =>
-            conn.wire.endConnection.pos.x === portPos.x &&
-            conn.wire.endConnection.pos.y === portPos.y
-        )
-        if (!hasConnection) {
-          problems.push({
-            label: component.props?.label || component.id,
-            type: component.type,
-            port: port.name || String(portIndex)
-          })
-        }
-      })
-    })
-
-    return problems
-  }
-
-  /**
    * Run simulation on the current circuit with support for hierarchical circuits
    */
   async function runCircuitSimulationWithHierarchy(canvasRef) {
@@ -122,21 +79,11 @@ export function useAppController(circuitManager) {
     }
 
     try {
-      // Guardrail: block the run if ANY component has an unconnected input — an
-      // open input is undefined logic, so running would give wrong/silent results.
-      // Detect via the same geometry validator code generation uses and abort
-      // BEFORE any real work (Pyodide init / code gen / execution); finally resets.
-      const unconnectedInputs = findUnconnectedInputs(canvasRef)
-      if (unconnectedInputs.length > 0) {
-        if (canvasRef?.showErrorNotification) {
-          unconnectedInputs.forEach(p => {
-            canvasRef.showErrorNotification(
-              `${p.type} "${p.label}" input "${p.port}" is not connected`
-            )
-          })
-        }
-        return // abort: do NOT execute the circuit
-      }
+      // Open inputs are caught by the engine now: the codegen declares every
+      // component (wired via connect(), unwired via add_orphan()), and
+      // Circuit.preflight() raises inputNotConnected for any open input port
+      // before settling — surfaced through the same structured-error path as
+      // bit-width mismatches (component highlight + message), one at a time.
 
       // Initialize Pyodide if not already initialized
       if (!isPyodideReady.value) {
