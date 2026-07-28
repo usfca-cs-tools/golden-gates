@@ -627,7 +627,8 @@ export function useAppController(circuitManager) {
           wireJunctions,
           circuitMetadata,
           allSchematicComponents,
-          nextCircuitId
+          nextCircuitId,
+          circuitManager
         )
         const jsonString = JSON.stringify(circuitData, null, 2)
         await window.electronAPI.writeCircuitFile(projectDir, filename, jsonString)
@@ -645,7 +646,9 @@ export function useAppController(circuitManager) {
           wireJunctions,
           circuitMetadata,
           allSchematicComponents,
-          nextCircuitId
+          nextCircuitId,
+          null,
+          circuitManager
         )
       }
 

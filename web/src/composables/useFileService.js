@@ -1,3 +1,5 @@
+import { computeComponentPorts } from '../utils/portGeometry'
+
 // Golden Gates circuits are JSON saved with a `.ggc` extension — the file type
 // registered with the OS for double-click open. Older circuits were saved as
 // `.json`, so opening still accepts both.
@@ -18,20 +20,25 @@ function buildCircuitData(
   wireJunctions,
   circuitMetadata = {},
   schematicComponents = {},
-  nextCircuitId = 1
+  nextCircuitId = 1,
+  circuitManager = null
 ) {
   const sanitizedComponents = (components || []).map(component => {
     const { js_id, ...componentWithoutJsId } = component || {}
+    // Canonical geometry: each port's grid-unit offset + name + direction,
+    // derived (never stored live) so ggl.view can match wires without a browser.
+    const ports = computeComponentPorts(component, circuitManager)
 
     if (component.type === 'input' || component.type === 'output') {
       const { value, lastUpdate, ...propsWithoutTransient } = component.props || {}
       return {
         ...componentWithoutJsId,
-        props: propsWithoutTransient
+        props: propsWithoutTransient,
+        ports
       }
     }
 
-    return componentWithoutJsId
+    return { ...componentWithoutJsId, ports }
   })
 
   const sanitizedSchematicComponents = {}
@@ -40,16 +47,18 @@ function buildCircuitData(
     if (sanitizedCircuit && sanitizedCircuit.components) {
       const sanitizedSubComponents = sanitizedCircuit.components.map(component => {
         const { js_id, ...componentWithoutJsId } = component || {}
+        const ports = computeComponentPorts(component, circuitManager)
 
         if (component.type === 'input' || component.type === 'output') {
           const { value, lastUpdate, ...propsWithoutTransient } = component.props || {}
           return {
             ...componentWithoutJsId,
-            props: propsWithoutTransient
+            props: propsWithoutTransient,
+            ports
           }
         }
 
-        return componentWithoutJsId
+        return { ...componentWithoutJsId, ports }
       })
 
       sanitizedCircuit = {
@@ -65,7 +74,7 @@ function buildCircuitData(
   }
 
   return {
-    version: '1.3',
+    version: '1.4',
     timestamp: new Date().toISOString(),
     name: circuitMetadata.name || 'Untitled Circuit',
     label: circuitMetadata.label || circuitMetadata.name || 'Untitled Circuit',
@@ -86,7 +95,8 @@ export function useFileService() {
     circuitMetadata = {},
     schematicComponents = {},
     nextCircuitId = 1,
-    projectContext = null
+    projectContext = null,
+    circuitManager = null
   ) => {
     try {
       const circuitData = buildCircuitData(
@@ -95,7 +105,8 @@ export function useFileService() {
         wireJunctions,
         circuitMetadata,
         schematicComponents,
-        nextCircuitId
+        nextCircuitId,
+        circuitManager
       )
       const jsonString = JSON.stringify(circuitData, null, 2)
 
