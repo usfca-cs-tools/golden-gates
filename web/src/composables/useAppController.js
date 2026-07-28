@@ -50,30 +50,28 @@ export function useAppController(circuitManager) {
   }
 
   /**
-   * Find Output components (type === 'output') whose input port has no wire
-   * connected to it. An orphaned Output never gets wired into the generated
-   * program, so the engine silently ignores it and the user gets wrong results
-   * with no complaint. Scoped to outputs only: an Output's single input is never
-   * optional, so this cannot false-positive.
+   * Find every component input port with no wire connected to it. An open input
+   * is undefined logic: running the circuit gives wrong or silent results (and a
+   * fully-unconnected component is never even seen by the engine). Every input in
+   * this engine is required — an unconnected one always raises — so there are no
+   * optional inputs to false-positive on. Uses the same geometry validator as
+   * code generation, so it flags exactly the connections codegen would drop.
    *
-   * @returns {string[]} labels (or ids) of orphaned Output components
+   * @returns {Array<{label: string, type: string, port: string}>}
    */
-  function findOrphanedOutputs(canvasRef) {
+  function findUnconnectedInputs(canvasRef) {
     const components = canvasRef?.components || []
     const wires = circuitManager?.activeCircuit?.value?.wires || []
 
-    // Reuse the geometry-based validator (same logic used by code generation)
     const validator = useCircuitValidator(ref(components), ref(wires), circuitManager)
     const validConnections = validator.getValidConnections()
 
-    const orphaned = []
+    const problems = []
     components.forEach(component => {
-      if (component.type !== 'output') return
-
       const connections = validator.getComponentConnections(component)
       const inputs = connections?.inputs || []
 
-      inputs.forEach(port => {
+      inputs.forEach((port, portIndex) => {
         const portPos = validator.getPortPosition(component, port)
         const hasConnection = validConnections.some(
           conn =>
@@ -81,12 +79,16 @@ export function useAppController(circuitManager) {
             conn.wire.endConnection.pos.y === portPos.y
         )
         if (!hasConnection) {
-          orphaned.push(component.props?.label || component.id)
+          problems.push({
+            label: component.props?.label || component.id,
+            type: component.type,
+            port: port.name || String(portIndex)
+          })
         }
       })
     })
 
-    return orphaned
+    return problems
   }
 
   /**
@@ -120,14 +122,17 @@ export function useAppController(circuitManager) {
     }
 
     try {
-      // Guardrail: block the run if any Output component has an unconnected input.
-      // Detect via the geometry validator and abort BEFORE doing any real work
-      // (Pyodide init / code gen / execution). The finally clause resets state.
-      const orphanedOutputs = findOrphanedOutputs(canvasRef)
-      if (orphanedOutputs.length > 0) {
+      // Guardrail: block the run if ANY component has an unconnected input — an
+      // open input is undefined logic, so running would give wrong/silent results.
+      // Detect via the same geometry validator code generation uses and abort
+      // BEFORE any real work (Pyodide init / code gen / execution); finally resets.
+      const unconnectedInputs = findUnconnectedInputs(canvasRef)
+      if (unconnectedInputs.length > 0) {
         if (canvasRef?.showErrorNotification) {
-          orphanedOutputs.forEach(label => {
-            canvasRef.showErrorNotification(`Output "${label}" has no input connected`)
+          unconnectedInputs.forEach(p => {
+            canvasRef.showErrorNotification(
+              `${p.type} "${p.label}" input "${p.port}" is not connected`
+            )
           })
         }
         return // abort: do NOT execute the circuit
