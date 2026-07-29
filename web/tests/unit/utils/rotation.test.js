@@ -64,3 +64,31 @@ describe('multiplexer getConnections under rotation', () => {
     expect(r90.inputs[0]).toMatchObject({ name: '0', x: 5, y: 2 })
   })
 })
+
+describe('splitter/merger getConnections under rotation (origin center)', () => {
+  const allPorts = c => [...(c.inputs || []), ...(c.outputs || [])]
+
+  for (const type of ['splitter', 'merger']) {
+    const cfg = componentRegistry[type]
+    const base = { ...cfg.defaultProps }
+
+    it(`${type}: every port stays on an integer grid vertex at each rotation`, () => {
+      for (const rotation of [0, 90, 180, 270]) {
+        const conns = cfg.getConnections({ ...base, rotation })
+        for (const p of allPorts(conns)) {
+          expect(Number.isInteger(p.x), `${type} x @${rotation} ${p.name}`).toBe(true)
+          expect(Number.isInteger(p.y), `${type} y @${rotation} ${p.name}`).toBe(true)
+        }
+      }
+    })
+
+    it(`${type}: rotation 0 is unchanged and 90 rotates about the origin`, () => {
+      const r0 = cfg.getConnections({ ...base, rotation: 0 })
+      const r90 = cfg.getConnections({ ...base, rotation: 90 })
+      // origin-centered 90deg: (x,y) -> (-y, x)
+      const first0 = allPorts(r0)[0]
+      const first90 = allPorts(r90)[0]
+      expect(first90).toMatchObject({ x: -first0.y, y: first0.x })
+    })
+  }
+})

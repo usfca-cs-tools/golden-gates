@@ -239,7 +239,10 @@ export const componentRegistry = {
         }
       })
 
-      return { inputs, outputs }
+      // Rotate ports around the origin to match SplitterComponent.vue's rotate(rotation)
+      // (no center = origin). The SFC renders its dots from getConnections with
+      // rotation:0, so its own SVG rotate() produces the same visual — no double rotation.
+      return rotateConnections({ inputs, outputs }, props.rotation || 0, { x: 0, y: 0 })
     },
     getPythonProps: props => ({
       label: props.label,
@@ -310,7 +313,9 @@ export const componentRegistry = {
         }
       ]
 
-      return { inputs, outputs }
+      // Rotate around the origin to match MergerComponent.vue's rotate(rotation); the
+      // SFC renders with rotation:0 so its own transform produces the same visual.
+      return rotateConnections({ inputs, outputs }, props.rotation || 0, { x: 0, y: 0 })
     },
     getPythonProps: props => ({
       label: props.label,

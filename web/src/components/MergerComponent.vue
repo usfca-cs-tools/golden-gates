@@ -78,10 +78,12 @@ export default defineComponent({
   },
   emits: ['startDrag'],
   computed: {
-    // Get dynamic connections
+    // Get dynamic connections for rendering with rotation:0 (base positions); this
+    // component's own rotate(rotation) transform spins the dots visually, while
+    // getConnections rotates for external consumers — so the two agree, no double spin.
     connections() {
       const config = componentRegistry['merger']
-      return config.getConnections(this.$props)
+      return config.getConnections({ ...this.$props, rotation: 0 })
     },
 
     // Get dynamic dimensions
