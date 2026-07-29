@@ -1,5 +1,5 @@
 import { GRID_SIZE } from './constants'
-import { createGateRegistryEntry } from './componentFactory'
+import { createGateRegistryEntry, rotateConnections } from './componentFactory'
 import { gateDefinitions } from '../config/gateDefinitions'
 
 // Static imports for all components
@@ -413,7 +413,13 @@ export const componentRegistry = {
         }
       ]
 
-      return { inputs, outputs }
+      // Rotate ports around the output point to match MultiplexerNode.vue's
+      // rotate(rotation, outputX, outputY) — so wire endpoints/validation/serialization
+      // land where the dots are actually drawn.
+      return rotateConnections({ inputs, outputs }, props.rotation || 0, {
+        x: 2,
+        y: Math.round(totalHeight / 2)
+      })
     },
     getDimensions: props => {
       const numInputs = Math.pow(2, props.selectorBits || 2)

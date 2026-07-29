@@ -9,7 +9,7 @@ import { getGateDefinition } from '../config/gateDefinitions'
  * @param {Object} center - Center point for rotation {x, y}
  * @returns {Object} Rotated point {x, y}
  */
-function rotatePoint(point, rotation, center) {
+export function rotatePoint(point, rotation, center) {
   if (!rotation || rotation === 0) {
     return point
   }
@@ -44,6 +44,22 @@ function rotatePoint(point, rotation, center) {
   return {
     x: rotatedX + center.x,
     y: rotatedY + center.y
+  }
+}
+
+/**
+ * Rotate a whole {inputs, outputs} connection set around a center, in grid units.
+ * Each port is rotated the same way the component's SFC spins its group via SVG
+ * rotate(), so the resolved (and serialized) port coordinate equals where the dot is
+ * actually drawn. A no-op at rotation 0. `center` must be grid-aligned to keep ports
+ * on integer grid vertices (exact-match resolution depends on it).
+ */
+export function rotateConnections(connections, rotation, center) {
+  if (!rotation || rotation === 0) return connections
+  const rot = port => ({ ...port, ...rotatePoint({ x: port.x, y: port.y }, rotation, center) })
+  return {
+    inputs: (connections.inputs || []).map(rot),
+    outputs: (connections.outputs || []).map(rot)
   }
 }
 
