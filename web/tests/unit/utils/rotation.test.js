@@ -93,11 +93,26 @@ describe('splitter/merger getConnections under rotation (origin center)', () => 
   }
 })
 
+describe('tunnel (single port) rotates about (1,1) and stays grid-aligned', () => {
+  const tunnel = componentRegistry['tunnel']
+  for (const direction of ['input', 'output']) {
+    it(`${direction} tunnel: integer grid vertices at each rotation`, () => {
+      for (const rotation of [0, 90, 180, 270]) {
+        const c = tunnel.getConnections({ direction, rotation })
+        for (const p of [...(c.inputs || []), ...(c.outputs || [])]) {
+          expect(Number.isInteger(p.x) && Number.isInteger(p.y), `${direction} @${rotation}`).toBe(true)
+        }
+      }
+    })
+  }
+})
+
 describe('body-center rotated components stay grid-aligned', () => {
   const allPorts = c => [...(c.inputs || []), ...(c.outputs || [])]
   // Arithmetic (static ports wrapped) + register + decoder — all rotate about an
   // integer body center, so ports must remain on integer grid vertices at every angle.
-  const types = ['adder', 'subtract', 'multiply', 'divide', 'compare', 'shift', 'register', 'decoder']
+  // priorityEncoder has an odd (3) width so it rotates about x=2, not its 1.5 center.
+  const types = ['adder', 'subtract', 'multiply', 'divide', 'compare', 'shift', 'register', 'decoder', 'priorityEncoder']
 
   for (const type of types) {
     const cfg = componentRegistry[type]

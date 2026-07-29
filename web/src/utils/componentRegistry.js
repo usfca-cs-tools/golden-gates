@@ -345,16 +345,12 @@ export const componentRegistry = {
     },
     getConnections: props => {
       const centerY = Math.round(GRID_SIZE / 2 / GRID_SIZE)
-      if (props.direction === 'output') {
-        return {
-          outputs: [{ name: '0', x: 2, y: centerY }]
-        }
-      } else {
-        // Default to input
-        return {
-          inputs: [{ name: '0', x: 0, y: centerY }]
-        }
-      }
+      const conns =
+        props.direction === 'output'
+          ? { outputs: [{ name: '0', x: 2, y: centerY }] }
+          : { inputs: [{ name: '0', x: 0, y: centerY }] } // default to input
+      // Rotate about (1,1) to match TunnelComponent.vue's rotate(rotation, GRID_SIZE, GRID_SIZE).
+      return rotateConnections(conns, props.rotation || 0, { x: 1, y: 1 })
     },
     getPythonProps: props => ({
       label: props.label,
@@ -903,7 +899,12 @@ export const componentRegistry = {
         }
       ]
 
-      return { inputs, outputs }
+      // Body is 3 wide (odd) so its true center x=1.5 would push ports off-grid;
+      // rotate about x=2 instead (PriorityEncoder.vue uses the same center).
+      return rotateConnections({ inputs, outputs }, props.rotation || 0, {
+        x: 2,
+        y: totalHeight / 2
+      })
     },
     getDimensions: props => {
       const numInputs = Math.pow(2, props.selectorBits || 2)

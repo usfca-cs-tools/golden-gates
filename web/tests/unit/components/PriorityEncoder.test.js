@@ -153,10 +153,11 @@ describe('PriorityEncoder', () => {
       expect(rotationGroup.attributes('transform')).toContain('rotate(90')
     })
 
-    it('rotates around component center', async () => {
+    it('rotates around a grid-aligned center', async () => {
       await wrapper.setProps({ rotation: 180 })
       const rotationGroup = wrapper.findAll('g')[1]
-      const centerX = (3 * GRID_SIZE) / 2
+      // x=2 (not the 1.5 body center of a 3-wide body) so rotated ports stay on the grid
+      const centerX = 2 * GRID_SIZE
       const centerY = (8 * GRID_SIZE) / 2
       expect(rotationGroup.attributes('transform')).toBe(`rotate(180, ${centerX}, ${centerY})`)
     })
