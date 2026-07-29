@@ -92,3 +92,30 @@ describe('splitter/merger getConnections under rotation (origin center)', () => 
     })
   }
 })
+
+describe('body-center rotated components stay grid-aligned', () => {
+  const allPorts = c => [...(c.inputs || []), ...(c.outputs || [])]
+  // Arithmetic (static ports wrapped) + register + decoder — all rotate about an
+  // integer body center, so ports must remain on integer grid vertices at every angle.
+  const types = ['adder', 'subtract', 'multiply', 'divide', 'compare', 'shift', 'register', 'decoder']
+
+  for (const type of types) {
+    const cfg = componentRegistry[type]
+    const base = { ...cfg.defaultProps }
+
+    it(`${type}: every port is an integer grid vertex at 0/90/180/270`, () => {
+      for (const rotation of [0, 90, 180, 270]) {
+        for (const p of allPorts(cfg.getConnections({ ...base, rotation }))) {
+          expect(Number.isInteger(p.x), `${type} x @${rotation} ${p.name}`).toBe(true)
+          expect(Number.isInteger(p.y), `${type} y @${rotation} ${p.name}`).toBe(true)
+        }
+      }
+    })
+
+    it(`${type}: rotation 0 preserves port names`, () => {
+      const names = allPorts(cfg.getConnections({ ...base, rotation: 0 })).map(p => p.name)
+      const names180 = allPorts(cfg.getConnections({ ...base, rotation: 180 })).map(p => p.name)
+      expect(names180.sort()).toEqual(names.sort())
+    })
+  }
+})

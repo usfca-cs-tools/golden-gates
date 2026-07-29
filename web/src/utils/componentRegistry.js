@@ -1,5 +1,5 @@
 import { GRID_SIZE } from './constants'
-import { createGateRegistryEntry, rotateConnections } from './componentFactory'
+import { createGateRegistryEntry, rotateConnections, rotatableConnections } from './componentFactory'
 import { gateDefinitions } from '../config/gateDefinitions'
 
 // Static imports for all components
@@ -487,7 +487,11 @@ export const componentRegistry = {
         })
       }
 
-      return { inputs, outputs }
+      // Rotate about the body center (width/2, height/2) to match Decoder.vue.
+      return rotateConnections({ inputs, outputs }, props.rotation || 0, {
+        x: 1,
+        y: totalHeight / 2
+      })
     },
     getDimensions: props => {
       const numOutputs = Math.pow(2, props.selectorBits || 2)
@@ -514,22 +518,27 @@ export const componentRegistry = {
     requiresNamedPorts: true,
     defaultProps: {
       bits: 1,
-      label: 'REG'
+      label: 'REG',
+      rotation: 0
     },
     dimensions: {
       width: GRID_SIZE * 4,
       height: GRID_SIZE * 6
     },
-    connections: {
-      inputs: [
-        { name: 'D', x: 0, y: 1 }, // Data input (top)
-        { name: 'CLK', x: 0, y: 3 }, // Clock input (middle)
-        { name: 'en', x: 0, y: 5 } // Enable input (bottom)
-      ],
-      outputs: [
-        { name: 'Q', x: 4, y: 3 } // Output (right, center)
-      ]
-    },
+    // Rotated about the body center (2,3) to match Register.vue.
+    getConnections: rotatableConnections(
+      {
+        inputs: [
+          { name: 'D', x: 0, y: 1 }, // Data input (top)
+          { name: 'CLK', x: 0, y: 3 }, // Clock input (middle)
+          { name: 'en', x: 0, y: 5 } // Enable input (bottom)
+        ],
+        outputs: [
+          { name: 'Q', x: 4, y: 3 } // Output (right, center)
+        ]
+      },
+      { x: 2, y: 3 }
+    ),
     onCreate: (instance, index) => {
       instance.props.label = `REG${index}`
     }
@@ -646,17 +655,21 @@ export const componentRegistry = {
       width: GRID_SIZE * 4,
       height: GRID_SIZE * 6
     },
-    connections: {
-      inputs: [
-        { name: 'a', x: 0, y: 1 }, // a input (top)
-        { name: 'b', x: 0, y: 3 }, // b input (middle)
-        { name: 'cin', x: 0, y: 5 } // cin input (bottom)
-      ],
-      outputs: [
-        { name: 'sum', x: 4, y: 2 }, // sum output (top)
-        { name: 'cout', x: 4, y: 4 } // cout output (bottom)
-      ]
-    },
+    // Rotated about the body center (width/2, height/2) = (2,3) to match Adder.vue.
+    getConnections: rotatableConnections(
+      {
+        inputs: [
+          { name: 'a', x: 0, y: 1 }, // a input (top)
+          { name: 'b', x: 0, y: 3 }, // b input (middle)
+          { name: 'cin', x: 0, y: 5 } // cin input (bottom)
+        ],
+        outputs: [
+          { name: 'sum', x: 4, y: 2 }, // sum output (top)
+          { name: 'cout', x: 4, y: 4 } // cout output (bottom)
+        ]
+      },
+      { x: 2, y: 3 }
+    ),
     onCreate: (instance, index) => {
       // Don't override if it already has a label (including default '+')
       if (!instance.props.label || instance.props.label === '') {
@@ -680,17 +693,20 @@ export const componentRegistry = {
       width: GRID_SIZE * 4,
       height: GRID_SIZE * 6
     },
-    connections: {
-      inputs: [
-        { name: 'a', x: 0, y: 1 }, // a input (top)
-        { name: 'b', x: 0, y: 3 }, // b input (middle)
-        { name: 'cin', x: 0, y: 5 } // cin input (bottom)
-      ],
-      outputs: [
-        { name: 's', x: 4, y: 2 }, // s output (top)
-        { name: 'cout', x: 4, y: 4 } // cout output (bottom)
-      ]
-    },
+    getConnections: rotatableConnections(
+      {
+        inputs: [
+          { name: 'a', x: 0, y: 1 }, // a input (top)
+          { name: 'b', x: 0, y: 3 }, // b input (middle)
+          { name: 'cin', x: 0, y: 5 } // cin input (bottom)
+        ],
+        outputs: [
+          { name: 's', x: 4, y: 2 }, // s output (top)
+          { name: 'cout', x: 4, y: 4 } // cout output (bottom)
+        ]
+      },
+      { x: 2, y: 3 }
+    ),
     onCreate: (instance, index) => {
       // Don't override if it already has a label (including default '-')
       if (!instance.props.label || instance.props.label === '') {
@@ -714,15 +730,18 @@ export const componentRegistry = {
       width: GRID_SIZE * 4,
       height: GRID_SIZE * 4
     },
-    connections: {
-      inputs: [
-        { name: 'a', x: 0, y: 1 }, // a input (top)
-        { name: 'b', x: 0, y: 3 } // b input (bottom)
-      ],
-      outputs: [
-        { name: 'mul', x: 4, y: 2 } // mul output (center)
-      ]
-    },
+    getConnections: rotatableConnections(
+      {
+        inputs: [
+          { name: 'a', x: 0, y: 1 }, // a input (top)
+          { name: 'b', x: 0, y: 3 } // b input (bottom)
+        ],
+        outputs: [
+          { name: 'mul', x: 4, y: 2 } // mul output (center)
+        ]
+      },
+      { x: 2, y: 2 }
+    ),
     onCreate: (instance, index) => {
       // Don't override if it already has a label (including default '×')
       if (!instance.props.label || instance.props.label === '') {
@@ -746,16 +765,19 @@ export const componentRegistry = {
       width: GRID_SIZE * 4,
       height: GRID_SIZE * 4
     },
-    connections: {
-      inputs: [
-        { name: 'a', x: 0, y: 1 }, // a input (top)
-        { name: 'b', x: 0, y: 3 } // b input (bottom)
-      ],
-      outputs: [
-        { name: 'q', x: 4, y: 1 }, // q output (quotient - top)
-        { name: 'r', x: 4, y: 3 } // r output (remainder - bottom)
-      ]
-    },
+    getConnections: rotatableConnections(
+      {
+        inputs: [
+          { name: 'a', x: 0, y: 1 }, // a input (top)
+          { name: 'b', x: 0, y: 3 } // b input (bottom)
+        ],
+        outputs: [
+          { name: 'q', x: 4, y: 1 }, // q output (quotient - top)
+          { name: 'r', x: 4, y: 3 } // r output (remainder - bottom)
+        ]
+      },
+      { x: 2, y: 2 }
+    ),
     onCreate: (instance, index) => {
       // Don't override if it already has a label (including default '÷')
       if (!instance.props.label || instance.props.label === '') {
@@ -780,15 +802,18 @@ export const componentRegistry = {
       width: GRID_SIZE * 4,
       height: GRID_SIZE * 4
     },
-    connections: {
-      inputs: [
-        { name: 'in', x: 0, y: 1 }, // in input (top)
-        { name: 'shift', x: 0, y: 3 } // shift input (bottom)
-      ],
-      outputs: [
-        { name: 'out', x: 4, y: 2 } // out output (center)
-      ]
-    },
+    getConnections: rotatableConnections(
+      {
+        inputs: [
+          { name: 'in', x: 0, y: 1 }, // in input (top)
+          { name: 'shift', x: 0, y: 3 } // shift input (bottom)
+        ],
+        outputs: [
+          { name: 'out', x: 4, y: 2 } // out output (center)
+        ]
+      },
+      { x: 2, y: 2 }
+    ),
     onCreate: (instance, index) => {
       // Don't override if it already has a label (including default '<<')
       if (!instance.props.label || instance.props.label === '') {
@@ -812,17 +837,20 @@ export const componentRegistry = {
       width: GRID_SIZE * 4,
       height: GRID_SIZE * 6
     },
-    connections: {
-      inputs: [
-        { name: 'a', x: 0, y: 2 }, // a input (top)
-        { name: 'b', x: 0, y: 4 } // b input (bottom)
-      ],
-      outputs: [
-        { name: 'lt', x: 4, y: 1 }, // lt output (less than - top)
-        { name: 'eq', x: 4, y: 3 }, // eq output (equal - middle)
-        { name: 'gt', x: 4, y: 5 } // gt output (greater than - bottom)
-      ]
-    },
+    getConnections: rotatableConnections(
+      {
+        inputs: [
+          { name: 'a', x: 0, y: 2 }, // a input (top)
+          { name: 'b', x: 0, y: 4 } // b input (bottom)
+        ],
+        outputs: [
+          { name: 'lt', x: 4, y: 1 }, // lt output (less than - top)
+          { name: 'eq', x: 4, y: 3 }, // eq output (equal - middle)
+          { name: 'gt', x: 4, y: 5 } // gt output (greater than - bottom)
+        ]
+      },
+      { x: 2, y: 3 }
+    ),
     onCreate: (instance, index) => {
       // Don't override if it already has a label (including default '=')
       if (!instance.props.label || instance.props.label === '') {

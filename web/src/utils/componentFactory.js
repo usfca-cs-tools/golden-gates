@@ -63,6 +63,16 @@ export function rotateConnections(connections, rotation, center) {
   }
 }
 
+/**
+ * Build a rotation-aware getConnections(props) from a fixed port set + rotation center
+ * (grid units). For components whose ports are static but whose SFC rotates the shape
+ * about `center` — the returned fn rotates the ports to match, so resolution/serialization
+ * agree with the drawn dots. `center` must be grid-aligned to keep ports on the grid.
+ */
+export function rotatableConnections(connections, center) {
+  return props => rotateConnections(connections, props?.rotation || 0, center)
+}
+
 // Shared functions for standard gate bounds and connections
 function standardGateBounds(props) {
   const numInputs = props?.numInputs || 2
