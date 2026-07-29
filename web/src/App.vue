@@ -283,10 +283,12 @@ export default {
 
     updateComponent(updatedComponent) {
       if (this.$refs.canvas) {
-        // Wires are independent geometry: a component's ports moving (e.g. a
-        // bit-width change) does not drag attached wires. Connectivity is
-        // re-derived from wire/port coordinates at run time, so nothing here
-        // reconciles endpoints on a property change.
+        // Capture the pre-update value to detect an actual change below. (Wires are
+        // independent geometry: a component's ports moving does not drag attached
+        // wires, so nothing here reconciles endpoints — connectivity is re-derived
+        // from wire/port coordinates at run time.)
+        const oldComponent = this.$refs.canvas.components.find(c => c.id === updatedComponent.id)
+
         this.$refs.canvas.updateComponent(updatedComponent)
 
         // If simulation is running and this is an input with a changed value, update Python
