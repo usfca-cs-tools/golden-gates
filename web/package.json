@@ -58,12 +58,15 @@
       "output": "release"
     },
     "afterPack": "./scripts/afterpack-sign.cjs",
-    "fileAssociations": {
-      "ext": "ggc",
-      "name": "Golden Gates Circuit",
-      "description": "Golden Gates Circuit file",
-      "role": "Editor"
-    },
+    "fileAssociations": [
+      {
+        "ext": "ggc",
+        "name": "Golden Gates Circuit",
+        "description": "Golden Gates Circuit file",
+        "role": "Editor",
+        "icon": "assets/icon"
+      }
+    ],
     "mac": {
       "icon": "assets/icon.icns",
       "artifactName": "GoldenGates-${version}-macos-${arch}.${ext}",
