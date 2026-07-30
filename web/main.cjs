@@ -21,13 +21,13 @@ function getFilePathFromArgv(argv) {
   )
 }
 
-// Send a project directory path instead of file content 
-function openProjectDir(dirPath) {
+// Send a project directory path (and optionally which file triggered the open)
+function openProjectDir(dirPath, activeFile = null) {
   if (!dirPath) return
   if (mainWindow && !mainWindow.isDestroyed()) {
-    mainWindow.webContents.send('open-project', dirPath)
+    mainWindow.webContents.send('open-project', { dirPath, activeFile })
   } else {
-    pendingFilePath = dirPath
+    pendingFilePath = { dirPath, activeFile }
   }
 }
 
@@ -43,7 +43,7 @@ if (!gotTheLock) {
   // process's argv carries the file path.
   app.on('second-instance', (_event, argv) => {
     const filePath = getFilePathFromArgv(argv)
-    if (filePath) openProjectDir(path.dirname(filePath))
+    if (filePath) openProjectDir(path.dirname(filePath), path.basename(filePath))
     if (mainWindow) {
       if (mainWindow.isMinimized()) mainWindow.restore()
       mainWindow.focus()
@@ -53,14 +53,14 @@ if (!gotTheLock) {
   // macOS: capture double-click open-file events
   app.on('open-file', (event, filePath) => {
     event.preventDefault()
-    openProjectDir(path.dirname(filePath))
+    openProjectDir(path.dirname(filePath), path.basename(filePath))
   })
 
   app.whenReady().then(() => {
     // Windows/Linux cold start: the double-clicked file is on our command line.
     if (process.platform !== 'darwin' && !pendingFilePath) {
       const filePath = getFilePathFromArgv(process.argv)
-      if (filePath) pendingFilePath = path.dirname(filePath)
+      if (filePath) pendingFilePath = { dirPath: path.dirname(filePath), activeFile: path.basename(filePath) }
     }
 
     // Native menu bar with File menu for Open/Save
@@ -82,10 +82,18 @@ if (!gotTheLock) {
             accelerator: 'CmdOrCtrl+O',
             click: async () => {
               const { filePaths } = await dialog.showOpenDialog({
-                properties: ['openDirectory']
+                properties: ['openFile', 'openDirectory'],
+                filters: [{ name: 'Golden Gates Circuit', extensions: ['ggc'] }]
               })
               if (filePaths.length > 0) {
-                openProjectDir(filePaths[0])
+                const selected = filePaths[0]
+                if (selected.endsWith('.ggc')) {
+                  // Single file selected — open its parent directory, focus this file's tab
+                  openProjectDir(path.dirname(selected), path.basename(selected))
+                } else {
+                  // Directory selected — open it, top-level circuit gets focus
+                  openProjectDir(selected)
+                }
               }
             }
           },
@@ -129,9 +137,9 @@ function createWindow() {
   // Once renderer is ready, send any queued project directory
   mainWindow.webContents.on('did-finish-load', () => {
     if (pendingFilePath) {
-      const dirPath = pendingFilePath
+      const { dirPath, activeFile } = pendingFilePath
       pendingFilePath = null
-      openProjectDir(dirPath)
+      openProjectDir(dirPath, activeFile)
     }
   })
 

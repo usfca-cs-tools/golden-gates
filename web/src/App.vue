@@ -363,8 +363,8 @@ export default {
       await this.saveCircuit(this.$refs.canvas)
     },
 
-    async openProject(dirPath) {
-      await this.openProjectInternal(this.$refs.canvas, dirPath)
+    async openProject({ dirPath, activeFile = null } = {}) {
+      await this.openProjectInternal(this.$refs.canvas, dirPath, activeFile)
     },
 
     handleDragEnter(event) {

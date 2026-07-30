@@ -628,8 +628,21 @@ export function useAppController(circuitManager) {
             label: circuit.label,
             interface: circuit.properties?.interface
           }
+          // Rewrite schematic-component circuitIds to filename refs so cross-file
+          // references survive a reload (resolveFilenameReferences reads them back).
+          const componentsForSave = circuit.components.map(comp => {
+            if (comp.type === 'schematic-component' && comp.props?.circuitId) {
+              const ref = circuitManager.allCircuits.value.get(comp.props.circuitId)
+              if (ref) {
+                const refFilename = ref.sourceFilename || `${ref.name}.ggc`
+                return { ...comp, props: { ...comp.props, filename: refFilename } }
+              }
+            }
+            return comp
+          })
+
           const circuitData = buildCircuitData(
-            circuit.components,
+            componentsForSave,
             circuit.wires,
             circuit.wireJunctions,
             circuitMetadata,
@@ -672,7 +685,7 @@ export function useAppController(circuitManager) {
   }
 
 
-  async function openProject(canvasRef, dirPath = null) {
+  async function openProject(canvasRef, dirPath = null, activeFile = null) {
     try {
       const project = await openProjectDir(dirPath)
       if (!project) return
@@ -735,9 +748,14 @@ export function useAppController(circuitManager) {
             const circuit = circuitManager.getCircuitByFilename(filename)
             if (circuit) circuitManager.openTab(circuit.id)
           }
-          // Make the top-level circuit the active tab
-          const topCircuit = circuitManager.getCircuitByFilename(topLevelFilename)
-          if (topCircuit) circuitManager.openTab(topCircuit.id)
+          // Focus the double-clicked file if provided, otherwise the top-level circuit
+          const focusFilename = activeFile || topLevelFilename
+          const focusCircuit = circuitManager.getCircuitByFilename(focusFilename)
+          if (focusCircuit) circuitManager.openTab(focusCircuit.id)
+          else {
+            const topCircuit = circuitManager.getCircuitByFilename(topLevelFilename)
+            if (topCircuit) circuitManager.openTab(topCircuit.id)
+          }
         }
       }
   
@@ -762,14 +780,32 @@ export function useAppController(circuitManager) {
  * to their current in-memory circuitId. Call this after all .ggc files are loaded.
  */
 function resolveFilenameReferences() {
+  // Build name→circuit map for old-format files that have circuitId but no filename prop
+  const circuitsByName = new Map()
+  for (const [, circuit] of circuitManager.allCircuits.value) {
+    circuitsByName.set(circuit.name, circuit)
+  }
+
   for (const [, circuit] of circuitManager.allCircuits.value) {
     for (const comp of circuit.components || []) {
-      if (comp.type === 'schematic-component' && comp.props?.filename) {
+      if (comp.type !== 'schematic-component') continue
+
+      if (comp.props?.filename) {
+        // New format: resolve filename → current circuitId
         const referenced = circuitManager.getCircuitByFilename(comp.props.filename)
         if (referenced) {
           comp.props.circuitId = referenced.id
         } else {
           console.warn(`Cannot resolve schematic ref: "${comp.props.filename}" not found in project`)
+        }
+      } else if (comp.props?.label) {
+        // Old format (no filename): fall back to matching by circuit name == label
+        const referenced = circuitsByName.get(comp.props.label)
+        if (referenced) {
+          comp.props.circuitId = referenced.id
+          comp.props.filename = referenced.sourceFilename || `${referenced.name}.ggc`
+        } else {
+          console.warn(`Cannot resolve schematic ref by name: "${comp.props.label}" not found in project`)
         }
       }
     }

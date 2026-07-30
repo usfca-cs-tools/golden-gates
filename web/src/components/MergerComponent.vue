@@ -81,7 +81,9 @@ export default defineComponent({
     // Get dynamic connections
     connections() {
       const config = componentRegistry['merger']
-      return config.getConnections(this.$props)
+      // Use rotation: 0 here because the SVG <g> transform already handles visual rotation.
+      // The wire controller calls getConnections(component.props) independently with the real rotation.
+      return config.getConnections({ ...this.$props, rotation: 0 })
     },
 
     // Get dynamic dimensions
