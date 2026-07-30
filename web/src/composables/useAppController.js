@@ -724,15 +724,20 @@ export function useAppController(circuitManager) {
   
         // Resolve filename → circuitId cross-references
         resolveFilenameReferences()
-  
-        // Open and navigate to the top-level circuit
-        const topCircuit = circuitManager.getCircuitByFilename(topLevelFilename)
-        if (topCircuit) {
-          circuitManager.openTab(topCircuit.id)
-        } else if (allFiles.length === 0) {
+
+        if (allFiles.length === 0) {
           // Empty repo — create blank circuit named after the directory
           const circuitName = topLevelFilename.replace('.ggc', '')
           circuitManager.createCircuit(circuitName)
+        } else {
+          // Open every circuit as a tab (so all .ggc files are visible)
+          for (const filename of allFiles) {
+            const circuit = circuitManager.getCircuitByFilename(filename)
+            if (circuit) circuitManager.openTab(circuit.id)
+          }
+          // Make the top-level circuit the active tab
+          const topCircuit = circuitManager.getCircuitByFilename(topLevelFilename)
+          if (topCircuit) circuitManager.openTab(topCircuit.id)
         }
       }
   
