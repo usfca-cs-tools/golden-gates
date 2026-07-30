@@ -9,7 +9,7 @@ import { getGateDefinition } from '../config/gateDefinitions'
  * @param {Object} center - Center point for rotation {x, y}
  * @returns {Object} Rotated point {x, y}
  */
-function rotatePoint(point, rotation, center) {
+export function rotatePoint(point, rotation, center) {
   if (!rotation || rotation === 0) {
     return point
   }

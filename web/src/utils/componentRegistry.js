@@ -1,5 +1,5 @@
 import { GRID_SIZE } from './constants'
-import { createGateRegistryEntry } from './componentFactory'
+import { createGateRegistryEntry, rotatePoint } from './componentFactory'
 import { gateDefinitions } from '../config/gateDefinitions'
 
 // Static imports for all components
@@ -204,6 +204,7 @@ export const componentRegistry = {
     // Dynamic connections based on ranges
     getConnections: props => {
       const ranges = props.ranges || []
+      const rotation = props.rotation || 0
       const outputCount = ranges.length
       const minHeight = 4 // Minimum height in grid units
       const totalHeight = Math.max(minHeight, outputCount + 1) // More spacing in grid units
@@ -238,6 +239,15 @@ export const componentRegistry = {
           y
         }
       })
+
+      // Apply rotation so wire snap targets match the visual port positions
+      if (rotation !== 0) {
+        const center = { x: 0, y: 0 }
+        return {
+          inputs: inputs.map(p => ({ ...p, ...rotatePoint(p, rotation, center) })),
+          outputs: outputs.map(p => ({ ...p, ...rotatePoint(p, rotation, center) }))
+        }
+      }
 
       return { inputs, outputs }
     },
@@ -275,6 +285,7 @@ export const componentRegistry = {
     // Dynamic connections based on ranges
     getConnections: props => {
       const ranges = props.ranges || []
+      const rotation = props.rotation || 0
       const inputCount = ranges.length
       const minHeight = 4 // Minimum height in grid units
       const totalHeight = Math.max(minHeight, inputCount + 1) // More spacing in grid units
@@ -309,6 +320,15 @@ export const componentRegistry = {
           y: Math.round(totalHeight / 2) // In grid units
         }
       ]
+
+      // Apply rotation so wire snap targets match the visual port positions
+      if (rotation !== 0) {
+        const center = { x: 0, y: 0 }
+        return {
+          inputs: inputs.map(p => ({ ...p, ...rotatePoint(p, rotation, center) })),
+          outputs: outputs.map(p => ({ ...p, ...rotatePoint(p, rotation, center) }))
+        }
+      }
 
       return { inputs, outputs }
     },
