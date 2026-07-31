@@ -191,7 +191,8 @@ except ImportError as e:
     const {
       generateGglProgramForCircuitComponent,
       wrapGglProgramAsComponentModule,
-      findRequiredComponentImports
+      findRequiredComponentImports,
+      toPythonIdentifier
     } = useCodeGenController()
 
     // Write ALL saved components as Python modules to MEMFS
@@ -210,8 +211,8 @@ except ImportError as e:
           findRequiredComponentImports(circuit.components, circuitManager, component.name)
         )
 
-        // Log the generated component module for debugging and verification
-        const fileName = `${component.name}.py`
+        // Use the Python identifier for the filename so `import _1bha` finds `_1bha.py`
+        const fileName = `${toPythonIdentifier(component.name)}.py`
         console.log(`\n=== Writing ${fileName} to MEMFS ===`)
         console.log(pythonModuleCode)
         console.log(`=== End of ${fileName} ===\n`)

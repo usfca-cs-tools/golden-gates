@@ -434,6 +434,7 @@ ${pyComponentName} = circuit.Component(circuit0)
     generateGglProgram,
     generateGglProgramForCircuitComponent,
     wrapGglProgramAsComponentModule,
-    findRequiredComponentImports
+    findRequiredComponentImports,
+    toPythonIdentifier
   }
 }

@@ -147,7 +147,6 @@ Golden Gates can run as a native desktop application using Electron, with native
 
 3. Open the output folder in Finder:
    ```bash
-   open release/mac-arm64/
    ```
 
 4. Drag `Golden Gates.app` into your `/Applications` folder.
