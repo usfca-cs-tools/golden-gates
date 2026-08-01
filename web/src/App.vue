@@ -138,6 +138,7 @@ export default {
       runTests,
       stopSimulation,
       saveCircuit,
+      saveCircuitAs,
       openProject: openProjectInternal,
       loadCircuitData,
       openSubcircuitTab,
@@ -180,6 +181,7 @@ export default {
       runTests,
       stopSimulation,
       saveCircuit,
+      saveCircuitAs,
       openProjectInternal,
       loadCircuitData,
       openSubcircuitTab,
@@ -576,6 +578,9 @@ export default {
     }
     if (window.electronAPI?.onMenuSaveCircuit) {
       window.electronAPI.onMenuSaveCircuit(() => this.saveCircuit(this.$refs.canvas))
+    }
+    if (window.electronAPI?.onMenuSaveCircuitAs) {
+      window.electronAPI.onMenuSaveCircuitAs(() => this.saveCircuitAs(this.$refs.canvas))
     }
   },
 

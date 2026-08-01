@@ -579,6 +579,21 @@ export function useAppController(circuitManager) {
 
 
   /**
+   * Save As: pick a new directory, update currentProjectDir, then save all circuits
+   */
+  async function saveCircuitAs(canvasRef) {
+    const newDir = await window.electronAPI.pickProjectDirectory()
+    if (!newDir) return
+    circuitManager.currentProjectDir.value = newDir
+    for (const [, circuit] of circuitManager.allCircuits.value) {
+      if (!circuit.sourceFilename) {
+        circuit.sourceFilename = `${circuit.name}.ggc`
+      }
+    }
+    await saveCircuit(canvasRef)
+  }
+
+  /**
    * Save current circuit to file
    */
   async function saveCircuit(canvasRef) {
@@ -1212,6 +1227,7 @@ function resolveFilenameReferences() {
     runCircuitSimulationWithHierarchy,
     stopSimulation,
     saveCircuit,
+    saveCircuitAs,
     openProject,
     loadCircuitData,
     loadSubcircuitData,

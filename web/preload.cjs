@@ -17,5 +17,6 @@ contextBridge.exposeInMainWorld('electronAPI', {
   // Events from main process
   onOpenProject: (callback) => ipcRenderer.on('open-project', (_event, payload) => callback(payload)),
   onMenuNewCircuit: (callback) => ipcRenderer.on('menu-new-circuit', () => callback()),
-  onMenuSaveCircuit: (callback) => ipcRenderer.on('menu-save-circuit', () => callback())
+  onMenuSaveCircuit: (callback) => ipcRenderer.on('menu-save-circuit', () => callback()),
+  onMenuSaveCircuitAs: (callback) => ipcRenderer.on('menu-save-circuit-as', () => callback())
 })

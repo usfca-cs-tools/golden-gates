@@ -105,6 +105,15 @@ if (!gotTheLock) {
                 mainWindow.webContents.send('menu-save-circuit')
               }
             }
+          },
+          {
+            label: 'Save As...',
+            accelerator: 'CmdOrCtrl+Shift+S',
+            click: () => {
+              if (mainWindow && !mainWindow.isDestroyed()) {
+                mainWindow.webContents.send('menu-save-circuit-as')
+              }
+            }
           }
         ]
       }
