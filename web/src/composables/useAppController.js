@@ -850,7 +850,8 @@ function resolveFilenameReferences() {
           if (data.circuit) {
             circuitManager.allCircuits.value.set(nestedId, {
               ...data.circuit,
-              id: nestedId
+              id: nestedId,
+              hasUnsavedChanges: false
             })
           }
           if (data.definition) {
@@ -910,6 +911,9 @@ function resolveFilenameReferences() {
     if (canvasRef.setLoadingState) {
       canvasRef.setLoadingState(false)
     }
+
+    // Reset dirty flag — loading from disk is not a user change
+    circuitManager.markCircuitAsSaved(circuitId)
   }
 
   /**
