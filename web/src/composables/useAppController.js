@@ -190,23 +190,6 @@ export function useAppController(circuitManager) {
   }
 
   /**
-   * Generate GGL program for the current circuit (with hierarchical support)
-   */
-  function generateGglProgramForCurrentCircuit(canvasRef, mode = 'run') {
-    if (!canvasRef) {
-      console.error('No canvas reference provided to generateGglProgramForCurrentCircuit')
-      return ''
-    }
-
-    if (typeof canvasRef.getCircuitData !== 'function') {
-      console.error('Canvas reference does not have getCircuitData method')
-      return ''
-    }
-
-    return canvasRef.getCircuitData(mode)
-  }
-
-  /**
    * Set up the callback for Python to update Vue components
    */
   function setupPythonVueUpdateCallback(canvasRef) {
