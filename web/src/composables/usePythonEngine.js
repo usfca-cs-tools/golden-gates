@@ -332,6 +332,25 @@ result
   }
 
   /**
+   * Pass 1 of the ggl.view flow: run ggl.view.generate(model, mode) in Pyodide and
+   * return the GGL program string. Runs nothing — the caller logs the program and hands
+   * it to executePythonProgram (pass 2). `model` is a .ggc-shaped dict (components with
+   * ports + inlined schematicComponents); `mode` is a ggl.view mode ('run_async'/'test').
+   * The dict is serialized to JSON and embedded as a Python string literal for json.loads.
+   */
+  async function generateProgramFromModel(model, mode = 'run_async') {
+    if (!pyodideInstance.value) {
+      throw new Error('Pyodide not initialized. Call initialize() first.')
+    }
+    const code = `
+import json
+import ggl.view
+ggl.view.generate(json.loads(${JSON.stringify(JSON.stringify(model))}), ${JSON.stringify(mode)})
+`
+    return await pyodideInstance.value.runPythonAsync(code)
+  }
+
+  /**
    * Execute hierarchical circuit simulation with all MEMFS operations
    */
   async function executeHierarchicalCircuit(circuitManager, gglProgram) {
@@ -408,6 +427,7 @@ result
 
     // Python execution
     executePythonProgram,
+    generateProgramFromModel,
     executeHierarchicalCircuit,
 
     // Simulation control

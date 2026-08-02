@@ -23,7 +23,8 @@ export function useAppController(circuitManager) {
     isReady: isPyodideReady,
     error: pyodideError,
     pyodide,
-    executeHierarchicalCircuit,
+    executePythonProgram,
+    generateProgramFromModel,
     stopSimulation
   } = usePythonEngine()
 
@@ -102,23 +103,30 @@ export function useAppController(circuitManager) {
         await initializePyodide()
       }
 
-      // Generate GGL program for the current circuit
-      const mainCircuitGglProgram = generateGglProgramForCurrentCircuit(canvasRef, mode)
+      // Build the .ggc-shaped model (components with serialized port coordinates +
+      // inlined subcircuits) and let ggl.view generate the GGL program from it in Pyodide
+      // (pass 1); then exec that program (pass 2). Two passes so the generated program is a
+      // plain, inspectable artifact in between. The front-end 'run' maps to run_async (the
+      // browser's free-running clock + live inputs); 'test' evaluates each Test.
+      const model = buildRunModel(canvasRef)
+      const gglMode = mode === 'test' ? 'test' : 'run_async'
+      const program = await generateProgramFromModel(model, gglMode)
 
-      if (!mainCircuitGglProgram || mainCircuitGglProgram.trim() === '') {
+      if (!program || program.trim() === '') {
         return
       }
 
       // Log the generated GGL program for debugging and verification
-      console.log('\n=== Main Circuit GGL Program ===')
-      console.log(mainCircuitGglProgram)
-      console.log('=== End of Main Circuit ===\n')
+      console.log('\n=== ggl.view GGL Program ===')
+      console.log(program)
+      console.log('=== End of Program ===\n')
 
       // Set up callback for Python to update Vue components
       setupPythonVueUpdateCallback(canvasRef)
 
-      // Execute the complete hierarchical circuit program
-      await executeHierarchicalCircuit(circuitManager, mainCircuitGglProgram)
+      // Execute the generated program (ggl.view already inlined the hierarchy, so there
+      // are no per-subcircuit MEMFS modules to write).
+      await executePythonProgram(program)
     } catch (err) {
       console.error('Hierarchical circuit simulation error:', err)
 
@@ -138,6 +146,47 @@ export function useAppController(circuitManager) {
     } finally {
       isRunning.value = false
     }
+  }
+
+  /**
+   * Assemble the current circuit as a .ggc-shaped model dict for ggl.view: components
+   * (each with its serialized port coordinates), wires, junctions, and ALL saved subcircuit
+   * definitions inlined under schematicComponents. Mirrors the save path's assembly.
+   */
+  function buildRunModel(canvasRef) {
+    const components = canvasRef?.components || []
+    const wires = canvasRef?.wires || []
+    const wireJunctions = canvasRef?.wireJunctions || []
+
+    const activeCircuit = circuitManager.activeCircuit.value
+    const circuitMetadata = activeCircuit
+      ? {
+          name: activeCircuit.name,
+          label: activeCircuit.label,
+          interface: activeCircuit.properties?.interface
+        }
+      : {}
+
+    const allSchematicComponents = {}
+    for (const [circuitId, componentDef] of circuitManager.availableComponents.value) {
+      if (componentDef && componentDef.type === 'circuit-component') {
+        const circuit = circuitManager.getCircuit(circuitId)
+        if (circuit) {
+          allSchematicComponents[circuitId] = { definition: componentDef, circuit }
+        }
+      }
+    }
+
+    const nextCircuitId = circuitManager.exportState().nextCircuitId
+    return buildCircuitData(
+      components,
+      wires,
+      wireJunctions,
+      circuitMetadata,
+      allSchematicComponents,
+      nextCircuitId,
+      circuitManager
+    )
   }
 
   /**
