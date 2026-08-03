@@ -170,9 +170,37 @@ To remove the first-launch warnings entirely, the builds need real signing
   file-based path suits an existing/enterprise cert; for a new public cert use a
   cloud signing service (e.g. Azure Trusted Signing), which would need a
   different workflow step.
-- **macOS** builds are currently ad-hoc signed (they run, but aren't
-  notarized). Eliminating the macOS prompt needs Developer ID signing + Apple
-  notarization (Apple Developer Program), wired in as additional secrets.
+- **macOS** signing + notarization + auto-update is **fully wired but inert** —
+  it activates the moment the Developer ID secrets exist; no code change. Until
+  then macOS builds stay ad-hoc (they run, with the first-launch prompt above).
+
+  **To activate** (needs the Apple Developer Program, $99/yr — check for a USF
+  institutional account first), add these repository secrets:
+
+  | Secret | How to get it |
+  | --- | --- |
+  | `CSC_LINK` | base64 of your *Developer ID Application* `.p12` (`base64 -i cert.p12 \| pbcopy`) |
+  | `CSC_KEY_PASSWORD` | the `.p12` export password |
+  | `APPLE_ID` | your Apple ID email |
+  | `APPLE_APP_SPECIFIC_PASSWORD` | an app-specific password from appleid.apple.com |
+  | `APPLE_TEAM_ID` | your 10-char Team ID (developer.apple.com → Membership) |
+
+  With those set, cutting a **tag** (`git tag v… && git push`) produces a signed,
+  notarized, stapled build — installs with no prompt. Only tagged (stable)
+  releases are signed/notarized; rolling `latest` dev builds stay ad-hoc.
+
+  **Auto-update** then follows automatically: signed tagged builds check the
+  GitHub releases via `electron-updater` and update themselves between tags
+  (rolling prereleases are ignored). So students install once and every later
+  `v…` tag reaches them silently. It's gated on `build-info.json`'s `signed`
+  flag, so nothing self-updates until signing is live. (Windows auto-update
+  works even unsigned; only the first install trips SmartScreen.)
+
+  Mechanics, all keyed on the secrets so they no-op until then:
+  `scripts/notarize.cjs` (afterSign notarize hook), `scripts/afterpack-sign.cjs`
+  (stands down when a Developer ID is present), the `publish` config in
+  `package.json` (emits `latest*.yml` update metadata), and the sign/notarize
+  branch in `build-desktop.yml`.
 
 To build locally:
 

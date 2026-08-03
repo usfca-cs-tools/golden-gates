@@ -25,6 +25,7 @@
     "format:check": "prettier --check ."
   },
   "dependencies": {
+    "electron-updater": "^6.8.9",
     "primeicons": "^6.0.1",
     "primevue": "^3.40.0",
     "pyodide": "^0.27.6",
@@ -32,6 +33,7 @@
     "vue-i18n": "^9.14.5"
   },
   "devDependencies": {
+    "@electron/notarize": "^3.1.1",
     "@eslint/js": "^9.31.0",
     "@types/node": "^24.1.0",
     "@vitejs/plugin-vue": "^6.0.0",
@@ -59,6 +61,14 @@
       "output": "release"
     },
     "afterPack": "./scripts/afterpack-sign.cjs",
+    "afterSign": "./scripts/notarize.cjs",
+    "publish": [
+      {
+        "provider": "github",
+        "owner": "usfca-cs-tools",
+        "repo": "golden-gates"
+      }
+    ],
     "fileAssociations": [
       {
         "ext": "ggc",
@@ -72,15 +82,24 @@
       "icon": "assets/icon.icns",
       "artifactName": "GoldenGates-${version}-macos-${arch}.${ext}",
       "target": [
-        { "target": "dmg", "arch": "arm64" },
-        { "target": "zip", "arch": "arm64" }
+        {
+          "target": "dmg",
+          "arch": "arm64"
+        },
+        {
+          "target": "zip",
+          "arch": "arm64"
+        }
       ]
     },
     "win": {
       "icon": "assets/icon.png",
       "artifactName": "GoldenGates-${version}-windows-${arch}.${ext}",
       "target": [
-        { "target": "nsis", "arch": "x64" }
+        {
+          "target": "nsis",
+          "arch": "x64"
+        }
       ]
     },
     "files": [

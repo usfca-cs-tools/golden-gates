@@ -48,6 +48,23 @@ function showAboutDialog() {
   })
 }
 
+// Auto-update, from tagged (stable) releases only. Gated hard: only a packaged, signed,
+// tagged build ever checks — because on macOS Squirrel rejects an unsigned update anyway,
+// and dev/rolling builds shouldn't self-update. `buildInfo.signed` is false until Developer
+// ID signing is configured, so this is a no-op today. electron-updater defaults to
+// allowPrerelease:false, so it ignores the rolling `latest` prerelease and only moves
+// between tagged releases. The dependency is required lazily so unsigned/local runs (which
+// may not have it bundled) never touch it.
+function maybeCheckForUpdates() {
+  if (!app.isPackaged || !buildInfo.signed || buildInfo.channel !== 'release') return
+  try {
+    const { autoUpdater } = require('electron-updater')
+    autoUpdater.checkForUpdatesAndNotify()
+  } catch (err) {
+    console.warn('auto-update check skipped:', err && err.message)
+  }
+}
+
 let mainWindow = null
 let pendingFilePath = null  // project dir opened before the renderer is ready
 
@@ -192,6 +209,7 @@ if (!gotTheLock) {
     Menu.setApplicationMenu(Menu.buildFromTemplate(menuTemplate))
 
     createWindow()
+    maybeCheckForUpdates() // no-op unless this is a signed, tagged build
   })
 
   app.on('activate', () => {

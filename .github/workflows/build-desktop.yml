@@ -59,26 +59,33 @@ jobs:
         id: buildinfo
         working-directory: web
         shell: bash
-        # Writes web/build-info.json (channel/id/sha/date -> the About box) and emits
-        # `version` (the semver electron-builder should stamp): the tag for a tag push,
-        # 0.0.0-dev.<run> for a rolling main build.
+        env:
+          # Presence of the Developer ID secret on a tag build flips build-info `signed`
+          # true, which is what enables auto-update in the app. Empty until configured.
+          CSC_LINK: ${{ secrets.CSC_LINK }}
+        # Writes web/build-info.json (channel/id/sha/date/signed -> the About box + updater)
+        # and emits `version` (the semver electron-builder should stamp): the tag for a tag
+        # push, 0.0.0-dev.<run> for a rolling main build.
         run: node scripts/gen-build-info.cjs
 
       - name: Package Electron app
         working-directory: web
         shell: bash
         env:
-          # macOS: skip Developer ID discovery; the afterPack hook ad-hoc signs
-          # the app so it runs on Apple Silicon (not notarized — see README).
-          CSC_IDENTITY_AUTO_DISCOVERY: 'false'
+          # macOS Developer ID cert + notarization credentials. All empty until the repo
+          # secrets are added (see README "Code signing"), so the build stays ad-hoc.
+          CSC_LINK: ${{ secrets.CSC_LINK }}
+          CSC_KEY_PASSWORD: ${{ secrets.CSC_KEY_PASSWORD }}
+          APPLE_ID: ${{ secrets.APPLE_ID }}
+          APPLE_APP_SPECIFIC_PASSWORD: ${{ secrets.APPLE_APP_SPECIFIC_PASSWORD }}
+          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
           # Windows: electron-builder signs automatically when these are set.
-          # Until the WIN_CSC_* repo secrets exist they resolve to empty and the
-          # Windows build stays unsigned. See README "Code signing".
           WIN_CSC_LINK: ${{ secrets.WIN_CSC_LINK }}
           WIN_CSC_KEY_PASSWORD: ${{ secrets.WIN_CSC_KEY_PASSWORD }}
           # Build number -> 4th component of the Windows file version and the
           # macOS CFBundleVersion. Monotonic per workflow run.
           BUILD_NUMBER: ${{ github.run_number }}
+          IS_TAG: ${{ github.ref_type == 'tag' }}
         run: |
           # Stamp the computed version so the artifact filename and CFBundleVersion
           # reflect the build (tag -> the tag, e.g. GoldenGates-1.0.0-...; rolling ->
@@ -87,7 +94,23 @@ jobs:
           if [ -n "${{ steps.buildinfo.outputs.version }}" ]; then
             VERSION_ARG="--config.extraMetadata.version=${{ steps.buildinfo.outputs.version }}"
           fi
-          npx electron-builder --${{ matrix.platform }} $VERSION_ARG --publish never
+
+          # Sign + notarize ONLY a tagged (stable) release, and ONLY once the Developer ID
+          # secret exists. Everything else (rolling builds, the pre-cert period) stays
+          # ad-hoc — identical to today. On the signed path the afterPack hook stands down
+          # and the notarize afterSign hook runs (both keyed on these env vars).
+          SIGN_ARGS=""
+          if [ "$IS_TAG" = "true" ] && [ -n "$CSC_LINK" ]; then
+            export CSC_IDENTITY_AUTO_DISCOVERY=true
+            SIGN_ARGS="--config.mac.hardenedRuntime=true --config.mac.gatekeeperAssess=false"
+            echo "macOS: Developer ID signing + notarization (tagged release)"
+          else
+            export CSC_IDENTITY_AUTO_DISCOVERY=false
+            unset CSC_LINK CSC_KEY_PASSWORD APPLE_ID APPLE_APP_SPECIFIC_PASSWORD APPLE_TEAM_ID
+            echo "macOS: ad-hoc signing (rolling build or Developer ID not configured yet)"
+          fi
+
+          npx electron-builder --${{ matrix.platform }} $VERSION_ARG $SIGN_ARGS --publish never
 
       - name: Upload build artifacts
         uses: actions/upload-artifact@v7
@@ -97,6 +120,8 @@ jobs:
             web/release/*.dmg
             web/release/*.zip
             web/release/*.exe
+            web/release/latest*.yml
+            web/release/*.blockmap
           if-no-files-found: error
 
   release:
@@ -116,7 +141,7 @@ jobs:
           SHA: ${{ github.sha }}
         run: |
           set -euo pipefail
-          mapfile -t files < <(find artifacts -type f \( -name '*.dmg' -o -name '*.zip' -o -name '*.exe' \) | sort)
+          mapfile -t files < <(find artifacts -type f \( -name '*.dmg' -o -name '*.zip' -o -name '*.exe' -o -name 'latest*.yml' -o -name '*.blockmap' \) | sort)
           if [ "${#files[@]}" -eq 0 ]; then
             echo "No build artifacts found to release" >&2
             exit 1
@@ -140,7 +165,7 @@ jobs:
           TAG: ${{ github.ref_name }}
         run: |
           set -euo pipefail
-          mapfile -t files < <(find artifacts -type f \( -name '*.dmg' -o -name '*.zip' -o -name '*.exe' \) | sort)
+          mapfile -t files < <(find artifacts -type f \( -name '*.dmg' -o -name '*.zip' -o -name '*.exe' -o -name 'latest*.yml' -o -name '*.blockmap' \) | sort)
           if [ "${#files[@]}" -eq 0 ]; then
             echo "No build artifacts found to release" >&2
             exit 1

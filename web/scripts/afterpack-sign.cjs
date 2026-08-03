@@ -16,6 +16,14 @@ const path = require('node:path')
 exports.default = async function afterPack(context) {
   if (context.electronPlatformName !== 'darwin') return
 
+  // Stand down when a real Developer ID cert is configured: electron-builder signs (and the
+  // notarize afterSign hook notarizes) properly, and re-signing ad-hoc here would strip that
+  // signature. Inert today — CSC_LINK is unset until the signing secret is added.
+  if (process.env.CSC_LINK || process.env.CSC_IDENTITY_AUTO_DISCOVERY === 'true') {
+    console.log('[afterPack] Developer ID signing configured — skipping ad-hoc sign')
+    return
+  }
+
   const appPath = path.join(
     context.appOutDir,
     `${context.packager.appInfo.productFilename}.app`

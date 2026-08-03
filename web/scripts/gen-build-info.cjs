@@ -40,6 +40,12 @@ const commitDate = git(
   date.slice(0, 10)
 )
 
+// Whether THIS build is Developer-ID signed + notarized: true only for a tagged release
+// built with the CSC_LINK secret present. It gates auto-update in main.cjs, so unsigned
+// builds never attempt it (Squirrel would reject an unsigned update on macOS anyway).
+// Inert until the signing secrets exist.
+const signed = isCI && refType === 'tag' && !!env.CSC_LINK
+
 let channel
 let id
 let version // semver for electron-builder; null = leave package.json version alone (local)
@@ -58,7 +64,7 @@ if (isCI && refType === 'tag') {
   version = null
 }
 
-const info = { id, channel, sha, commitDate, date, runNumber: runNumber || null }
+const info = { id, channel, signed, sha, commitDate, date, runNumber: runNumber || null }
 const outPath = path.join(__dirname, '..', 'build-info.json')
 fs.writeFileSync(outPath, JSON.stringify(info, null, 2) + '\n')
 console.log('Wrote build-info.json:', info)
