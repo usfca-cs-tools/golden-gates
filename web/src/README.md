@@ -115,44 +115,29 @@ output0 = io.Output(bits=1, label="R", base=10)
 
 ### Code Generation Flow
 
-1. **Component Data**: Vue components maintain UI state and component data
-2. **Factory Pattern**: `ComponentGeneratorFactory` creates the appropriate generator class based on component type
-3. **Circuit Generation**: `useCodeGenController.js` uses the factory to create generators from component data
-4. **Type Safety**: All generators implement the `ComponentGenerator` interface
-5. **GGL Output**: Complete Python program ready for execution
+GGL source is generated in Python by the `ggl.view` module (in the ggl engine), not in
+the front end. The Vue side only assembles a geometry-canonical circuit model and hands it
+to Pyodide:
 
-### File Structure
+1. **Component Data**: Vue components (SFCs + `componentRegistry`) are graphics only. Each
+   component serializes its ports as transformed grid coordinates (`portGeometry.js`).
+2. **Model Assembly**: `useAppController.buildRunModel` builds a `.ggc`-shaped model from
+   the canvas via `buildCircuitData` (the same assembler the save path uses), with nested
+   circuits inlined under `schematicComponents`.
+3. **Generation (Python, pass 1)**: `usePythonEngine.generateProgramFromModel` runs
+   `ggl.view.generate(model, mode)` in Pyodide. `ggl.view` re-derives the netlist from wire
+   endpoint / port coordinates and emits a complete GGL program string.
+4. **Execution (Python, pass 2)**: `usePythonEngine.executePythonProgram` runs that program
+   with top-level `await`; structured `CircuitError`s flow back to Vue via `ggl.callbacks`.
 
-```
-src/
-├── types/
-│   └── ComponentGenerator.ts        # Core interfaces
-├── generators/
-│   ├── BaseComponentGenerator.ts    # Base utilities
-│   ├── IOComponentGenerator.ts      # I/O shared logic
-│   ├── InputGenerator.ts            # Input generation
-│   ├── OutputGenerator.ts           # Output generation
-│   ├── LogicGateGenerator.ts        # All logic gates
-│   ├── SplitterGenerator.ts         # Splitter generation
-│   ├── MergerGenerator.ts           # Merger generation
-│   ├── WireGenerator.ts             # Wire generation
-│   └── ComponentGeneratorFactory.ts # Factory function
-├── components/
-│   ├── InputNode.vue                # Pure UI component
-│   ├── OutputNode.vue               # Pure UI component
-│   ├── LogicGate.vue                # Pure UI component
-│   ├── SplitterComponent.vue        # Pure UI component
-│   └── MergerComponent.vue          # Pure UI component
-└── composables/
-    └── useCodeGenController.js      # Orchestrates generation
-```
+Because `ggl.view` is the single authority for JSON→circuit semantics, headless grading
+(`ggl-grade`, used by the autograder) produces identical results from the same `.ggc`.
 
 ### Design Principles
 
-1. **Object-Oriented**: Maintains inheritance patterns from Python GGL
-2. **Type Safety**: Compile-time enforcement of generation contracts
-3. **DRY Principle**: Single implementation shared across similar components
-4. **Separation of Concerns**: UI and generation logic are cleanly separated
-5. **Factory Pattern**: Single entry point for creating generators based on component type
-6. **Data-Driven**: Generators work with component data rather than Vue instances
+1. **Geometry is canonical**: the drawing's grid coordinates are the source of truth;
+   connectivity is derived every run, never stored as a netlist.
+2. **One code-gen authority**: `ggl.view` (Python) generates GGL for both the editor and the
+   headless grader — no parallel front-end generator to drift.
+3. **Separation of Concerns**: SFCs draw; `ggl.view` builds circuits.
 

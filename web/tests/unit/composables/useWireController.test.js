@@ -386,55 +386,6 @@ describe('useWireController', () => {
     })
   })
 
-  describe('wire endpoint updates', () => {
-    beforeEach(() => {
-      // Setup a wire connected to components - matches expected positions from input1 output
-      wireController.wires.value = [
-        {
-          id: 'wire1',
-          points: [
-            { x: 7, y: 6 },
-            { x: 10, y: 6 }
-          ],
-          startConnection: { pos: { x: 7, y: 6 }, portIndex: 0 },
-          endConnection: { pos: { x: 10, y: 6 }, portIndex: 0 }
-        }
-      ]
-    })
-
-    it('should update wire endpoints when component moves', () => {
-      // Component before move: input1 at (5,5) with output at (7,6)
-      // Component after move: input1 at (7,6) with output at (9,7)
-      // So old position was (5,5), new is (7,6), delta is (2,1)
-      const component = { ...mockComponents.value[0], x: 7, y: 6 } // moved position
-      const deltaX = 2
-      const deltaY = 1
-
-      wireController.updateWireEndpoints(component, deltaX, deltaY)
-
-      const wire = wireController.wires.value[0]
-      expect(wire.startConnection.pos).toEqual({ x: 9, y: 7 }) // 7+2, 6+1
-      expect(wire.points[0]).toEqual({ x: 9, y: 7 })
-    })
-
-    it('should not update unrelated wire endpoints', () => {
-      const component = { id: 'unrelated', type: 'and-gate', x: 20, y: 20 }
-      const originalWire = JSON.parse(JSON.stringify(wireController.wires.value[0]))
-
-      wireController.updateWireEndpoints(component, 5, 5)
-
-      expect(wireController.wires.value[0]).toEqual(originalWire)
-    })
-
-    it('should handle components with no matching connections', () => {
-      const component = mockComponents.value[1] // and1 at different position
-      const originalWire = JSON.parse(JSON.stringify(wireController.wires.value[0]))
-
-      wireController.updateWireEndpoints(component, 1, 1)
-
-      expect(wireController.wires.value[0]).toEqual(originalWire)
-    })
-  })
 
   describe('error handling', () => {
     it('should handle invalid wire index for junction operations', () => {

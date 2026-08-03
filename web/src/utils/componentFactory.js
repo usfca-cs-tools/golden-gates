@@ -47,6 +47,32 @@ export function rotatePoint(point, rotation, center) {
   }
 }
 
+/**
+ * Rotate a whole {inputs, outputs} connection set around a center, in grid units.
+ * Each port is rotated the same way the component's SFC spins its group via SVG
+ * rotate(), so the resolved (and serialized) port coordinate equals where the dot is
+ * actually drawn. A no-op at rotation 0. `center` must be grid-aligned to keep ports
+ * on integer grid vertices (exact-match resolution depends on it).
+ */
+export function rotateConnections(connections, rotation, center) {
+  if (!rotation || rotation === 0) return connections
+  const rot = port => ({ ...port, ...rotatePoint({ x: port.x, y: port.y }, rotation, center) })
+  return {
+    inputs: (connections.inputs || []).map(rot),
+    outputs: (connections.outputs || []).map(rot)
+  }
+}
+
+/**
+ * Build a rotation-aware getConnections(props) from a fixed port set + rotation center
+ * (grid units). For components whose ports are static but whose SFC rotates the shape
+ * about `center` — the returned fn rotates the ports to match, so resolution/serialization
+ * agree with the drawn dots. `center` must be grid-aligned to keep ports on the grid.
+ */
+export function rotatableConnections(connections, center) {
+  return props => rotateConnections(connections, props?.rotation || 0, center)
+}
+
 // Shared functions for standard gate bounds and connections
 function standardGateBounds(props) {
   const numInputs = props?.numInputs || 2

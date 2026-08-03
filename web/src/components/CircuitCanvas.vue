@@ -204,7 +204,6 @@ import { useWireController } from '../composables/useWireController'
 import { useSelectionController } from '../composables/useSelectionController'
 import { useDragController } from '../composables/useDragController'
 import { useCanvasController } from '../composables/useCanvasController'
-import { useCodeGenController } from '../composables/useCodeGenController'
 import { useUndoHistory } from '../composables/useUndoHistory'
 
 export default {
@@ -296,12 +295,6 @@ export default {
     const components = computed(() => activeCircuit.value?.components || [])
     const wires = computed(() => activeCircuit.value?.wires || [])
     const wireJunctions = computed(() => activeCircuit.value?.wireJunctions || [])
-
-    // Circuit data management (from circuit model)
-    const { getCircuitData: getCircuitDataBase } = props.circuitManager
-
-    // Circuit generation
-    const { generateGglProgram } = useCodeGenController()
 
     // Error notifications
     const errorNotifications = ref([])
@@ -512,75 +505,6 @@ export default {
 
       return instances
     })
-
-    function getCircuitData(mode = 'run') {
-      // Clear all existing error states first
-      components.value.forEach(component => {
-        if (component.props?.hasError) {
-          updateComponent({
-            ...component,
-            props: {
-              ...component.props,
-              hasError: false,
-              errorMessage: '',
-              errorDetails: {}
-            }
-          })
-        }
-      })
-
-      const result = generateGglProgram(
-        components.value,
-        wires.value,
-        wireJunctions.value,
-        componentRefs.value,
-        componentInstances.value,
-        props.circuitManager,
-        true, // includeRun
-        props.circuitManager.activeCircuit.value?.name, // Pass active circuit name for error context
-        mode // 'run' → run_async(); 'test' → evaluate() each Test
-      )
-
-      // Store the hierarchy mapping for callback handling
-      if (result.hierarchyMapping && window.ggComponentHierarchy) {
-        console.log('Storing hierarchy mapping:', result.hierarchyMapping)
-        // Update the global hierarchy mapping with the current circuit's mapping
-        result.hierarchyMapping.forEach((parentId, nestedId) => {
-          window.ggComponentHierarchy.set(nestedId, parentId)
-          console.log(`Mapped nested component ${nestedId} -> parent ${parentId}`)
-        })
-      } else {
-        console.log('No hierarchy mapping to store:', {
-          hasMapping: !!result.hierarchyMapping,
-          hasRegistry: !!window.ggComponentHierarchy
-        })
-      }
-
-      // Handle component errors - mark components with visual error state and show notifications
-      if (result.errors && result.errors.length > 0) {
-        result.errors.forEach(error => {
-          const component = components.value.find(c => c.id === error.componentId)
-          if (component) {
-            // Update component with error state (for red styling)
-            updateComponent({
-              ...component,
-              props: {
-                ...component.props,
-                hasError: true,
-                errorMessage: error.error.message,
-                errorDetails: error.error.details
-              }
-            })
-
-            // Show error notification
-            showErrorNotification(error.error.message)
-          }
-        })
-      }
-
-      // Return just the code for backward compatibility
-      return result.code
-    }
 
     // Watch for selection changes and emit event
     watch(
@@ -806,9 +730,7 @@ export default {
       addComponentAtSmartPosition: addComponentAtSmartPositionAndScroll,
       clearCircuit,
       setLoadingState,
-      getCircuitData,
       updateComponent,
-      updateWireEndpointsForPropertyChange: wireManagement.updateWireEndpointsForPropertyChange,
       loadComponent,
       addWire,
       addWireJunction,

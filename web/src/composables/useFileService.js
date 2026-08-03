@@ -1,3 +1,5 @@
+import { computeComponentPorts } from '../utils/portGeometry'
+
 // Golden Gates circuits are JSON saved with a `.ggc` extension — the file type
 // registered with the OS for double-click open. Older circuits were saved as
 // `.json`, so opening still accepts both.
@@ -18,40 +20,39 @@ function buildCircuitData(
   wireJunctions,
   circuitMetadata = {},
   schematicComponents = {},
-  nextCircuitId = 1, 
-  { standalone = false } = {}  
+  nextCircuitId = 1,
+  circuitManager = null,
+  // standalone (multi-file save): emit no embedded schematicComponents block.
+  // keepInputValues (run model): keep live input values instead of stripping them.
+  { standalone = false, keepInputValues = false } = {}
 ) {
-  const sanitizedComponents = (components || []).map(component => {
+  // An input's `value` is transient UI state. Saving strips it (a saved circuit has no
+  // live stimulus). But a RUN model must carry it, or the simulation starts every input at
+  // the engine default (0) — e.g. a CLR held at 1 on the canvas would silently run as 0
+  // until toggled. buildRunModel passes keepInputValues:true for exactly this reason.
+  const stripTransient = component => {
     const { js_id, ...componentWithoutJsId } = component || {}
-
-    if (component.type === 'input' || component.type === 'output') {
+    const ports = computeComponentPorts(component, circuitManager)
+    const isIO = component.type === 'input' || component.type === 'output'
+    if (isIO && !keepInputValues) {
       const { value, lastUpdate, ...propsWithoutTransient } = component.props || {}
-      return {
-        ...componentWithoutJsId,
-        props: propsWithoutTransient
-      }
+      return { ...componentWithoutJsId, props: propsWithoutTransient, ports }
     }
+    if (isIO) {
+      // Keep value (the live stimulus) but still drop lastUpdate (pure UI bookkeeping).
+      const { lastUpdate, ...props } = component.props || {}
+      return { ...componentWithoutJsId, props, ports }
+    }
+    return { ...componentWithoutJsId, ports }
+  }
 
-    return componentWithoutJsId
-  })
+  const sanitizedComponents = (components || []).map(stripTransient)
 
   const sanitizedSchematicComponents = {}
   for (const [circuitId, schematicData] of Object.entries(schematicComponents || {})) {
     let sanitizedCircuit = schematicData.circuit
     if (sanitizedCircuit && sanitizedCircuit.components) {
-      const sanitizedSubComponents = sanitizedCircuit.components.map(component => {
-        const { js_id, ...componentWithoutJsId } = component || {}
-
-        if (component.type === 'input' || component.type === 'output') {
-          const { value, lastUpdate, ...propsWithoutTransient } = component.props || {}
-          return {
-            ...componentWithoutJsId,
-            props: propsWithoutTransient
-          }
-        }
-
-        return componentWithoutJsId
-      })
+      const sanitizedSubComponents = sanitizedCircuit.components.map(stripTransient)
 
       sanitizedCircuit = {
         ...sanitizedCircuit,
@@ -66,7 +67,7 @@ function buildCircuitData(
   }
 
   return {
-    version: '1.3',
+    version: '1.4',
     timestamp: new Date().toISOString(),
     name: circuitMetadata.name || 'Untitled Circuit',
     label: circuitMetadata.label || circuitMetadata.name || 'Untitled Circuit',
@@ -75,7 +76,6 @@ function buildCircuitData(
     components: sanitizedComponents,
     wires: wires || [],
     wireJunctions: wireJunctions || [],
-    schematicComponents: sanitizedSchematicComponents, 
     schematicComponents: standalone ? {} : sanitizedSchematicComponents
   }
 }
@@ -88,7 +88,8 @@ export function useFileService() {
     circuitMetadata = {},
     schematicComponents = {},
     nextCircuitId = 1,
-    projectContext = null
+    projectContext = null,
+    circuitManager = null
   ) => {
     try {
       const circuitData = buildCircuitData(
@@ -97,7 +98,8 @@ export function useFileService() {
         wireJunctions,
         circuitMetadata,
         schematicComponents,
-        nextCircuitId
+        nextCircuitId,
+        circuitManager
       )
       const jsonString = JSON.stringify(circuitData, null, 2)
 

@@ -84,11 +84,12 @@ export default defineComponent({
   },
   emits: ['startDrag'],
   computed: {
-    // Get dynamic connections
+    // Get dynamic connections for rendering. Use rotation:0 (base positions) and let
+    // this component's own SVG rotate(rotation) transform spin the dots visually —
+    // getConnections applies the same rotation for external consumers (wire resolution,
+    // serialization), so the two agree without double-rotating.
     connections() {
       const config = componentRegistry['splitter']
-      // Use rotation: 0 here because the SVG <g> transform already handles visual rotation.
-      // The wire controller calls getConnections(component.props) independently with the real rotation.
       return config.getConnections({ ...this.$props, rotation: 0 })
     },
 

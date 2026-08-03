@@ -1,7 +1,9 @@
 <template>
   <g :transform="`translate(${x * GRID_SIZE}, ${y * GRID_SIZE})`">
     <!-- Rotation group centered on component -->
-    <g :transform="`rotate(${rotation}, ${(width * GRID_SIZE) / 2}, ${(height * GRID_SIZE) / 2})`">
+    <!-- Rotate about x=2 (not the true 1.5 center of a 3-wide body) so ports stay on
+         the grid; getConnections uses the same center. -->
+    <g :transform="`rotate(${rotation}, ${2 * GRID_SIZE}, ${(height * GRID_SIZE) / 2})`">
       <!-- Priority Encoder body (rectangle) -->
       <rect
         :width="width * GRID_SIZE"

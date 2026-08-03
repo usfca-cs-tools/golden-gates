@@ -461,7 +461,9 @@ describe('useAppController - Hierarchical Circuit Saving', () => {
         mockCanvasRef.wireJunctions,
         expect.any(Object), // circuitMetadata
         expect.any(Object), // schematicComponents
-        6 // nextCircuitId
+        6, // nextCircuitId
+        null, // projectContext
+        expect.anything() // circuitManager (for serializing port geometry)
       )
     })
   })

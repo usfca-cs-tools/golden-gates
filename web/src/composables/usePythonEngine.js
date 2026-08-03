@@ -1,6 +1,5 @@
 import { ref, shallowRef } from 'vue'
 import { loadPyodide } from 'pyodide'
-import { useCodeGenController } from './useCodeGenController.js'
 
 /**
  * Python Engine - Unified Pyodide integration for circuit simulation
@@ -176,120 +175,6 @@ except ImportError as e:
   }
 
   /**
-   * Write all saved circuit components as Python modules to Pyodide's MEMFS
-   * This allows components to import other components in hierarchical circuits
-   */
-  async function writeAllCircuitComponentsToMemfs(circuitManager) {
-    if (!pyodideInstance.value) {
-      throw new Error('Pyodide not initialized. Call initialize() first.')
-    }
-
-    // Clean up any existing component files first
-    await removeExistingComponentFilesFromMemfs()
-
-    // Use circuit generation functions (now imported statically)
-    const {
-      generateGglProgramForCircuitComponent,
-      wrapGglProgramAsComponentModule,
-      findRequiredComponentImports,
-      toPythonIdentifier
-    } = useCodeGenController()
-
-    // Write ALL saved components as Python modules to MEMFS
-    for (const [id, component] of circuitManager.availableComponents.value) {
-      if (component.type === 'circuit-component') {
-        const circuit = circuitManager.getCircuit(component.circuitId)
-        if (!circuit) continue
-
-        // Generate GGL program for this component's circuit
-        const gglProgramCode = generateGglProgramForCircuitComponent(circuit, circuitManager)
-
-        // Wrap as importable Python module
-        const pythonModuleCode = wrapGglProgramAsComponentModule(
-          component.name,
-          gglProgramCode,
-          findRequiredComponentImports(circuit.components, circuitManager, component.name)
-        )
-
-        // Use the Python identifier for the filename so `import _1bha` finds `_1bha.py`
-        const fileName = `${toPythonIdentifier(component.name)}.py`
-        console.log(`\n=== Writing ${fileName} to MEMFS ===`)
-        console.log(pythonModuleCode)
-        console.log(`=== End of ${fileName} ===\n`)
-
-        // Write to Pyodide's MEMFS
-        pyodideInstance.value.FS.writeFile(fileName, pythonModuleCode)
-      }
-    }
-  }
-
-  /**
-   * Remove existing component files from Pyodide's MEMFS
-   */
-  async function removeExistingComponentFilesFromMemfs() {
-    if (!pyodideInstance.value) return
-
-    try {
-      const files = pyodideInstance.value.FS.readdir('.')
-      files.forEach(file => {
-        if (file.endsWith('.py') && !file.startsWith('_')) {
-          try {
-            pyodideInstance.value.FS.unlink(file)
-          } catch (e) {
-            // File might not exist or be a system file
-          }
-        }
-      })
-
-      // Clear Python's import cache for our modules
-      try {
-        pyodideInstance.value.runPython(`
-import sys
-if hasattr(sys, 'modules'):
-    modules_to_remove = [m for m in sys.modules.keys() 
-                         if not m.startswith('_') and '.' not in m 
-                         and m not in ['ggl', 'circuit', 'logic', 'io', 'sys']]
-    for module in modules_to_remove:
-        if module in sys.modules:
-            del sys.modules[module]
-    print(f"Removed {len(modules_to_remove)} modules from cache")
-`)
-      } catch (e) {
-        console.warn('Could not clear Python import cache:', e)
-      }
-    } catch (e) {
-      console.warn('Error cleaning up MEMFS:', e)
-    }
-  }
-
-  /**
-   * Configure Python import path to include MEMFS root directory
-   */
-  function configurePythonImportPath() {
-    if (!pyodideInstance.value) return
-
-    // Since Pyodide already sets up sys.path in initialization,
-    // and MEMFS files are written to the current directory ('.'),
-    // we just need to ensure '.' is in the path if it's not already there
-    try {
-      const result = pyodideInstance.value.runPython(`
-import sys
-import os
-current_dir = os.getcwd()
-print(f"Current working directory: {current_dir}")
-print(f"sys.path: {sys.path}")
-if '.' not in sys.path:
-    sys.path.insert(0, '.')
-    print("Added '.' to sys.path")
-'Python path configured'
-`)
-    } catch (e) {
-      console.warn('Could not configure Python import path:', e)
-      // This is not critical - MEMFS might work anyway
-    }
-  }
-
-  /**
    * Execute a Python program in Pyodide with proper error handling
    * Uses compile() with PyCF_ALLOW_TOP_LEVEL_AWAIT to support await in generated code
    */
@@ -300,10 +185,9 @@ if '.' not in sys.path:
 
     const pythonExecutionCode = `
 # Register the Vue update callback with the ggl engine.
-# The GGL engine reads this from builtins.updateCallback (see io.py Output.propagate).
 import js
-import builtins
-builtins.updateCallback = js.window.__vueUpdateCallback
+import ggl.callbacks
+ggl.callbacks.set_callback(js.window.__vueUpdateCallback)
 
 try:
     # Compile and execute with async support
@@ -334,25 +218,22 @@ result
   }
 
   /**
-   * Execute hierarchical circuit simulation with all MEMFS operations
+   * Pass 1 of the ggl.view flow: run ggl.view.generate(model, mode) in Pyodide and
+   * return the GGL program string. Runs nothing — the caller logs the program and hands
+   * it to executePythonProgram (pass 2). `model` is a .ggc-shaped dict (components with
+   * ports + inlined schematicComponents); `mode` is a ggl.view mode ('run_async'/'test').
+   * The dict is serialized to JSON and embedded as a Python string literal for json.loads.
    */
-  async function executeHierarchicalCircuit(circuitManager, gglProgram) {
+  async function generateProgramFromModel(model, mode = 'run_async') {
     if (!pyodideInstance.value) {
       throw new Error('Pyodide not initialized. Call initialize() first.')
     }
-
-    // Step 1: Write all saved circuit components as Python modules to MEMFS
-    await writeAllCircuitComponentsToMemfs(circuitManager)
-
-    // Step 2: Configure Python import path for MEMFS (optional - MEMFS might already be in path)
-    try {
-      configurePythonImportPath()
-    } catch (e) {
-      console.warn('Could not configure Python import path, continuing anyway:', e)
-    }
-
-    // Step 3: Execute the complete hierarchical circuit program
-    return await executePythonProgram(gglProgram)
+    const code = `
+import json
+import ggl.view
+ggl.view.generate(json.loads(${JSON.stringify(JSON.stringify(model))}), ${JSON.stringify(mode)})
+`
+    return await pyodideInstance.value.runPythonAsync(code)
   }
 
   /**
@@ -403,14 +284,9 @@ result
     runPythonSync,
     loadPackage,
 
-    // MEMFS operations
-    writeAllCircuitComponentsToMemfs,
-    removeExistingComponentFilesFromMemfs,
-    configurePythonImportPath,
-
     // Python execution
     executePythonProgram,
-    executeHierarchicalCircuit,
+    generateProgramFromModel,
 
     // Simulation control
     stopSimulation,
