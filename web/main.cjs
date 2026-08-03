@@ -24,18 +24,23 @@ const buildInfo = (() => {
 function showAboutDialog() {
   const channelLine =
     buildInfo.channel === 'release'
-      ? 'Release build'
+      ? `Release build ${buildInfo.id}` // a tagged release: show its version/tag
       : buildInfo.channel === 'dev'
         ? 'Development build — rolling “latest”, may be unstable'
         : 'Local development build'
   const detail = [channelLine]
   if (buildInfo.sha && buildInfo.sha !== 'unknown') detail.push(`commit ${buildInfo.sha}`)
-  if (buildInfo.date) detail.push(`built ${String(buildInfo.date).slice(0, 10)}`)
+  if (buildInfo.date) {
+    // UTC build date + the CI run number, spelled out so neither reads as a time.
+    let built = `built ${String(buildInfo.date).slice(0, 10)}`
+    if (buildInfo.runNumber) built += ` build run ${buildInfo.runNumber}`
+    detail.push(built)
+  }
   dialog.showMessageBox(mainWindow && !mainWindow.isDestroyed() ? mainWindow : undefined, {
     // A dev/local build gets the warning icon; a real release gets the info icon.
     type: buildInfo.channel === 'release' ? 'info' : 'warning',
     title: 'About Golden Gates',
-    message: `Golden Gates ${buildInfo.id}`,
+    message: 'Golden Gates',
     detail: detail.join('\n'),
     buttons: ['OK'],
     defaultId: 0
