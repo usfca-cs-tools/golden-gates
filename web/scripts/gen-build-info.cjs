@@ -29,9 +29,16 @@ const isCI = !!env.GITHUB_ACTIONS
 const refType = env.GITHUB_REF_TYPE // 'tag' | 'branch' (CI only)
 const refName = env.GITHUB_REF_NAME || ''
 const runNumber = env.GITHUB_RUN_NUMBER || ''
-const sha = (env.GITHUB_SHA || git('rev-parse HEAD', 'unknown')).slice(0, 7)
-const date = new Date().toISOString()
-const ymd = date.slice(0, 10).replace(/-/g, '.') // 2026.08.02
+const fullSha = env.GITHUB_SHA || git('rev-parse HEAD', 'unknown')
+const sha = fullSha.slice(0, 7)
+const date = new Date().toISOString() // when this build was packaged (UTC); metadata only
+// The commit's own date (committer-local, YYYY-MM-DD). It's tied to the code, so a rolling
+// build and a tag on the same commit — or any later rebuild — show the same date, read in
+// the zone you committed in rather than whenever a runner happened to package it.
+const commitDate = git(
+  `show -s --format=%cd --date=short ${fullSha === 'unknown' ? 'HEAD' : fullSha}`,
+  date.slice(0, 10)
+)
 
 let channel
 let id
@@ -43,7 +50,7 @@ if (isCI && refType === 'tag') {
   id = version
 } else if (isCI) {
   channel = 'dev'
-  id = `${ymd}-${runNumber}` // e.g. 2026.08.02-57
+  id = `${commitDate.replace(/-/g, '.')}-${runNumber}` // e.g. 2026.08.02-57 (commit date)
   version = `0.0.0-dev.${runNumber}` // valid semver prerelease
 } else {
   channel = 'local'
@@ -51,7 +58,7 @@ if (isCI && refType === 'tag') {
   version = null
 }
 
-const info = { id, channel, sha, date, runNumber: runNumber || null }
+const info = { id, channel, sha, commitDate, date, runNumber: runNumber || null }
 const outPath = path.join(__dirname, '..', 'build-info.json')
 fs.writeFileSync(outPath, JSON.stringify(info, null, 2) + '\n')
 console.log('Wrote build-info.json:', info)
