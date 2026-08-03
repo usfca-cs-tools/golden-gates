@@ -8,6 +8,40 @@ const fs = require('fs')
 const path = require('path')
 app.name = 'Golden Gates'
 
+// Build identity, written at build time by scripts/gen-build-info.cjs and bundled
+// into the app. Missing => a bare `electron .` run that skipped the generator; fall
+// back to a clearly-local identity rather than crashing.
+const buildInfo = (() => {
+  try {
+    return require('./build-info.json')
+  } catch {
+    return { id: 'dev', channel: 'local', sha: 'unknown', date: null }
+  }
+})()
+
+// "About Golden Gates": show the build id and, bluntly, which channel it came from
+// so a user can tell a tagged release from an unvetted rolling build.
+function showAboutDialog() {
+  const channelLine =
+    buildInfo.channel === 'release'
+      ? 'Release build'
+      : buildInfo.channel === 'dev'
+        ? 'Development build — rolling “latest”, may be unstable'
+        : 'Local development build'
+  const detail = [channelLine]
+  if (buildInfo.sha && buildInfo.sha !== 'unknown') detail.push(`commit ${buildInfo.sha}`)
+  if (buildInfo.date) detail.push(`built ${String(buildInfo.date).slice(0, 10)}`)
+  dialog.showMessageBox(mainWindow && !mainWindow.isDestroyed() ? mainWindow : undefined, {
+    // A dev/local build gets the warning icon; a real release gets the info icon.
+    type: buildInfo.channel === 'release' ? 'info' : 'warning',
+    title: 'About Golden Gates',
+    message: `Golden Gates ${buildInfo.id}`,
+    detail: detail.join('\n'),
+    buttons: ['OK'],
+    defaultId: 0
+  })
+}
+
 let mainWindow = null
 let pendingFilePath = null  // project dir opened before the renderer is ready
 
@@ -63,8 +97,30 @@ if (!gotTheLock) {
       if (filePath) pendingFilePath = { dirPath: path.dirname(filePath), activeFile: path.basename(filePath) }
     }
 
-    // Native menu bar with File menu for Open/Save
+    const isMac = process.platform === 'darwin'
+
+    // Native menu bar. On macOS the first submenu is the app menu (Golden Gates);
+    // that's where About belongs. Windows/Linux have no app menu, so About goes
+    // under Help. Either way it opens the same channel-aware About dialog.
     const menuTemplate = [
+      ...(isMac
+        ? [
+            {
+              label: app.name,
+              submenu: [
+                { label: 'About Golden Gates', click: showAboutDialog },
+                { type: 'separator' },
+                { role: 'services' },
+                { type: 'separator' },
+                { role: 'hide' },
+                { role: 'hideOthers' },
+                { role: 'unhide' },
+                { type: 'separator' },
+                { role: 'quit' }
+              ]
+            }
+          ]
+        : []),
       {
         label: 'File',
         submenu: [
@@ -116,7 +172,16 @@ if (!gotTheLock) {
             }
           }
         ]
-      }
+      },
+      // macOS already has About in the app menu; elsewhere it lives under Help.
+      ...(isMac
+        ? []
+        : [
+            {
+              role: 'help',
+              submenu: [{ label: 'About Golden Gates', click: showAboutDialog }]
+            }
+          ])
     ]
     Menu.setApplicationMenu(Menu.buildFromTemplate(menuTemplate))
 

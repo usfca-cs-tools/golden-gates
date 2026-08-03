@@ -28,6 +28,9 @@ Thumbs.db
 .env.local
 .env.*.local
 
+# Generated at build time by scripts/gen-build-info.cjs (the About-box build identity)
+build-info.json
+
 # Package lock files (optional - some teams prefer to commit these)
 # package-lock.json
 # yarn.lock

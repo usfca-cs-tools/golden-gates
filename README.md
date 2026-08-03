@@ -113,19 +113,35 @@ If you want to develop for Golden Gates, the tool chain works like this:
 
 ### Desktop app
 
-The Electron desktop app is built automatically on every push to `main` (and on
-demand) by the [`Build Desktop App`](.github/workflows/build-desktop.yml)
-workflow and published to the
-[`latest`](https://github.com/usfca-cs-tools/golden-gates/releases/tag/latest)
-prerelease:
+The Electron desktop app is built by the
+[`Build Desktop App`](.github/workflows/build-desktop.yml) workflow in two channels:
+
+- **Rolling `latest` (development).** Every push to `main` (and manual *Run
+  workflow*) rebuilds and republishes the
+  [`latest`](https://github.com/usfca-cs-tools/golden-gates/releases/tag/latest)
+  **prerelease** — always the newest build, at a stable URL. These are unvetted;
+  the app's About box labels them a development build.
+- **Tagged releases (stable).** Pushing a semver tag cuts a permanent, named
+  release with its own entry on the Releases page. Cut one whenever a build is
+  known good:
+
+  ```sh
+  git tag v2026.8.2        # or a milestone like v1.0.0 — must be valid semver
+  git push origin v2026.8.2
+  ```
+
+Artifacts:
 
 - **macOS** (Apple Silicon): `GoldenGates-<version>-macos-arm64.dmg` / `.zip`
 - **Windows** (x64): `GoldenGates-<version>-windows-x64.exe` (installer)
 
-Each build embeds the workflow run number as a build number in the app's version
-metadata (Windows file version / macOS `CFBundleVersion`); the download
-filenames keep the `package.json` version. To trigger a build manually, run the
-workflow from the **Actions** tab (*Build Desktop App → Run workflow*).
+where `<version>` is the tag for a tagged release (e.g. `2026.8.2`) or
+`0.0.0-dev.<run>` for a rolling build. Each build also embeds the workflow run
+number as a build number (Windows file version / macOS `CFBundleVersion`).
+
+**Which build is this?** *Golden Gates → About Golden Gates* (macOS) or *Help →
+About Golden Gates* (Windows) shows the build identifier and states plainly
+whether it's a tagged release or a rolling development build.
 
 These builds are **ad-hoc signed but not notarized**, so the OS blocks them on
 first launch (after that, they open normally):

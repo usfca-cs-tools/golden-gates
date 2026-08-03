@@ -2,18 +2,21 @@ name: Build Desktop App
 
 on:
   push:
-    branches: [ main ]
-    paths:
-      - 'web/**'                              # app code, deps, or the ggl-engine submodule pointer
-      - '.github/workflows/build-desktop.yml'
-  workflow_dispatch: {}                       # allow manual runs from the Actions tab
+    branches: [ main ]        # rolling 'latest' development build
+    tags: [ 'v*' ]            # a tag push cuts a permanent, named (stable) release
+    # No `paths:` filter on purpose: a `paths` filter also gates tag pushes (whose
+    # changed-file set is unreliable), which would silently skip releases. Every push
+    # to main therefore builds; the concurrency group below coalesces rapid pushes.
+  workflow_dispatch: {}        # allow manual rolling builds from the Actions tab
 
 concurrency:
-  group: build-desktop
-  cancel-in-progress: true                    # a newer push supersedes an in-flight build
+  # Per-ref so a main build and a tag (release) build never cancel each other;
+  # rapid pushes to the same ref still supersede.
+  group: build-desktop-${{ github.ref }}
+  cancel-in-progress: true
 
 permissions:
-  contents: write                             # the release job publishes to GitHub Releases
+  contents: write             # the release job publishes to GitHub Releases
 
 jobs:
   build:
@@ -52,8 +55,18 @@ jobs:
         working-directory: web
         run: npm run build
 
+      - name: Generate build info
+        id: buildinfo
+        working-directory: web
+        shell: bash
+        # Writes web/build-info.json (channel/id/sha/date -> the About box) and emits
+        # `version` (the semver electron-builder should stamp): the tag for a tag push,
+        # 0.0.0-dev.<run> for a rolling main build.
+        run: node scripts/gen-build-info.cjs
+
       - name: Package Electron app
         working-directory: web
+        shell: bash
         env:
           # macOS: skip Developer ID discovery; the afterPack hook ad-hoc signs
           # the app so it runs on Apple Silicon (not notarized — see README).
@@ -64,10 +77,17 @@ jobs:
           WIN_CSC_LINK: ${{ secrets.WIN_CSC_LINK }}
           WIN_CSC_KEY_PASSWORD: ${{ secrets.WIN_CSC_KEY_PASSWORD }}
           # Build number -> 4th component of the Windows file version and the
-          # macOS CFBundleVersion (artifact filenames keep the package.json
-          # semver). Monotonic per workflow run.
+          # macOS CFBundleVersion. Monotonic per workflow run.
           BUILD_NUMBER: ${{ github.run_number }}
-        run: npx electron-builder --${{ matrix.platform }} --publish never
+        run: |
+          # Stamp the computed version so the artifact filename and CFBundleVersion
+          # reflect the build (tag -> the tag, e.g. GoldenGates-1.0.0-...; rolling ->
+          # GoldenGates-0.0.0-dev.<run>-...) instead of the static package.json 0.0.1.
+          VERSION_ARG=""
+          if [ -n "${{ steps.buildinfo.outputs.version }}" ]; then
+            VERSION_ARG="--config.extraMetadata.version=${{ steps.buildinfo.outputs.version }}"
+          fi
+          npx electron-builder --${{ matrix.platform }} $VERSION_ARG --publish never
 
       - name: Upload build artifacts
         uses: actions/upload-artifact@v7
@@ -88,7 +108,8 @@ jobs:
         with:
           path: artifacts
 
-      - name: Publish rolling 'latest' prerelease
+      - name: Publish rolling 'latest' prerelease (development build)
+        if: github.ref_type != 'tag'
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           REPO: ${{ github.repository }}
@@ -101,12 +122,32 @@ jobs:
             exit 1
           fi
           printf 'Releasing asset: %s\n' "${files[@]}"
-          # Recreate the release so 'latest' always points at the most recent
-          # build of main while keeping stable download URLs (tag + filenames).
+          # Recreate 'latest' so it always points at the newest main build while
+          # keeping a stable download URL (tag + filenames).
           gh release delete latest --repo "$REPO" --cleanup-tag --yes || true
           gh release create latest "${files[@]}" \
             --repo "$REPO" \
             --target "$SHA" \
             --prerelease \
-            --title "Latest build" \
-            --notes "Automated build from \`main\` (${SHA}). These builds are ad-hoc signed (macOS) / unsigned (Windows) — see the README for how to open them."
+            --title "Latest development build" \
+            --notes "Rolling build from \`main\` (${SHA}). This is a DEVELOPMENT build — unvetted and possibly unstable (the About box says so). For a build known to be usable, use a tagged release. Ad-hoc signed (macOS) / unsigned (Windows) — see the README for how to open them."
+
+      - name: Publish tagged release (stable)
+        if: github.ref_type == 'tag'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          REPO: ${{ github.repository }}
+          TAG: ${{ github.ref_name }}
+        run: |
+          set -euo pipefail
+          mapfile -t files < <(find artifacts -type f \( -name '*.dmg' -o -name '*.zip' -o -name '*.exe' \) | sort)
+          if [ "${#files[@]}" -eq 0 ]; then
+            echo "No build artifacts found to release" >&2
+            exit 1
+          fi
+          printf 'Releasing asset: %s\n' "${files[@]}"
+          # The tag already exists (it triggered this run) — create its release.
+          gh release create "$TAG" "${files[@]}" \
+            --repo "$REPO" \
+            --title "Golden Gates $TAG" \
+            --notes "Tagged release \`$TAG\`. Ad-hoc signed (macOS) / unsigned (Windows) — see the README for how to open them."

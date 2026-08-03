@@ -10,8 +10,9 @@
     "build": "vite build",
     "build:check": "vue-tsc && vite build",
     "preview": "vite preview",
-    "electron:dev": "vite build && electron .",
-    "electron:build": "vite build && electron-builder",
+    "build:info": "node scripts/gen-build-info.cjs",
+    "electron:dev": "node scripts/gen-build-info.cjs && vite build && electron .",
+    "electron:build": "node scripts/gen-build-info.cjs && vite build && electron-builder",
     "icon": "node scripts/generate-icon.mjs",
     "test": "vitest",
     "test:ui": "vitest --ui",
@@ -86,6 +87,7 @@
       "dist/**/*",
       "main.cjs",
       "preload.cjs",
+      "build-info.json",
       "assets/**/*"
     ]
   }
