@@ -185,7 +185,10 @@ export function useAppController(circuitManager) {
       circuitMetadata,
       allSchematicComponents,
       nextCircuitId,
-      circuitManager
+      circuitManager,
+      // Running (unlike saving) must honor the live input values on the canvas, or every
+      // input starts at the engine default 0 until it's toggled.
+      { keepInputValues: true }
     )
   }
 

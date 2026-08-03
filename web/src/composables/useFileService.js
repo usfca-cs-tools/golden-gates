@@ -21,45 +21,36 @@ function buildCircuitData(
   circuitMetadata = {},
   schematicComponents = {},
   nextCircuitId = 1,
-  circuitManager = null
+  circuitManager = null,
+  { keepInputValues = false } = {}
 ) {
-  const sanitizedComponents = (components || []).map(component => {
+  // An input's `value` is transient UI state. Saving strips it (a saved circuit has no
+  // live stimulus). But a RUN model must carry it, or the simulation starts every input at
+  // the engine default (0) — e.g. a CLR held at 1 on the canvas would silently run as 0
+  // until toggled. buildRunModel passes keepInputValues:true for exactly this reason.
+  const stripTransient = component => {
     const { js_id, ...componentWithoutJsId } = component || {}
-    // Canonical geometry: each port's grid-unit offset + name + direction,
-    // derived (never stored live) so ggl.view can match wires without a browser.
     const ports = computeComponentPorts(component, circuitManager)
-
-    if (component.type === 'input' || component.type === 'output') {
+    const isIO = component.type === 'input' || component.type === 'output'
+    if (isIO && !keepInputValues) {
       const { value, lastUpdate, ...propsWithoutTransient } = component.props || {}
-      return {
-        ...componentWithoutJsId,
-        props: propsWithoutTransient,
-        ports
-      }
+      return { ...componentWithoutJsId, props: propsWithoutTransient, ports }
     }
-
+    if (isIO) {
+      // Keep value (the live stimulus) but still drop lastUpdate (pure UI bookkeeping).
+      const { lastUpdate, ...props } = component.props || {}
+      return { ...componentWithoutJsId, props, ports }
+    }
     return { ...componentWithoutJsId, ports }
-  })
+  }
+
+  const sanitizedComponents = (components || []).map(stripTransient)
 
   const sanitizedSchematicComponents = {}
   for (const [circuitId, schematicData] of Object.entries(schematicComponents || {})) {
     let sanitizedCircuit = schematicData.circuit
     if (sanitizedCircuit && sanitizedCircuit.components) {
-      const sanitizedSubComponents = sanitizedCircuit.components.map(component => {
-        const { js_id, ...componentWithoutJsId } = component || {}
-        const ports = computeComponentPorts(component, circuitManager)
-
-        if (component.type === 'input' || component.type === 'output') {
-          const { value, lastUpdate, ...propsWithoutTransient } = component.props || {}
-          return {
-            ...componentWithoutJsId,
-            props: propsWithoutTransient,
-            ports
-          }
-        }
-
-        return { ...componentWithoutJsId, ports }
-      })
+      const sanitizedSubComponents = sanitizedCircuit.components.map(stripTransient)
 
       sanitizedCircuit = {
         ...sanitizedCircuit,
