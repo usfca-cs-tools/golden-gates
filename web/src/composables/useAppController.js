@@ -1002,179 +1002,80 @@ function resolveFilenameReferences() {
   }
 
   /**
-   * Load circuit data into canvas
+   * Load a set of already-read .ggc files (each { filename, content }) as circuits + tabs.
+   * Clears the workspace, creates one circuit per file keyed by sourceFilename, resolves
+   * subcircuit filename references among the loaded set, opens a tab per circuit, and focuses
+   * `focusFilename` (or the first file). Used by the web .ggc drop.
    */
-  function loadCircuitData(canvasRef, circuitData) {
-    if (!canvasRef) return
+  async function loadCircuitsFromFiles(canvasRef, files, focusFilename = null) {
+    canvasRef?.clearCircuit?.()
+    circuitManager.allCircuits.value.clear()
+    circuitManager.availableComponents.value.clear()
+    circuitManager.openTabs.value = []
 
-    // Set loading state to prevent undo saves during loading
-    if (canvasRef.setLoadingState) {
-      canvasRef.setLoadingState(true)
-    }
-
-    // Clear existing circuit canvas
-    canvasRef.clearCircuit()
-
-    // For v1.1+ format, restore schematic component definitions first
-    if (
-      circuitData.schematicComponents &&
-      Object.keys(circuitData.schematicComponents).length > 0
-    ) {
-      Object.entries(circuitData.schematicComponents).forEach(([circuitId, data]) => {
-        try {
-          // Restore the circuit definition
-          if (data.circuit) {
-            // Always restore circuit data (overwrite existing if needed)
-            const circuit = {
-              ...data.circuit,
-              id: circuitId
-            }
-            circuitManager.allCircuits.value.set(circuitId, circuit)
-          }
-
-          // Restore the component definition
-          if (data.definition) {
-            circuitManager.availableComponents.value.set(circuitId, data.definition)
-          }
-        } catch (error) {
-          console.warn(`Failed to restore schematic component ${circuitId}:`, error)
-        }
-      })
-    }
-
-    // Restore nextCircuitId to prevent ID collisions
-    if (circuitData.nextCircuitId) {
-      // Get current state, update nextCircuitId, and restore it
-      const currentState = circuitManager.exportState()
-      currentState.nextCircuitId = Math.max(currentState.nextCircuitId, circuitData.nextCircuitId)
-      circuitManager.importState(currentState)
-    }
-
-    // Ensure we're loading into the correct circuit context
-    // Create a new circuit or use the active circuit appropriately
-    let targetCircuit = circuitManager.activeCircuit.value
-
-    // If the loaded circuit has a different name than the active circuit,
-    // we should create a new circuit or rename the active circuit
-    if (targetCircuit && circuitData.name && circuitData.name !== targetCircuit.name) {
-      // Check if any of the schematic components reference the current active circuit
-      const hasConflict = circuitData.components?.some(component => {
-        if (component.type === 'schematic-component') {
-          const circuitId = component.props?.circuitId || component.circuitId
-          return circuitId === targetCircuit.id
-        }
-        return false
-      })
-
-      if (hasConflict) {
-        // Create a new circuit for the loaded data to avoid conflicts
-        const newCircuitName = circuitData.name || `Circuit${Date.now()}`
-        targetCircuit = circuitManager.createCircuit(newCircuitName, {
-          label: circuitData.label || newCircuitName
+    for (const { filename, content } of files) {
+      try {
+        if (!content) continue
+        const circuitData = parseAndValidateJSON(content)
+        const circuit = circuitManager.createCircuit(circuitData.name, {
+          sourceFilename: filename,
+          hasUnsavedChanges: false,
+          openTab: false
         })
+        circuit.components = circuitData.components || []
+        circuit.wires = circuitData.wires || []
+        circuit.wireJunctions = circuitData.wireJunctions || []
+        if (circuitData.label) circuit.label = circuitData.label
+        if (circuitData.interface) {
+          circuit.properties = circuit.properties || {}
+          circuit.properties.interface = circuitData.interface
+        }
+        circuitManager.saveCircuitAsComponent(circuit.id)
+      } catch (err) {
+        console.warn(`Failed to load ${filename}:`, err)
       }
     }
 
-    // Apply circuit properties to the target circuit
-    if (targetCircuit) {
-      if (circuitData.name) {
-        targetCircuit.name = circuitData.name
-      }
-      if (circuitData.label) {
-        targetCircuit.label = circuitData.label
-      }
-      if (circuitData.interface) {
-        targetCircuit.properties = targetCircuit.properties || {}
-        targetCircuit.properties.interface = circuitData.interface
-      }
-    }
+    resolveFilenameReferences()
 
-    // Load components
-    if (circuitData.components) {
-      circuitData.components.forEach(component => {
-        canvasRef.loadComponent(component)
-      })
+    for (const { filename } of files) {
+      const circuit = circuitManager.getCircuitByFilename(filename)
+      if (circuit) circuitManager.openTab(circuit.id)
     }
-
-    // Load wires
-    if (circuitData.wires) {
-      circuitData.wires.forEach(wire => {
-        canvasRef.addWire(wire)
-      })
-    }
-
-    // Load wire junctions
-    if (circuitData.wireJunctions) {
-      circuitData.wireJunctions.forEach(junction => {
-        canvasRef.addWireJunction(junction)
-      })
-    }
-
-    // Reset loading state
-    if (canvasRef.setLoadingState) {
-      canvasRef.setLoadingState(false)
-    }
+    const focus =
+      (focusFilename && circuitManager.getCircuitByFilename(focusFilename)) ||
+      (files[0] && circuitManager.getCircuitByFilename(files[0].filename))
+    if (focus) circuitManager.openTab(focus.id)
   }
 
   /**
-   * Handle drag and drop of circuit files
+   * Web .ggc drop: open the dropped file(s) as tabs. The browser can't see the directory, so
+   * exactly the dropped files load (multi-drop a project's files together to resolve
+   * subcircuits). There's no project directory in the browser, so a later Save uses the
+   * no-project path.
    */
-  async function handleDroppedFile(canvasRef, file) {
-    try {
-      const fileContent = await file.text()
-      const circuitData = parseAndValidateJSON(fileContent)
-
-      // Check if current circuit has any components
-      const hasExistingCircuit = canvasRef?.components?.length > 0 || canvasRef?.wires?.length > 0
-
-      if (hasExistingCircuit) {
-        showConfirmation({
-          title: 'Replace Circuit?',
-          message: 'This will replace your current circuit. Are you sure you want to continue?',
-          type: 'warning',
-          onAccept: () => {
-            // Complete replacement: clear all schematic components to prevent ID conflicts
-            circuitManager.availableComponents.value.clear()
-
-            // Also clear any other circuits that might have conflicting IDs
-            // Keep only the currently active circuit, but clear its contents
-            const activeCircuitId = circuitManager.activeTabId.value
-            if (activeCircuitId) {
-              const activeCircuit = circuitManager.getCircuit(activeCircuitId)
-              if (activeCircuit) {
-                // Clear all other circuits except the active one
-                for (const [circuitId] of circuitManager.allCircuits.value) {
-                  if (circuitId !== activeCircuitId) {
-                    circuitManager.allCircuits.value.delete(circuitId)
-                  }
-                }
-              }
-            }
-
-            loadCircuitData(canvasRef, circuitData)
-          }
-        })
-      } else {
-        // Complete replacement even when no existing circuit
-        circuitManager.availableComponents.value.clear()
-
-        const activeCircuitId = circuitManager.activeTabId.value
-        if (activeCircuitId) {
-          const activeCircuit = circuitManager.getCircuit(activeCircuitId)
-          if (activeCircuit) {
-            for (const [circuitId] of circuitManager.allCircuits.value) {
-              if (circuitId !== activeCircuitId) {
-                circuitManager.allCircuits.value.delete(circuitId)
-              }
-            }
-          }
-        }
-
-        loadCircuitData(canvasRef, circuitData)
+  async function openDroppedGgcFiles(canvasRef, ggcFiles) {
+    const files = []
+    for (const file of ggcFiles) {
+      try {
+        files.push({ filename: file.name, content: await file.text() })
+      } catch (err) {
+        console.warn(`Failed to read ${file.name}:`, err)
       }
-    } catch (error) {
-      console.error('Error loading dropped file:', error)
-      alert('Error loading circuit: ' + error.message)
+    }
+    if (files.length === 0) return
+
+    const load = () => loadCircuitsFromFiles(canvasRef, files, files[0].filename)
+    const hasExistingWork = canvasRef?.components?.length > 0 || canvasRef?.wires?.length > 0
+    if (hasExistingWork) {
+      showConfirmation({
+        title: 'Open Circuits?',
+        message: 'This will replace your current work. Are you sure?',
+        type: 'warning',
+        onAccept: load
+      })
+    } else {
+      await load()
     }
   }
 
@@ -1278,10 +1179,9 @@ function resolveFilenameReferences() {
     saveCircuit,
     saveCircuitAs,
     openProject,
-    loadCircuitData,
     loadSubcircuitData,
     openSubcircuitTab,
-    handleDroppedFile,
+    openDroppedGgcFiles,
     handleInspectorAction,
 
     // Utility functions

@@ -2,12 +2,15 @@
 // functions you want. The Vue app can't access all of Node.js, 
 // just what you explicitly allow here.
 
-const { contextBridge, ipcRenderer } = require('electron')
+const { contextBridge, ipcRenderer, webUtils } = require('electron')
 
 contextBridge.exposeInMainWorld('electronAPI', {
   // Project-based operations
   pickProjectDirectory: () => ipcRenderer.invoke('pick-project-directory'),
   openProject: (dirPath) => ipcRenderer.invoke('open-project', dirPath),
+  // Real filesystem path of a dropped File/folder. Electron removed File.path, so a dropped
+  // .ggc / folder is resolved to its directory to reuse the open-project loader.
+  getPathForFile: (file) => webUtils.getPathForFile(file),
   readCircuitFile: (dirPath, filename) => ipcRenderer.invoke('read-circuit-file', { dirPath, filename }),
   writeCircuitFile: (dirPath, filename, content) => ipcRenderer.invoke('write-circuit-file', { dirPath, filename, content }),
 

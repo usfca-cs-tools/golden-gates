@@ -211,8 +211,9 @@
   },
   "ui": {
     "toggleInspector": "Toggle Inspector",
-    "dropFileHere": "Drop JSON circuit file here",
-    "dropFileAlert": "Please drop a JSON circuit file",
+    "dropFileHere": "Drop .ggc circuit files (or a project folder) here",
+    "dropGgcAlert": "Please drop .ggc circuit file(s) or a project folder",
+    "dropFolderDesktopOnly": "Dropping a folder is only supported in the desktop app. In the browser, drop the .ggc files directly (select them all to open a whole project).",
     "unknownCommand": "Unknown command action",
     "closeWithoutSaving": "Close Without Saving",
     "clearCircuit": "Clear Circuit"

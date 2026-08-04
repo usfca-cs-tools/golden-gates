@@ -145,9 +145,8 @@ export default {
       saveCircuit,
       saveCircuitAs,
       openProject: openProjectInternal,
-      loadCircuitData,
       openSubcircuitTab,
-      handleDroppedFile,
+      openDroppedGgcFiles,
       handleInspectorAction,
       showConfirmation,
       isRunning,
@@ -188,9 +187,8 @@ export default {
       saveCircuit,
       saveCircuitAs,
       openProjectInternal,
-      loadCircuitData,
       openSubcircuitTab,
-      handleDroppedFile,
+      openDroppedGgcFiles,
       handleInspectorAction,
       showConfirmation,
       isRunning,
@@ -376,19 +374,49 @@ export default {
       this.isDraggingOver = false
       this.dragCounter = 0
 
-      const files = Array.from(event.dataTransfer.files)
+      // Extract synchronously — dataTransfer is only valid during the event. Detect a dropped
+      // folder and collect .ggc files. JSON drop is no longer supported.
+      const items = Array.from(event.dataTransfer.items || [])
+      let folderFile = null
+      const ggcFiles = []
+      for (const item of items) {
+        if (item.kind !== 'file') continue
+        const entry = item.webkitGetAsEntry ? item.webkitGetAsEntry() : null
+        const file = item.getAsFile()
+        if (entry && entry.isDirectory) {
+          if (!folderFile) folderFile = file
+        } else if (file && file.name.toLowerCase().endsWith('.ggc')) {
+          ggcFiles.push(file)
+        }
+      }
 
-      // Find the first JSON file
-      const jsonFile = files.find(
-        file => file.type === 'application/json' || file.name.toLowerCase().endsWith('.json')
-      )
-
-      if (!jsonFile) {
-        alert(this.$t('ui.dropFileAlert'))
+      if (window.electronAPI) {
+        // Desktop: a dropped folder or .ggc opens ALL .ggc in that directory as tabs.
+        let dirPath = null
+        if (folderFile) {
+          dirPath = window.electronAPI.getPathForFile(folderFile)
+        } else if (ggcFiles.length > 0) {
+          const filePath = window.electronAPI.getPathForFile(ggcFiles[0])
+          dirPath = filePath.slice(0, Math.max(filePath.lastIndexOf('/'), filePath.lastIndexOf('\\')))
+        }
+        if (dirPath) {
+          await this.openProject({ dirPath })
+        } else {
+          alert(this.$t('ui.dropGgcAlert'))
+        }
         return
       }
 
-      await this.handleDroppedFile(this.$refs.canvas, jsonFile)
+      // Web: no directory access — open exactly the dropped .ggc file(s) as tabs.
+      if (folderFile) {
+        alert(this.$t('ui.dropFolderDesktopOnly'))
+        return
+      }
+      if (ggcFiles.length === 0) {
+        alert(this.$t('ui.dropGgcAlert'))
+        return
+      }
+      await this.openDroppedGgcFiles(this.$refs.canvas, ggcFiles)
     },
 
     /**
