@@ -334,6 +334,9 @@ export default {
           ...circuit.properties,
           ...updatedCircuit.properties
         }
+        // Circuit metadata edits (name/label/interface) are a real change that gets written
+        // to the .ggc — mark dirty so the save-on-quit prompt catches it.
+        this.circuitManager.markCircuitAsModified(circuit.id)
 
         // Update selectedCircuit to reflect changes
         this.selectedCircuit = circuit
@@ -537,11 +540,16 @@ export default {
   },
 
   mounted() {
-    // Initialize autosave system
-    this.autosave.initializeAutosave()
-
-    // Check for available autosaves and prompt for restoration
-    this.checkForAutosaveRestoration()
+    // localStorage autosave/restore is the persistence layer ONLY for the pure web build. In
+    // the desktop app disk (.ggc files) is the single source of truth; autosaving to and
+    // silently restoring from localStorage would mask a stale disk and let a student commit
+    // work that only ever lived in localStorage. Skip both in Electron — save-on-quit + the
+    // per-circuit dirty flags cover persistence there. (Skipping initializeAutosave() means
+    // the deep watchers + visibilitychange listener never attach; no restore ⇒ launch blank.)
+    if (!window.electronAPI) {
+      this.autosave.initializeAutosave()
+      this.checkForAutosaveRestoration()
+    }
 
     // Initialize selectedCircuit with the current circuit if no component is selected
     if (!this.selectedComponent && this.activeCircuit) {
@@ -590,6 +598,21 @@ export default {
     }
     if (window.electronAPI?.onMenuSaveCircuitAs) {
       window.electronAPI.onMenuSaveCircuitAs(() => this.saveCircuitAs(this.$refs.canvas))
+    }
+
+    // Save-on-quit bridge (Electron): main.cjs queries these globals when the window is
+    // closing so it can prompt to save unsaved circuits before quitting. Uses the same
+    // window.__* renderer-global style as the ggl callbacks.
+    if (window.electronAPI) {
+      window.__ggHasUnsavedChanges = () =>
+        [...this.circuitManager.allCircuits.value.values()].some(c => c.hasUnsavedChanges)
+      window.__ggSaveAll = async () => {
+        try {
+          return (await this.saveCircuit(this.$refs.canvas)) !== false
+        } catch (e) {
+          return false
+        }
+      }
     }
   },
 

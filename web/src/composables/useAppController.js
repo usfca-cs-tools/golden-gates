@@ -738,9 +738,12 @@ export function useAppController(circuitManager) {
       if (activeCircuit) {
         circuitManager.markCircuitAsSaved(activeCircuit.id)
       }
+      // Report success so the save-on-quit flow can block quitting on a failed write.
+      return true
     } catch (error) {
       console.error('Error saving circuit:', error)
       alert('Error saving circuit: ' + error.message)
+      return false
     }
   }
 

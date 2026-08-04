@@ -229,6 +229,7 @@ export function useCircuitModel() {
     const circuit = allCircuits.value.get(circuitId)
     if (circuit && !circuit.isMain) {
       circuit.name = newName
+      markCircuitAsModified(circuitId)
       return true
     }
     return false
@@ -353,6 +354,7 @@ export function useCircuitModel() {
       circuit.components = []
       circuit.wires = []
       circuit.wireJunctions = []
+      markCircuitAsModified(circuitId)
       return true
     }
     return false

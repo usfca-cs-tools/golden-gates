@@ -598,7 +598,12 @@ export function useCanvasController(
     // End dragging
     if (isDragging()) {
       const wasComponentDrag = !dragAndDrop.dragging.value?.isWireDrag
-      endDrag(snapToGrid)
+      const moved = endDrag(snapToGrid)
+      if (moved) {
+        // A drag that actually moved something is an edit; mark dirty so the save-on-quit
+        // prompt is reliable (drag-move otherwise bypasses the circuitManager mutators).
+        circuitManager.markCircuitAsModified(circuitManager.activeTabId.value)
+      }
 
       // Update last component position if we were dragging components
       if (wasComponentDrag && selection.selectedComponents.value.size > 0) {

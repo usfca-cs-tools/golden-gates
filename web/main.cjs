@@ -68,6 +68,13 @@ function maybeCheckForUpdates() {
 let mainWindow = null
 let pendingFilePath = null  // project dir opened before the renderer is ready
 
+// Save-on-quit state (see the mainWindow 'close' handler in createWindow). readyToClose flips
+// true once the user has confirmed the quit (saved or discarded); quitRequested is true while a
+// full app quit (Cmd-Q / before-quit) is in progress, so a confirmed close can quit the app
+// rather than merely close the window (macOS keeps the app in the dock on a window close).
+let readyToClose = false
+let quitRequested = false
+
 // Windows/Linux pass the path of an associated file as a command-line argument
 // when the app is launched (or re-launched) by double-clicking it. Pick out the
 // .ggc path, ignoring the executable and any Chromium/Electron flags.
@@ -243,6 +250,13 @@ if (!gotTheLock) {
   app.on('window-all-closed', () => {
     if (process.platform !== 'darwin') app.quit()
   })
+
+  // A full app quit (Cmd-Q, menu Quit) fires before-quit before windows close. Record it so the
+  // window 'close' handler, once the user confirms, quits the app instead of just closing the
+  // window. Reset on Cancel (below) so a later window close isn't mistaken for a quit.
+  app.on('before-quit', () => {
+    quitRequested = true
+  })
 }
 
 function createWindow() {
@@ -275,6 +289,70 @@ function createWindow() {
       pendingFilePath = null
       openProjectDir(dirPath, activeFile)
     }
+  })
+
+  // Proceed with the close/quit that was interrupted by the save prompt.
+  const finishClose = () => {
+    readyToClose = true
+    if (quitRequested) app.quit()
+    else mainWindow.close()
+  }
+
+  // Save-on-quit: unsaved circuit changes must not silently vanish (they'd never reach the
+  // .ggc project files a student commits). Intercept the close, ask the renderer whether
+  // anything is unsaved, and if so prompt Save / Don't Save / Cancel. Disk is the source of
+  // truth, so "Save" writes the whole project before quitting, and a failed/cancelled save
+  // keeps the app open so nothing is lost.
+  mainWindow.on('close', async e => {
+    if (readyToClose) return
+    e.preventDefault()
+
+    let dirty = false
+    try {
+      dirty = await mainWindow.webContents.executeJavaScript(
+        'window.__ggHasUnsavedChanges ? window.__ggHasUnsavedChanges() : false'
+      )
+    } catch {
+      dirty = false
+    }
+    if (!dirty) {
+      finishClose()
+      return
+    }
+
+    const { response } = await dialog.showMessageBox(mainWindow, {
+      type: 'warning',
+      buttons: ['Save', "Don't Save", 'Cancel'],
+      defaultId: 0,
+      cancelId: 2,
+      message: 'Save changes before quitting?',
+      detail:
+        'Your circuit has unsaved changes. Anything not saved is not written to your project ' +
+        'files, so it will not be committed or graded.'
+    })
+
+    if (response === 2) {
+      // Cancel: stay open, and abandon any in-progress quit.
+      quitRequested = false
+      return
+    }
+    if (response === 1) {
+      // Don't Save: discard and close.
+      finishClose()
+      return
+    }
+
+    // Save: write the project files; only close if the save actually succeeded.
+    let saved = false
+    try {
+      saved = await mainWindow.webContents.executeJavaScript(
+        'window.__ggSaveAll ? window.__ggSaveAll() : false'
+      )
+    } catch {
+      saved = false
+    }
+    if (saved) finishClose()
+    else quitRequested = false
   })
 
   // Clear the reference when the window is closed so open-file doesn't

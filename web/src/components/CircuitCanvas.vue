@@ -349,6 +349,9 @@ export default {
           const circuit = props.circuitManager.getCircuit(props.circuitManager.activeTabId.value)
           if (circuit?.wires) {
             circuit.wires.push(wire)
+            // Wire drawing bypasses the circuitManager mutators, so mark dirty here — the
+            // save-on-quit prompt relies on hasUnsavedChanges being reliable (data integrity).
+            props.circuitManager.markCircuitAsModified(props.circuitManager.activeTabId.value)
           }
         },
         removeWire: index => {
@@ -358,18 +361,21 @@ export default {
           const circuit = props.circuitManager.getCircuit(props.circuitManager.activeTabId.value)
           if (circuit?.wires) {
             circuit.wires.splice(index, 1)
+            props.circuitManager.markCircuitAsModified(props.circuitManager.activeTabId.value)
           }
         },
         addWireJunction: junction => {
           const circuit = props.circuitManager.getCircuit(props.circuitManager.activeTabId.value)
           if (circuit?.wireJunctions) {
             circuit.wireJunctions.push(junction)
+            props.circuitManager.markCircuitAsModified(props.circuitManager.activeTabId.value)
           }
         },
         removeWireJunction: index => {
           const circuit = props.circuitManager.getCircuit(props.circuitManager.activeTabId.value)
           if (circuit?.wireJunctions) {
             circuit.wireJunctions.splice(index, 1)
+            props.circuitManager.markCircuitAsModified(props.circuitManager.activeTabId.value)
           }
         }
       },
@@ -405,6 +411,7 @@ export default {
         const circuit = props.circuitManager.getCircuit(props.circuitManager.activeTabId.value)
         if (circuit?.wires) {
           circuit.wires.splice(index, 1)
+          props.circuitManager.markCircuitAsModified(props.circuitManager.activeTabId.value)
         }
       }
     )

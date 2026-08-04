@@ -233,8 +233,9 @@ export function useDragController(
 
   // End dragging with snap to grid
   function endDrag(snapToGrid) {
-    if (!dragging.value) return
+    if (!dragging.value) return false
 
+    const moved = !!dragging.value.hasMoved
     // Only snap if we actually moved
     if (dragging.value.hasMoved) {
       let snappedDeltaX = 0
@@ -313,6 +314,7 @@ export function useDragController(
     }
 
     dragging.value = null
+    return moved
   }
 
   // Check if currently dragging
