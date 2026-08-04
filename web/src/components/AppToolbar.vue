@@ -9,6 +9,8 @@
         <GoldenGateLogo :width="48" :height="24" />
       </Button>
 
+      <AllCircuitsMenu :circuitManager="circuitManager" :activeTabId="activeTabId" />
+
       <CircuitTabsBar
         :circuitTabs="circuitTabs"
         :activeTabId="activeTabId"
@@ -32,13 +34,15 @@
 <script>
 import CircuitTabsBar from './CircuitTabsBar.vue'
 import GoldenGateLogo from './GoldenGateLogo.vue'
+import AllCircuitsMenu from './AllCircuitsMenu.vue'
 import { useI18n } from 'vue-i18n'
 
 export default {
   name: 'AppToolbar',
   components: {
     CircuitTabsBar,
-    GoldenGateLogo
+    GoldenGateLogo,
+    AllCircuitsMenu
   },
   props: {
     circuitTabs: {

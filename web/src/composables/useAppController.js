@@ -632,13 +632,15 @@ export function useAppController(circuitManager) {
         circuit.sourceFilename = `${circuit.name}.ggc`
       }
     }
-    await saveCircuit(canvasRef)
+    // Save As copies the whole project to the new folder, so write EVERY circuit — not just the
+    // changed ones (the destination has none of them yet).
+    await saveCircuit(canvasRef, { changedOnly: false })
   }
 
   /**
    * Save current circuit to file
    */
-  async function saveCircuit(canvasRef) {
+  async function saveCircuit(canvasRef, { changedOnly = true } = {}) {
     try {
       const components = canvasRef?.components || []
       const wires = canvasRef?.wires || []
@@ -677,8 +679,12 @@ export function useAppController(circuitManager) {
       const nextCircuitId = circuitManager.exportState().nextCircuitId
 
       if (projectDir && activeCircuit) {
-        // Project mode: save EVERY circuit to its own file (no schematicComponents embedding)
+        // Project mode: save each circuit to its own file (no schematicComponents embedding).
         for (const [, circuit] of circuitManager.allCircuits.value) {
+          // Skip a circuit only if it's clean AND already on disk, so Save (⌘S) doesn't rewrite
+          // unchanged files — but a never-saved (new) circuit, which may not be flagged dirty, is
+          // always written. (Save As passes changedOnly:false to copy the whole project.)
+          if (changedOnly && !circuit.hasUnsavedChanges && circuit.sourceFilename) continue
           const filename = circuit.sourceFilename || `${circuit.name}.ggc`
           const circuitMetadata = {
             name: circuit.name,

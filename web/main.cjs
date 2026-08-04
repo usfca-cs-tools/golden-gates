@@ -163,26 +163,22 @@ if (!gotTheLock) {
               }
             }
           },
+          { type: 'separator' },
           {
-            label: 'Open...',
+            // A project is a folder of .ggc files, so opening is always "open a folder".
+            // (Double-clicking a .ggc in Finder still opens its folder via app.on('open-file').)
+            label: 'Open Folder...',
             accelerator: 'CmdOrCtrl+O',
             click: async () => {
               const { filePaths } = await dialog.showOpenDialog({
-                properties: ['openFile', 'openDirectory'],
-                filters: [{ name: 'Golden Gates Circuit', extensions: ['ggc'] }]
+                properties: ['openDirectory']
               })
               if (filePaths.length > 0) {
-                const selected = filePaths[0]
-                if (selected.endsWith('.ggc')) {
-                  // Single file selected — open its parent directory, focus this file's tab
-                  openProjectDir(path.dirname(selected), path.basename(selected))
-                } else {
-                  // Directory selected — open it, top-level circuit gets focus
-                  openProjectDir(selected)
-                }
+                openProjectDir(filePaths[0])
               }
             }
           },
+          { type: 'separator' },
           {
             label: 'Save',
             accelerator: 'CmdOrCtrl+S',

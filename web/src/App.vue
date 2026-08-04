@@ -551,6 +551,26 @@ export default {
       this.checkForAutosaveRestoration()
     }
 
+    // Show the open project folder in the OS title bar (document-based-app style — the app name
+    // lives in the menu bar), with "— Edited" appended while any circuit has unsaved changes
+    // (Pages/Numbers style). The getter reads only currentProjectDir + each circuit's dirty flag,
+    // never component values, so it doesn't refire during simulation. document.title flows
+    // through to the Electron window title.
+    this.$watch(
+      () => {
+        const dir = this.circuitManager.currentProjectDir.value
+        const base = (dir && dir.split(/[\\/]/).filter(Boolean).pop()) || 'Golden Gates'
+        const edited = [...this.circuitManager.allCircuits.value.values()].some(
+          c => c.hasUnsavedChanges
+        )
+        return edited ? `${base} — Edited` : base
+      },
+      title => {
+        document.title = title
+      },
+      { immediate: true }
+    )
+
     // Initialize selectedCircuit with the current circuit if no component is selected
     if (!this.selectedComponent && this.activeCircuit) {
       this.selectedCircuit = this.activeCircuit
