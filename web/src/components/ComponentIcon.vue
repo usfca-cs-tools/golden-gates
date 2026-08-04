@@ -288,6 +288,12 @@ export default {
         return `${body} ${input1} ${input2} ${input3} ${output}`
       }
 
+      if (this.componentType === 'tunnel') {
+        // Left-pointing triangle, matching the on-canvas tunnel whose connection point
+        // (dot) is at the tip on the left and whose flat base is on the right.
+        return 'M 4 15 L 26 4 L 26 26 Z'
+      }
+
       if (this.componentType === 'multiplexer') {
         // Multiplexer with slanted top and bottom lines
         const width = 24
@@ -396,6 +402,8 @@ export default {
         return '0 0 75 30' // Standard XOR width
       } else if (this.componentType === 'test') {
         return '0 0 30 30' // Square so the circle+check fills the icon
+      } else if (this.componentType === 'tunnel') {
+        return '0 0 30 30' // Square so the triangle fills the icon
       }
       return '0 0 60 30' // Standard width for other gates
     },
