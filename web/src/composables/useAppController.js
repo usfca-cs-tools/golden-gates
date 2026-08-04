@@ -240,8 +240,7 @@ export function useAppController(circuitManager) {
             console.warn(`Unknown event type: ${eventType}`)
         }
       } else {
-        const wireIdPattern = /^wire_\d+$/
-        if (wireIdPattern.test(componentId) && eventType === 'step') {
+        if (componentId.startsWith('wire_') && eventType === 'step') {
           handleWireStepUpdate(canvasRef, componentId, value)
         } else if (eventType === 'error') {
           console.log(`Nested component error: ${componentId} = ${value} (no parent mapped)`)
