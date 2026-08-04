@@ -80,9 +80,13 @@
             :selected="selectedWires.has(index)"
             :step-active="wire.stepActive || false"
             :step-style="wire.stepStyle || 'processing'"
+            :value="wire.value ?? null"
+            :bits="wire.bits || 1"
             :data-wire-index="index"
             @click="handleWireClick(index, $event)"
             @mousedown="handleWireMouseDown(index, $event)"
+            @value-hover="showWireValueTooltip"
+            @value-hover-end="hideWireValueTooltip"
           />
 
           <!-- Wire preview during drawing -->
@@ -176,6 +180,15 @@
         <i class="pi pi-minus"></i>
       </button>
     </div>
+
+    <!-- Bus-value hover tooltip (issue #133): follows the cursor over a multi-bit wire -->
+    <div
+      v-if="wireValueTooltip.visible"
+      class="wire-value-tooltip"
+      :style="{ left: `${wireValueTooltip.x + 14}px`, top: `${wireValueTooltip.y + 14}px` }"
+    >
+      {{ wireValueTooltip.text }}
+    </div>
   </div>
 </template>
 
@@ -227,6 +240,17 @@ export default {
     const container = ref(null)
     const scrollContainer = ref(null)
     const componentRefs = ref({})
+
+    // Bus-value hover tooltip (issue #133): shown at the cursor while hovering a multi-bit
+    // wire. Wire.vue emits the already-formatted text + viewport point; we position a
+    // fixed overlay there so pan/zoom transforms don't affect it.
+    const wireValueTooltip = ref({ visible: false, text: '', x: 0, y: 0 })
+    const showWireValueTooltip = ({ text, x, y }) => {
+      wireValueTooltip.value = { visible: true, text, x, y }
+    }
+    const hideWireValueTooltip = () => {
+      wireValueTooltip.value = { ...wireValueTooltip.value, visible: false }
+    }
 
     // Undo history — snapshot-based, max 50 entries
     const undoHistory = useUndoHistory(props.circuitManager)
@@ -672,6 +696,11 @@ export default {
       container,
       scrollContainer,
 
+      // Bus-value hover tooltip (issue #133)
+      wireValueTooltip,
+      showWireValueTooltip,
+      hideWireValueTooltip,
+
       // State
       containerWidth,
       containerHeight,
@@ -756,6 +785,23 @@ export default {
   height: 100%;
   background-color: var(--color-canvas-bg);
   overflow: hidden;
+}
+
+/* Bus-value hover tooltip (issue #133). Fixed to the viewport (positioned from the
+   cursor's clientX/clientY) so canvas pan/zoom transforms never shift it; never
+   intercepts pointer events so it can't flicker the underlying wire's hover. */
+.wire-value-tooltip {
+  position: fixed;
+  z-index: 1000;
+  pointer-events: none;
+  padding: 2px 6px;
+  font-family: ui-monospace, SFMono-Regular, 'SF Mono', Consolas, monospace;
+  font-size: 12px;
+  white-space: nowrap;
+  color: #f8fafc;
+  background: rgba(15, 23, 42, 0.92);
+  border-radius: 4px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
 }
 
 .canvas-scroll-container {

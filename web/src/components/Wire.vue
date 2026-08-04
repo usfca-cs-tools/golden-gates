@@ -1,5 +1,12 @@
 <template>
-  <g @click="handleClick" @mousedown="handleMouseDown" :data-wire-index="$attrs['data-wire-index']">
+  <g
+    @click="handleClick"
+    @mousedown="handleMouseDown"
+    @mouseenter="handleValueHover"
+    @mousemove="handleValueHover"
+    @mouseleave="handleValueHoverEnd"
+    :data-wire-index="$attrs['data-wire-index']"
+  >
     <!-- Invisible wider line for easier clicking -->
     <polyline
       v-if="!preview"
@@ -33,6 +40,7 @@
 <script>
 import { computed } from 'vue'
 import { COLORS, STROKE_WIDTHS, gridToPixel } from '../utils/constants'
+import { formatBusValue } from '../utils/formatBusValue'
 
 export default {
   name: 'Wire',
@@ -56,9 +64,19 @@ export default {
     stepStyle: {
       type: String,
       default: 'processing'
+    },
+    // The value/width propagating on this wire, when known (issue #133). Only multi-bit
+    // buses show a hover tooltip; single-bit wires keep just the high/low coloring.
+    value: {
+      type: Number,
+      default: null
+    },
+    bits: {
+      type: Number,
+      default: 1
     }
   },
-  emits: ['click', 'mousedown'],
+  emits: ['click', 'mousedown', 'valueHover', 'valueHoverEnd'],
   setup(props, { emit }) {
     const pointsString = computed(() => {
       return props.points
@@ -92,12 +110,32 @@ export default {
       }
     }
 
+    // Only multi-bit buses with a known value show a value tooltip. The parent renders it
+    // at the cursor (SVG can't host a reliable PrimeVue tooltip), so pass the text + point.
+    const busText = computed(() =>
+      !props.preview && props.bits > 1 && props.value != null
+        ? formatBusValue(props.value, props.bits)
+        : null
+    )
+
+    const handleValueHover = event => {
+      if (busText.value) {
+        emit('valueHover', { text: busText.value, x: event.clientX, y: event.clientY })
+      }
+    }
+
+    const handleValueHoverEnd = () => {
+      emit('valueHoverEnd')
+    }
+
     return {
       pointsString,
       strokeColor,
       strokeWidth,
       handleClick,
-      handleMouseDown
+      handleMouseDown,
+      handleValueHover,
+      handleValueHoverEnd
     }
   }
 }

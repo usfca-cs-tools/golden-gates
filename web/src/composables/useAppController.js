@@ -361,11 +361,15 @@ export function useAppController(circuitManager) {
     // Convert Pyodide Proxy and extract data
     const jsStepData = stepData.toJs?.() || stepData
 
-    // Update wire state directly
+    // Update wire state directly. value/bits (added for the bus-value hover tooltip,
+    // issue #133) let Wire.vue show what a multi-bit bus is carrying; they mirror how an
+    // Output stores props.value.
     activeCircuit.wires.splice(wireIndex, 1, {
       ...activeCircuit.wires[wireIndex],
       stepActive: jsStepData.active,
-      stepStyle: jsStepData.style || 'processing'
+      stepStyle: jsStepData.style || 'processing',
+      value: jsStepData.value,
+      bits: jsStepData.bits
     })
   }
 
