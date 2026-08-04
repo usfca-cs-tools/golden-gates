@@ -231,6 +231,8 @@
       "invalidPortConnection": "Invalid connection to port '{portName}' on component '{componentType}'",
       "multipleOutputs": "Multiple outputs connected to input '{inputName}'",
       "inputShortCircuit": "Input '{inputName}' is driven by more than one wire (short circuit); an input can have only one connection",
+      "tunnelNoDriver": "Tunnel net '{label}' has no driver: connect a tunnel labeled '{label}' to the signal that should feed it",
+      "tunnelMultipleDrivers": "Tunnel net '{label}' has more than one driver: only one tunnel labeled '{label}' may be fed by a signal",
       "invalidComponentType": "Invalid component type: '{componentType}'",
       "simulationTimeout": "Simulation timed out after {timeoutMs}ms",
       "testInputNotFound": "Test input '{name}' not found",

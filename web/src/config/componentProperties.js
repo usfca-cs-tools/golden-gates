@@ -290,16 +290,9 @@ export const componentPropertySchema = {
         max: 64,
         showButtons: true
       },
-      {
-        name: 'direction',
-        type: 'dropdown',
-        label: 'Direction',
-        default: 'input',
-        options: [
-          { label: 'Input', value: 'input' },
-          { label: 'Output', value: 'output' }
-        ]
-      },
+      // No Direction control: a tunnel's direction is inferred from what it's wired to
+      // (a tunnel fed by a driver publishes to the net; one that drives a sink reads from
+      // it). ggl.view derives it at run time, so the user never picks it.
       commonProperties.rotation
     ]
   },

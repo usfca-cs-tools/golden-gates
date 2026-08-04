@@ -230,8 +230,18 @@ result
     }
     const code = `
 import json
+import js
 import ggl.view
-ggl.view.generate(json.loads(${JSON.stringify(JSON.stringify(model))}), ${JSON.stringify(mode)})
+try:
+    __ggl_program = ggl.view.generate(json.loads(${JSON.stringify(JSON.stringify(model))}), ${JSON.stringify(mode)})
+except Exception as __e:
+    # generate() can raise a structured CircuitError (e.g. an invalid tunnel net) before
+    # anything runs. Hand its detail to the same channel run-time errors use so the caller
+    # can highlight the offending component, then re-raise for the JS catch.
+    if hasattr(__e, 'to_dict'):
+        js.window.__vueStructuredErrorCallback(json.dumps(__e.to_dict()))
+    raise
+__ggl_program
 `
     return await pyodideInstance.value.runPythonAsync(code)
   }

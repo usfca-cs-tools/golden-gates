@@ -110,6 +110,12 @@ export function useAppController(circuitManager) {
       // browser's free-running clock + live inputs); 'test' evaluates each Test.
       const model = buildRunModel(canvasRef)
       const gglMode = mode === 'test' ? 'test' : 'run_async'
+
+      // Register the Python->Vue callbacks (including the structured-error channel) BEFORE
+      // generation, since generateProgramFromModel can itself raise a structured CircuitError
+      // (e.g. an invalid tunnel net) that we want surfaced the same way run-time errors are.
+      setupPythonVueUpdateCallback(canvasRef)
+
       const program = await generateProgramFromModel(model, gglMode)
 
       if (!program || program.trim() === '') {
@@ -120,9 +126,6 @@ export function useAppController(circuitManager) {
       console.log('\n=== ggl.view GGL Program ===')
       console.log(program)
       console.log('=== End of Program ===\n')
-
-      // Set up callback for Python to update Vue components
-      setupPythonVueUpdateCallback(canvasRef)
 
       // Execute the generated program (ggl.view already inlined the hierarchy, so there
       // are no per-subcircuit MEMFS modules to write).
