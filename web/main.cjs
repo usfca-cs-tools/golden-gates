@@ -196,6 +196,30 @@ if (!gotTheLock) {
           }
         ]
       },
+      {
+        label: 'View',
+        submenu: [
+          {
+            // Checkbox so the menu shows whether DevTools is currently open. The
+            // packaged app builds a fully custom menu (no default View menu), so this
+            // is the only way to open the renderer console — where the generated GGL
+            // program is logged. The checked state is kept in sync in createWindow()
+            // via the webContents devtools-opened/closed events, so it stays correct
+            // even when DevTools is closed from its own UI or the accelerator.
+            id: 'toggle-devtools',
+            label: 'Developer Tools',
+            type: 'checkbox',
+            checked: false,
+            accelerator: isMac ? 'Alt+Cmd+I' : 'Ctrl+Shift+I',
+            click: () => {
+              if (!mainWindow || mainWindow.isDestroyed()) return
+              const wc = mainWindow.webContents
+              if (wc.isDevToolsOpened()) wc.closeDevTools()
+              else wc.openDevTools()
+            }
+          }
+        ]
+      },
       // macOS already has About in the app menu; elsewhere it lives under Help.
       ...(isMac
         ? []
@@ -231,6 +255,18 @@ function createWindow() {
     }
   })
   mainWindow.loadFile('dist/index.html')
+
+  // Keep the View → Developer Tools checkbox in sync with the real DevTools state,
+  // so it reflects reality even when DevTools is closed from its own toolbar or the
+  // keyboard accelerator rather than the menu item.
+  const syncDevToolsChecked = () => {
+    const item = Menu.getApplicationMenu()?.getMenuItemById('toggle-devtools')
+    if (item && mainWindow && !mainWindow.isDestroyed()) {
+      item.checked = mainWindow.webContents.isDevToolsOpened()
+    }
+  }
+  mainWindow.webContents.on('devtools-opened', syncDevToolsChecked)
+  mainWindow.webContents.on('devtools-closed', syncDevToolsChecked)
 
   // Once renderer is ready, send any queued project directory
   mainWindow.webContents.on('did-finish-load', () => {
