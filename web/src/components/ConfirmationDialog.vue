@@ -128,7 +128,7 @@ export default {
   left: 0;
   right: 0;
   bottom: 0;
-  background-color: rgba(0, 0, 0, 0.5);
+  background-color: var(--color-overlay-bg);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -136,13 +136,15 @@ export default {
   padding: 1rem;
 }
 
-/* Modal dialog container */
+/* Modal dialog container. Use the theme surface (light: white, dark: slate #1e293b)
+   rather than a hardcoded white — otherwise the themed text goes light-gray-on-white and
+   is unreadable in dark mode. The slate surface + border sit distinctly above the darker
+   canvas (#0f172a) / app background (#020617), so the dialog still stands out. */
 .modal-dialog {
-  background: white;
+  background: var(--color-modal-bg);
+  border: 1px solid var(--color-border-light);
   border-radius: 12px;
-  box-shadow:
-    0 20px 25px -5px rgba(0, 0, 0, 0.1),
-    0 10px 10px -5px rgba(0, 0, 0, 0.04);
+  box-shadow: var(--shadow-large);
   width: 100%;
   max-width: 400px;
   font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
