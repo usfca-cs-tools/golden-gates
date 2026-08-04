@@ -86,6 +86,7 @@ describe('useWireController', () => {
       expect(wireController.wirePoints.value).toHaveLength(1)
       expect(wireController.wirePoints.value[0]).toEqual({ x: 7, y: 6 }) // 5+2, 5+1 in grid units
       expect(wireController.startConnection.value).toEqual({
+        componentId: 'input1',
         portIndex: 0,
         portType: 'output',
         pos: { x: 7, y: 6 }
