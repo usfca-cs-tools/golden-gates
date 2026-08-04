@@ -51,8 +51,10 @@ export function useWireController(components, gridSize, callbacks = {}, circuitM
       y: component.y + connectionPoint.y
     }
 
-    // Store the starting connection info
+    // Store the starting connection info (componentId lets completeWire tell whether
+    // an endpoint is a tunnel, so it can auto-orient it — see completeWire).
     startConnection.value = {
+      componentId,
       portIndex,
       portType,
       pos: connectionPos
@@ -105,16 +107,32 @@ export function useWireController(components, gridSize, callbacks = {}, circuitM
   function completeWire(componentId, portIndex, portType) {
     if (!drawingWire.value || !startConnection.value) return
 
-    // Check if this is a valid connection
-    if (startConnection.value.portType === portType) {
-      // Can't connect same port types
-      cancelWireDrawing()
-      return
-    }
-
     // Get the end component and connection point
     const component = components.value.find(c => c.id === componentId)
     if (!component) return
+
+    // A wire must join opposite port types (one output, one input). A tunnel is a virtual
+    // wire whose single tap can act as either end, so if a tunnel is involved in an
+    // otherwise same-type clash, orient the tunnel to match rather than silently dropping
+    // the wire. Its port sits at the same coordinate in both directions (see
+    // componentRegistry tunnel getConnections), so re-orienting never moves the endpoint.
+    if (startConnection.value.portType === portType) {
+      const startComponent = components.value.find(
+        c => c.id === startConnection.value.componentId
+      )
+      if (component.type === 'tunnel') {
+        portType = portType === 'output' ? 'input' : 'output'
+        component.props = { ...component.props, direction: portType }
+      } else if (startComponent?.type === 'tunnel') {
+        const newDirection = startConnection.value.portType === 'output' ? 'input' : 'output'
+        startComponent.props = { ...startComponent.props, direction: newDirection }
+        startConnection.value.portType = newDirection
+      } else {
+        // Two like-typed, non-tunnel ports genuinely can't connect.
+        cancelWireDrawing()
+        return
+      }
+    }
 
     const config = componentRegistry[component.type]
     if (!config) return

@@ -345,9 +345,12 @@ export const componentRegistry = {
     },
     getConnections: props => {
       const centerY = Math.round(GRID_SIZE / 2 / GRID_SIZE)
+      // The tunnel draws a single connection dot at the triangle tip (grid x=0; see
+      // TunnelComponent.vue), so the port must sit at x=0 for BOTH directions — otherwise
+      // an output tunnel's logical port lands away from the visible dot and wires strand.
       const conns =
         props.direction === 'output'
-          ? { outputs: [{ name: '0', x: 2, y: centerY }] }
+          ? { outputs: [{ name: '0', x: 0, y: centerY }] }
           : { inputs: [{ name: '0', x: 0, y: centerY }] } // default to input
       // Rotate about (1,1) to match TunnelComponent.vue's rotate(rotation, GRID_SIZE, GRID_SIZE).
       return rotateConnections(conns, props.rotation || 0, { x: 1, y: 1 })
