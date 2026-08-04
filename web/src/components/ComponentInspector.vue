@@ -178,6 +178,13 @@
         <p class="no-properties">No properties available</p>
       </div>
     </div>
+
+    <!-- Focus-return hint (issue #132): subtle, dismissible cue that Esc (or a canvas
+         click) hands keyboard focus back to the circuit so R/T etc. work again. -->
+    <div v-if="(component || circuit) && !focusHintDismissed" class="focus-hint">
+      <span>Press <kbd>Esc</kbd> or click the canvas to return to the circuit</span>
+      <button class="focus-hint-dismiss" @click="dismissFocusHint">Don't show again</button>
+    </div>
   </div>
 </template>
 
@@ -225,6 +232,18 @@ export default {
     }
   },
   emits: ['update:component', 'update:circuit', 'action'],
+  data() {
+    // Focus-return hint dismissal (issue #132), remembered via localStorage — following the
+    // app's direct-localStorage convention (cf. useKeyboardShortcuts 'recentCommands').
+    // Guarded so a blocked/absent store (private mode, tests) just shows the hint.
+    let focusHintDismissed = false
+    try {
+      focusHintDismissed = localStorage.getItem('gg.inspectorFocusHintDismissed') === '1'
+    } catch (e) {
+      focusHintDismissed = false
+    }
+    return { focusHintDismissed }
+  },
   computed: {
     componentSchema() {
       return this.component ? getComponentProperties(this.component.type) : null
@@ -234,6 +253,14 @@ export default {
     }
   },
   methods: {
+    dismissFocusHint() {
+      this.focusHintDismissed = true
+      try {
+        localStorage.setItem('gg.inspectorFocusHintDismissed', '1')
+      } catch (e) {
+        // localStorage may be unavailable (e.g. private mode); the in-memory flag still hides it.
+      }
+    },
     getPropValue(propName, defaultValue) {
       const value = this.component?.props?.[propName]
       // Return the actual value if it exists (including empty string)
@@ -324,6 +351,44 @@ export default {
 .component-inspector {
   height: 100%;
   overflow-y: auto;
+}
+
+/* Focus-return hint (issue #132): quiet, theme-aware, dismissible. */
+.focus-hint {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  margin-top: 0.5rem;
+  padding: 0.5rem 1rem;
+  border-top: 1px solid var(--color-border-light);
+  font-size: 0.75rem;
+  color: var(--color-text-muted);
+}
+
+.focus-hint kbd {
+  font-family: ui-monospace, SFMono-Regular, 'SF Mono', Consolas, monospace;
+  font-size: 0.7rem;
+  padding: 0.05rem 0.3rem;
+  border: 1px solid var(--color-border-medium);
+  border-radius: 3px;
+  background: var(--color-component-hover-fill);
+  color: var(--color-text-secondary);
+}
+
+.focus-hint-dismiss {
+  flex-shrink: 0;
+  background: none;
+  border: none;
+  padding: 0;
+  font-size: 0.7rem;
+  color: var(--color-text-muted);
+  text-decoration: underline;
+  cursor: pointer;
+}
+
+.focus-hint-dismiss:hover {
+  color: var(--color-text-secondary);
 }
 
 .empty-state {

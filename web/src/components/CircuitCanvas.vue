@@ -61,7 +61,7 @@
         :width="Math.max(canvasWidth, 10000)"
         :height="Math.max(canvasHeight, 10000)"
         @click="handleCanvasClick"
-        @mousedown="handleCanvasMouseDown"
+        @mousedown="onCanvasMouseDown"
         @mousemove="handleMouseMove"
         @mouseup="handleMouseUp"
         @keydown="handleKeyDown"
@@ -70,6 +70,7 @@
         @touchmove="handleTouchMove"
         @touchend="handleTouchEnd"
         tabindex="0"
+        ref="canvasSvg"
       >
         <g :transform="`translate(${panX}, ${panY}) scale(${zoom})`">
           <!-- Wires -->
@@ -240,6 +241,15 @@ export default {
     const container = ref(null)
     const scrollContainer = ref(null)
     const componentRefs = ref({})
+
+    // The focusable SVG. focusCanvas() lets the parent hand keyboard focus back to the
+    // canvas (e.g. after editing a property in the inspector — issue #132) so single-key
+    // shortcuts like R/T work again instead of typing into the input.
+    const canvasSvg = ref(null)
+    const focusCanvas = () => {
+      // preventScroll so focusing the large SVG never jumps the scroll position.
+      canvasSvg.value?.focus({ preventScroll: true })
+    }
 
     // Bus-value hover tooltip (issue #133): shown at the cursor while hovering a multi-bit
     // wire. Wire.vue emits the already-formatted text + viewport point; we position a
@@ -455,6 +465,16 @@ export default {
       handleTouchEnd,
       addComponentAtSmartPosition
     } = canvasInteractions
+
+    // Clicking empty canvas starts a selection box and calls preventDefault() on the
+    // mousedown, which suppresses the browser's native focus-on-click of the SVG — so
+    // keyboard focus would stay stuck in an inspector input (e.g. Circuit Name/Label).
+    // Focus the canvas explicitly so a canvas click reliably returns focus (issue #132),
+    // matching what already happens when clicking on a component.
+    const onCanvasMouseDown = event => {
+      handleCanvasMouseDown(event)
+      focusCanvas()
+    }
 
     const addComponentAtSmartPositionAndScroll = (type, customProps = {}) => {
       undoHistory.pushSnapshot()
@@ -695,6 +715,8 @@ export default {
       // Template refs
       container,
       scrollContainer,
+      canvasSvg,
+      focusCanvas,
 
       // Bus-value hover tooltip (issue #133)
       wireValueTooltip,
@@ -748,6 +770,7 @@ export default {
       setComponentRef,
       handleCanvasClick,
       handleCanvasMouseDown,
+      onCanvasMouseDown,
       handleMouseMove,
       handleMouseUp,
       handleKeyDown: handleInteractionKeyDown,

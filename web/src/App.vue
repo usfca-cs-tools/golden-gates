@@ -46,7 +46,12 @@
           />
         </div>
 
-        <div v-if="inspectorVisible" class="inspector-panel" :style="inspectorPanelStyle">
+        <div
+          v-if="inspectorVisible"
+          class="inspector-panel"
+          :style="inspectorPanelStyle"
+          @keydown.esc="returnFocusToCanvas"
+        >
           <div class="inspector-header">
             <button
               class="inspector-expand"
@@ -281,6 +286,14 @@ export default {
         // Show current circuit properties when no component is selected
         this.selectedCircuit = this.activeCircuit
       }
+    },
+
+    // Esc in the property inspector blurs the focused field and hands keyboard focus back
+    // to the canvas (issue #132), so single-key shortcuts (R/T, etc.) work again instead of
+    // typing into the input. Edits are applied live, so there's nothing to commit or revert.
+    returnFocusToCanvas(event) {
+      event.target?.blur?.()
+      this.$refs.canvas?.focusCanvas?.()
     },
 
     updateComponent(updatedComponent) {
