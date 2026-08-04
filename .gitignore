@@ -4,3 +4,4 @@ coverage/
 .devbox/
 .tsc-out/
 web/assets/icon.png
+cert.p12
