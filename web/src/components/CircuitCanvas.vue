@@ -62,7 +62,7 @@
         :height="Math.max(canvasHeight, 10000)"
         @click="handleCanvasClick"
         @mousedown="onCanvasMouseDown"
-        @mousemove="handleMouseMove"
+        @mousemove="onCanvasMouseMove"
         @mouseup="handleMouseUp"
         @keydown="handleKeyDown"
         @keyup="handleKeyUp"
@@ -521,6 +521,70 @@ export default {
       return newComponent
     }
 
+    // --- Autoscroll while dragging items past the viewport edge (issue #3) ---
+    // When a drag reaches the visible edge, scroll the canvas and keep the drag following the
+    // cursor: the cursor stays put, we scroll under it, and re-running the drag with the same
+    // client point yields a further-out canvas coordinate (getMousePos uses the SVG's CTM).
+    let autoScrollFrame = null
+    let lastDragPoint = null // { clientX, clientY, svg }
+
+    function dragScrollVelocity(clientX, clientY) {
+      const sc = scrollContainer.value
+      if (!sc) return { vx: 0, vy: 0 }
+      const r = sc.getBoundingClientRect()
+      const zone = 48 // px from an edge where autoscroll engages
+      const maxSpeed = 24 // px/frame at the very edge
+      const speed = dist => Math.max(0, Math.min(1, (zone - dist) / zone)) * maxSpeed
+      let vx = 0
+      let vy = 0
+      if (clientX < r.left + zone) vx = -speed(clientX - r.left)
+      else if (clientX > r.right - zone) vx = speed(r.right - clientX)
+      if (clientY < r.top + zone) vy = -speed(clientY - r.top)
+      else if (clientY > r.bottom - zone) vy = speed(r.bottom - clientY)
+      return { vx, vy }
+    }
+
+    function autoScrollStep() {
+      autoScrollFrame = null
+      const sc = scrollContainer.value
+      if (!sc || !isDragging() || !lastDragPoint) return
+      const { vx, vy } = dragScrollVelocity(lastDragPoint.clientX, lastDragPoint.clientY)
+      if (vx === 0 && vy === 0) return
+      sc.scrollLeft = Math.max(0, sc.scrollLeft + vx)
+      sc.scrollTop = Math.max(0, sc.scrollTop + vy)
+      // Cursor is held in place; the canvas just scrolled under it, so re-running the drag moves
+      // the items to follow. Synthesize a minimal event with the SVG as target for getMousePos.
+      handleMouseMove({
+        clientX: lastDragPoint.clientX,
+        clientY: lastDragPoint.clientY,
+        currentTarget: lastDragPoint.svg,
+        target: lastDragPoint.svg
+      })
+      autoScrollFrame = requestAnimationFrame(autoScrollStep)
+    }
+
+    function stopAutoScroll() {
+      lastDragPoint = null
+      if (autoScrollFrame !== null) {
+        cancelAnimationFrame(autoScrollFrame)
+        autoScrollFrame = null
+      }
+    }
+
+    // Wraps the canvas mousemove: run the normal handler, then drive autoscroll during a drag.
+    const onCanvasMouseMove = event => {
+      handleMouseMove(event)
+      if (isDragging()) {
+        lastDragPoint = { clientX: event.clientX, clientY: event.clientY, svg: event.currentTarget }
+        const { vx, vy } = dragScrollVelocity(event.clientX, event.clientY)
+        if ((vx !== 0 || vy !== 0) && autoScrollFrame === null) {
+          autoScrollFrame = requestAnimationFrame(autoScrollStep)
+        }
+      } else {
+        stopAutoScroll()
+      }
+    }
+
     // Global key handlers for when canvas doesn't have focus
     onMounted(() => {
       const handleGlobalKeyDown = event => {
@@ -539,6 +603,7 @@ export default {
         window.removeEventListener('keydown', handleGlobalKeyDown)
         window.removeEventListener('keyup', handleGlobalKeyUp)
         window.removeEventListener('blur', handleWindowBlur)
+        stopAutoScroll()
       })
     })
 
@@ -816,6 +881,7 @@ export default {
       handleCanvasMouseDown,
       onCanvasMouseDown,
       handleMouseMove,
+      onCanvasMouseMove,
       handleMouseUp,
       handleKeyDown: handleInteractionKeyDown,
       handleKeyUp: handleInteractionKeyUp,
