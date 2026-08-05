@@ -17,7 +17,11 @@
     @startDrag="$emit('startDrag', $event)"
     @doubleClick="handleDoubleClick"
   >
-    <!-- Custom labels for inputs and outputs -->
+    <!-- No center label: the frame carries only the input/output names; the filename is a
+         caption below the component (see #content). -->
+    <template #label></template>
+
+    <!-- Custom labels for inputs and outputs, plus the filename caption -->
     <template #content>
       <!-- Input labels -->
       <text
@@ -47,6 +51,19 @@
         class="component-label"
       >
         {{ output.label }}
+      </text>
+
+      <!-- Filename caption, centered below the frame -->
+      <text
+        :x="componentBounds.width / 2"
+        :y="componentBounds.height + 12"
+        font-size="10"
+        font-family="Arial, sans-serif"
+        :fill="COLORS.componentText"
+        text-anchor="middle"
+        class="component-caption"
+      >
+        {{ componentLabel }}
       </text>
     </template>
   </BaseCircuitComponent>
@@ -138,10 +155,11 @@ export default {
       return positionMap[rotation] || positionMap[0]
     }
 
-    // Computed label that updates when the source circuit changes
+    // The caption shown below the component: the subcircuit's filename (its name). The old
+    // display "label" is retired — only input/output names live inside the frame now.
     const componentLabel = computed(() => {
       const circuit = props.circuitManager.getCircuit(props.circuitId)
-      return circuit?.label || circuit?.name || props.label || 'Component'
+      return circuit?.name || props.label || 'Component'
     })
 
     // Computed interface that updates when the source circuit changes

@@ -522,9 +522,13 @@ export const componentPropertySchema = {
         help: 'Saved as <name>.ggc — letters, digits, underscore'
       },
       {
+        // Retired: the subcircuit no longer draws a center label — only input/output names
+        // inside the frame and the filename as a caption below it. Kept in data for backward
+        // compatibility but hidden from the inspector.
         name: 'label',
         label: 'Display Label',
         type: 'text',
+        hidden: true,
         help: 'Label shown when used as a component'
       }
     ],
