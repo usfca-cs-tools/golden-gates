@@ -516,10 +516,10 @@ export const componentPropertySchema = {
     properties: [
       {
         name: 'name',
-        label: 'Circuit Name',
+        label: 'Filename',
         type: 'text',
         required: true,
-        help: 'Upper, lower, digit, underscore'
+        help: 'Saved as <name>.ggc — letters, digits, underscore'
       },
       {
         name: 'label',
