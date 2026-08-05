@@ -231,6 +231,7 @@
       "bitWidthMismatch": "Input bit width ({actualBits}) does not match expected bit width ({expectedBits})",
       "inputNotConnected": "Input '{inputName}' is not connected",
       "outputNotConnected": "Output '{outputName}' is not connected",
+      "portNotFullyConnected": "In {circuit_name}, '{label}' is not fully connected. Redraw the wire and run again.",
       "invalidInputValue": "Invalid input value: {value}",
       "circuitLoop": "Circuit contains a feedback loop",
       "componentNotFound": "Component '{componentId}' not found",

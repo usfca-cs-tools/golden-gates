@@ -3,6 +3,11 @@ import { useI18n } from 'vue-i18n'
 import { useFileService } from './useFileService'
 import { usePythonEngine } from './usePythonEngine'
 
+// Errors whose message is already a full, self-contained sentence (naming the circuit, the
+// port, and the fix). The notification shows these verbatim rather than wrapping them in the
+// generic "Error in <component> in circuit X: " prefix, which would just repeat the context.
+const SELF_CONTAINED_ERROR_CODES = new Set(['portNotFullyConnected'])
+
 /**
  * Circuit Operations - Business logic for circuit management
  * Provides controller layer functionality for circuit operations
@@ -444,7 +449,11 @@ export function useAppController(circuitManager) {
         }
 
         const errorMessage = t(`simulation.errors.${errorData.error_code}`, templateVars)
-        canvasRef.showErrorNotification(`Error in ${componentDescription}: ${errorMessage}`)
+        canvasRef.showErrorNotification(
+          SELF_CONTAINED_ERROR_CODES.has(errorData.error_code)
+            ? errorMessage
+            : `Error in ${componentDescription}: ${errorMessage}`
+        )
       }
       return
     }
@@ -504,12 +513,15 @@ export function useAppController(circuitManager) {
     }
 
     const errorMessage = t(`simulation.errors.${errorData.error_code}`, templateVars)
+    const notification = SELF_CONTAINED_ERROR_CODES.has(errorData.error_code)
+      ? errorMessage
+      : `Error in ${componentDescription}: ${errorMessage}`
 
     if (canvasRef?.showErrorNotification) {
-      canvasRef.showErrorNotification(`Error in ${componentDescription}: ${errorMessage}`)
+      canvasRef.showErrorNotification(notification)
     } else {
       // Fallback when canvasRef is stale - at least log the error
-      console.error(`Error in ${componentDescription}: ${errorMessage}`)
+      console.error(notification)
     }
   }
 
