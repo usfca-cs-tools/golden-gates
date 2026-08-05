@@ -194,10 +194,14 @@ export const componentRegistry = {
     defaultProps: {
       inputBits: 8,
       ranges: [
-        { start: 0, end: 1 },
-        { start: 2, end: 3 },
-        { start: 4, end: 5 },
-        { start: 6, end: 7 }
+        { start: 0, end: 0 },
+        { start: 1, end: 1 },
+        { start: 2, end: 2 },
+        { start: 3, end: 3 },
+        { start: 4, end: 4 },
+        { start: 5, end: 5 },
+        { start: 6, end: 6 },
+        { start: 7, end: 7 }
       ],
       rotation: 0
     },
@@ -268,10 +272,14 @@ export const componentRegistry = {
     defaultProps: {
       outputBits: 8,
       ranges: [
-        { start: 0, end: 1 },
-        { start: 2, end: 3 },
-        { start: 4, end: 5 },
-        { start: 6, end: 7 }
+        { start: 0, end: 0 },
+        { start: 1, end: 1 },
+        { start: 2, end: 2 },
+        { start: 3, end: 3 },
+        { start: 4, end: 4 },
+        { start: 5, end: 5 },
+        { start: 6, end: 6 },
+        { start: 7, end: 7 }
       ],
       rotation: 0
     },
