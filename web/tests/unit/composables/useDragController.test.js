@@ -124,6 +124,22 @@ describe('useDragController - Mixed Selection Drag Fix', () => {
       expect(wires.value[0].points[0].y).toBeCloseTo(3.5) // wire: 1 + 2.5 = 3.5
     })
 
+    it('moves a junction sitting on a dragged wire (geometry, not stale sourceWireIndex)', () => {
+      // Junction taps wire1 mid-span at (2,1). Its stored sourceWireIndex is deliberately wrong
+      // (99) — the old code keyed off it and left the junction behind; geometry must catch it.
+      wireJunctions.value = [
+        { pos: { x: 2, y: 1 }, connectedWireId: 'branch-wire', sourceWireIndex: 99 }
+      ]
+      selectedWires.value.add(0)
+
+      dragController.startWireDrag(0, { id: 'wire1', offsetX: 10, offsetY: 10 })
+      expect(dragController.dragging.value.junctions.length).toBe(1)
+
+      dragController.updateDrag({ x: 100, y: 80 }) // delta (3.5, 2.5)
+      expect(wireJunctions.value[0].pos.x).toBeCloseTo(5.5) // 2 + 3.5
+      expect(wireJunctions.value[0].pos.y).toBeCloseTo(3.5) // 1 + 2.5
+    })
+
     it('should calculate drag delta correctly when starting from wire', () => {
       selectedComponents.value.add('comp1')
       selectedWires.value.add(0)

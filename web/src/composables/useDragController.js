@@ -1,6 +1,23 @@
 import { ref } from 'vue'
 import { GRID_SIZE } from '../utils/constants'
 
+// A junction sits on the wire it taps; test point-on-polyline containment (grid units).
+function pointOnSegment(a, b, p) {
+  if (Math.abs((b.x - a.x) * (p.y - a.y) - (b.y - a.y) * (p.x - a.x)) > 1e-6) return false
+  return (
+    Math.min(a.x, b.x) - 1e-6 <= p.x &&
+    p.x <= Math.max(a.x, b.x) + 1e-6 &&
+    Math.min(a.y, b.y) - 1e-6 <= p.y &&
+    p.y <= Math.max(a.y, b.y) + 1e-6
+  )
+}
+function pointOnPolyline(points, p) {
+  for (let i = 0; i < points.length - 1; i++) {
+    if (pointOnSegment(points[i], points[i + 1], p)) return true
+  }
+  return false
+}
+
 export function useDragController(
   components,
   wires,
@@ -11,6 +28,28 @@ export function useDragController(
 ) {
   // Dragging state
   const dragging = ref(null)
+
+  // Which junctions should ride along with a set of dragged wires. Resolve by geometry (the
+  // junction sits on the wire it taps) plus the stable connectedWireId — NOT the serialized
+  // sourceWireIndex, a positional index that goes stale and left junctions stranded when the
+  // wire moved.
+  function collectDraggedJunctions(draggedWires) {
+    const result = []
+    if (!wireJunctions || !wireJunctions.value) return result
+    wireJunctions.value.forEach((junction, junctionIndex) => {
+      const rides = draggedWires.some(w => {
+        const wire = wires.value[w.index]
+        return (
+          wire &&
+          (wire.id === junction.connectedWireId || pointOnPolyline(w.initialPoints, junction.pos))
+        )
+      })
+      if (rides) {
+        result.push({ index: junctionIndex, initialPos: { x: junction.pos.x, y: junction.pos.y } })
+      }
+    })
+    return result
+  }
 
   // Start dragging components or wires
   function startDrag(dragInfo) {
@@ -69,22 +108,8 @@ export function useDragController(
       }
     }
 
-    // Store initial positions of junctions that need to move with selected wires
-    const draggedJunctions = []
-    if (wireJunctions && wireJunctions.value) {
-      wireJunctions.value.forEach((junction, junctionIndex) => {
-        // Check if this junction's source wire is being dragged
-        const sourceWireDragged = draggedWires.some(
-          wireInfo => wireInfo.index === junction.sourceWireIndex
-        )
-        if (sourceWireDragged) {
-          draggedJunctions.push({
-            index: junctionIndex,
-            initialPos: { x: junction.pos.x, y: junction.pos.y }
-          })
-        }
-      })
-    }
+    // Junctions ride along with the selected wires (matched by geometry, not a stale index).
+    const draggedJunctions = collectDraggedJunctions(draggedWires)
 
     dragging.value = {
       id,
@@ -129,20 +154,8 @@ export function useDragController(
       }
     }
 
-    // Store initial positions of junctions that need to move with selected wires
-    const draggedJunctions = []
-    if (wireJunctions && wireJunctions.value) {
-      wireJunctions.value.forEach((junction, junctionIndex) => {
-        // Check if this junction's source wire is being dragged
-        const sourceWireDragged = selectedWires.value.has(junction.sourceWireIndex)
-        if (sourceWireDragged) {
-          draggedJunctions.push({
-            index: junctionIndex,
-            initialPos: { x: junction.pos.x, y: junction.pos.y }
-          })
-        }
-      })
-    }
+    // Junctions ride along with the selected wires (matched by geometry, not a stale index).
+    const draggedJunctions = collectDraggedJunctions(draggedWires)
 
     dragging.value = {
       id: dragInfo.id,
