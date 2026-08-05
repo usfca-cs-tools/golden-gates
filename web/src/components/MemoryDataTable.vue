@@ -26,7 +26,7 @@
         <input
           ref="fileInput"
           type="file"
-          accept=".json"
+          accept=".hex,.text,.txt,.mem,.dat,.json"
           @change="handleFileInput"
           style="display: none"
         />
@@ -249,7 +249,7 @@ function clearData() {
 async function importFile(file) {
   try {
     const text = await file.text()
-    const values = parseJsonFile(text)
+    const values = parseMemoryFile(text)
 
     // Truncate or pad to match total cells
     const newData = new Array(totalCells.value).fill(0)
@@ -260,9 +260,45 @@ async function importFile(file) {
     data.value = newData
     emit('update:modelValue', newData)
   } catch (error) {
-    console.error('Error importing JSON file:', error)
+    console.error('Error importing memory file:', error)
     // TODO: Show user-friendly error message
   }
+}
+
+// Dispatch by content: a JSON array/object goes to the JSON parser; anything else is treated
+// as a hex memory image — a plain list of hex words, or the Logisim/Digital "v2.0 raw" format
+// (header skipped, bare tokens read as hex, `count*value` run-length expanded). This is what
+// the toolchain's .hex/.text dumps look like.
+function parseMemoryFile(text) {
+  const trimmed = text.trim()
+  if (trimmed.startsWith('[') || trimmed.startsWith('{')) {
+    return parseJsonFile(text)
+  }
+
+  const values = []
+  for (let token of trimmed.split(/\s+/)) {
+    if (!token) continue
+    // "v2.0 raw" header tokens
+    if (/^v[\d.]+$/i.test(token) || token.toLowerCase() === 'raw') continue
+
+    // Run-length encoding: count*value (count decimal, value hex)
+    let count = 1
+    const rle = token.match(/^(\d+)\*(.+)$/)
+    if (rle) {
+      count = parseInt(rle[1], 10)
+      token = rle[2]
+    }
+
+    let value
+    if (/^0x/i.test(token)) value = parseInt(token.slice(2), 16)
+    else if (/^0b/i.test(token)) value = parseInt(token.slice(2), 2)
+    else value = parseInt(token, 16) // bare token = hex, per the v2.0 raw convention
+
+    if (Number.isNaN(value)) continue
+    for (let i = 0; i < count; i++) values.push(Math.floor(value))
+  }
+
+  return values
 }
 
 function parseJsonFile(text) {
