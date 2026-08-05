@@ -97,7 +97,7 @@
     "confirmClear": "Clear the circuit?",
     "confirmClearMessage": "This will start from a clean sheet, including autosaved circuits.",
     "unsavedChanges": "You have unsaved changes",
-    "unsavedChangesMessage": "If you close, your circuit will be lost"
+    "unsavedChangesMessage": "If you close, changes since your last save will be lost"
   },
   "autosave": {
     "restoreTitle": "Restore Previous Work?",
