@@ -200,6 +200,23 @@ if (!gotTheLock) {
         ]
       },
       {
+        // macOS routes the clipboard/undo key equivalents (Cmd+X/C/V/A/Z) to a focused text
+        // input ONLY when matching menu items with these roles exist — without this Edit menu,
+        // paste doesn't work in property-pane fields. On the canvas (nothing editable focused)
+        // the roles no-op and the renderer's own keydown handles component copy/paste, so the
+        // two don't collide.
+        label: 'Edit',
+        submenu: [
+          { role: 'undo' },
+          { role: 'redo' },
+          { type: 'separator' },
+          { role: 'cut' },
+          { role: 'copy' },
+          { role: 'paste' },
+          { role: 'selectAll' }
+        ]
+      },
+      {
         label: 'View',
         submenu: [
           {
