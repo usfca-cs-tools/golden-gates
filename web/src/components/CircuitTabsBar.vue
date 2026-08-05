@@ -20,16 +20,18 @@
         size="small"
       >
         <template #default>
-          <span>{{ tab.name }}</span>
-          <div
-            v-if="circuitTabs.length > 1"
-            class="tab-close-container"
-            @click.stop="handleCloseTab(tab.id)"
-            :class="{ 'has-unsaved-changes': hasCircuitUnsavedWork(tab.id, circuitManager) }"
-          >
-            <!-- Show dot for unsaved changes, X shown via CSS pseudo-element -->
-            <i v-if="hasCircuitUnsavedWork(tab.id, circuitManager)" class="unsaved-dot"></i>
-          </div>
+          <span class="tab-content">
+            <span class="tab-name">{{ tab.name }}</span>
+            <div
+              v-if="circuitTabs.length > 1"
+              class="tab-close-container"
+              @click.stop="handleCloseTab(tab.id)"
+              :class="{ 'has-unsaved-changes': hasCircuitUnsavedWork(tab.id, circuitManager) }"
+            >
+              <!-- Show dot for unsaved changes, X shown via CSS pseudo-element -->
+              <i v-if="hasCircuitUnsavedWork(tab.id, circuitManager)" class="unsaved-dot"></i>
+            </div>
+          </span>
         </template>
       </Button>
     </div>
@@ -199,12 +201,32 @@ export default {
   border-color: transparent !important;
   font-weight: 400 !important;
   position: relative;
-  max-width: 120px;
+  max-width: 160px;
   min-width: 60px;
+  overflow: hidden;
+  flex-shrink: 0;
+}
+
+/* Lay out name + close/badge as a row so a long name truncates instead of pushing the
+   close box and unsaved dot out past the tab's clipped edge. */
+.circuit-tab :deep(.p-button-label) {
+  display: flex;
+  align-items: center;
+  min-width: 0;
+  width: 100%;
+}
+.tab-content {
+  display: flex;
+  align-items: center;
+  min-width: 0;
+  width: 100%;
+}
+.tab-name {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
-  flex-shrink: 0;
+  min-width: 0;
+  flex: 1 1 auto;
 }
 
 .circuit-tab:hover {
@@ -227,6 +249,7 @@ export default {
   justify-content: center;
   width: 16px;
   height: 16px;
+  flex-shrink: 0;
   border-radius: 50%;
   transition: background-color 0.2s ease;
 }
