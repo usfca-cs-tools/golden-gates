@@ -483,14 +483,40 @@ export default {
       focusCanvas()
     }
 
-    const addComponentAtSmartPositionAndScroll = (type, customProps = {}) => {
+    // Insert a component at the center of the currently-visible canvas, cascading slightly on
+    // repeated inserts so they don't stack exactly. Deliberately does NOT scroll the viewport —
+    // the new component appears in view without the canvas jumping (which was disorienting).
+    const lastInsertGrid = ref(null)
+    const insertComponentInView = (type, customProps = {}) => {
       undoHistory.pushSnapshot()
       const newComponent = addComponentAtSmartPosition(type, customProps)
       if (newComponent && scrollContainer.value) {
-        const targetX = newComponent.x * gridSize.value - containerWidth.value / 2
-        const targetY = newComponent.y * gridSize.value - containerHeight.value / 2
-        scrollContainer.value.scrollLeft = Math.max(0, targetX)
-        scrollContainer.value.scrollTop = Math.max(0, targetY)
+        const sc = scrollContainer.value
+        const g = gridSize.value
+        const visible = v =>
+          v &&
+          v.x * g >= sc.scrollLeft &&
+          v.x * g <= sc.scrollLeft + sc.clientWidth &&
+          v.y * g >= sc.scrollTop &&
+          v.y * g <= sc.scrollTop + sc.clientHeight
+
+        let px = Math.round((sc.scrollLeft + sc.clientWidth / 2) / g)
+        let py = Math.round((sc.scrollTop + sc.clientHeight / 2) / g)
+        const prev = lastInsertGrid.value
+        if (visible(prev) && visible({ x: prev.x + 2, y: prev.y + 2 })) {
+          px = prev.x + 2
+          py = prev.y + 2
+        }
+
+        // Mutate the component in the reactive array (find() returns the proxy) so the move sticks.
+        const placed = components.value.find(c => c.id === newComponent.id)
+        if (placed) {
+          placed.x = px
+          placed.y = py
+        }
+        newComponent.x = px
+        newComponent.y = py
+        lastInsertGrid.value = { x: px, y: py }
       }
       return newComponent
     }
@@ -797,7 +823,7 @@ export default {
       handleEditSubcircuit,
       handleWireClick,
       handleWireMouseDown,
-      addComponentAtSmartPosition: addComponentAtSmartPositionAndScroll,
+      addComponentAtSmartPosition: insertComponentInView,
       clearCircuit,
       setLoadingState,
       updateComponent,
