@@ -737,6 +737,23 @@ export function useAppController(circuitManager) {
           }
           // Record the filename on the circuit for future saves
           circuit.sourceFilename = circuit.sourceFilename || filename
+
+          // If the Filename field was edited, the new file is now written — remove the old one
+          // so a renamed circuit doesn't leave its former file behind (which would reload as a
+          // stale duplicate). Never delete a file another circuit still points at.
+          const renamedFrom = circuit.renamedFromFilename
+          if (renamedFrom && renamedFrom !== filename) {
+            const stillUsed = [...circuitManager.allCircuits.value.values()].some(
+              c => c !== circuit && c.sourceFilename === renamedFrom
+            )
+            if (!stillUsed) {
+              await window.electronAPI.deleteCircuitFile?.(projectDir, renamedFrom)
+              circuitManager.projectCircuitFiles.value =
+                circuitManager.projectCircuitFiles.value.filter(f => f !== renamedFrom)
+            }
+          }
+          circuit.renamedFromFilename = null
+
           circuitManager.markCircuitAsSaved(circuit.id)
         }
       } else {

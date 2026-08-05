@@ -13,6 +13,7 @@ contextBridge.exposeInMainWorld('electronAPI', {
   getPathForFile: (file) => webUtils.getPathForFile(file),
   readCircuitFile: (dirPath, filename) => ipcRenderer.invoke('read-circuit-file', { dirPath, filename }),
   writeCircuitFile: (dirPath, filename, content) => ipcRenderer.invoke('write-circuit-file', { dirPath, filename, content }),
+  deleteCircuitFile: (dirPath, filename) => ipcRenderer.invoke('delete-circuit-file', { dirPath, filename }),
 
   // Fallback save-as for no-project state
   saveCircuitAs: (content, defaultName) => ipcRenderer.invoke('save-circuit', { content, defaultName }),

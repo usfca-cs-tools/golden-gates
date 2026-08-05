@@ -402,6 +402,17 @@ ipcMain.handle('write-circuit-file', async (event, { dirPath, filename, content 
   return true
 })
 
+// Remove a circuit file after it's been renamed (the Filename field changed). Guard against
+// path traversal and non-.ggc targets — only a plain .ggc basename inside the project dir.
+ipcMain.handle('delete-circuit-file', async (event, { dirPath, filename }) => {
+  if (typeof filename !== 'string' || filename !== path.basename(filename) || !filename.endsWith('.ggc')) {
+    return false
+  }
+  const target = path.join(dirPath, filename)
+  if (fs.existsSync(target)) fs.unlinkSync(target)
+  return true
+})
+
 // Save circuit to disk (fallback for no-project state)
 ipcMain.handle('save-circuit', async (event, { content, defaultName }) => {
   const { filePath } = await dialog.showSaveDialog({

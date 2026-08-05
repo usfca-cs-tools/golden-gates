@@ -327,6 +327,18 @@ export default {
       // Update circuit properties in the circuit manager
       const circuit = this.circuitManager.getCircuit(updatedCircuit.id)
       if (circuit) {
+        // The Filename field IS the on-disk name. If it changed for a circuit already saved to
+        // disk, remember the current file (so save can delete it) and point sourceFilename at
+        // the new name — the next save writes <newName>.ggc and removes the old file. Only an
+        // explicit edit triggers this; a file whose name already differs from the circuit isn't
+        // touched until the user renames it. Cross-file refs self-heal: parents write each ref
+        // from the target circuit's sourceFilename.
+        if (updatedCircuit.name && updatedCircuit.name !== circuit.name && circuit.sourceFilename) {
+          if (!circuit.renamedFromFilename) {
+            circuit.renamedFromFilename = circuit.sourceFilename
+          }
+          circuit.sourceFilename = `${updatedCircuit.name}.ggc`
+        }
         // Update reactive properties
         circuit.name = updatedCircuit.name
         circuit.label = updatedCircuit.label
