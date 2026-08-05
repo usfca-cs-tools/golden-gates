@@ -1,4 +1,4 @@
-import { ref } from 'vue'
+import { ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useFileService } from './useFileService'
 import { usePythonEngine } from './usePythonEngine'
@@ -35,6 +35,38 @@ export function useAppController(circuitManager) {
 
   // Simulation state
   const isRunning = ref(false)
+
+  // Persist which circuits are open (vs. closed-but-reopenable) per project, so the tab layout
+  // survives across runs. Keyed by project dir; stored by sourceFilename since circuit ids are
+  // reassigned each load. `restoringTabs` suppresses the watcher while openProject rebuilds tabs.
+  let restoringTabs = false
+  const openTabsKey = dir => `gg.openTabs:${dir}`
+  function loadOpenTabState(dir) {
+    try {
+      const raw = localStorage.getItem(openTabsKey(dir))
+      return raw ? JSON.parse(raw) : null
+    } catch {
+      return null
+    }
+  }
+  function saveOpenTabState() {
+    const dir = circuitManager.currentProjectDir?.value
+    if (!dir) return
+    try {
+      const filenames = (circuitManager.openTabs?.value || [])
+        .map(t => circuitManager.getCircuit?.(t.id)?.sourceFilename)
+        .filter(Boolean)
+      localStorage.setItem(openTabsKey(dir), JSON.stringify(filenames))
+    } catch {
+      // localStorage may be unavailable; the closed state just won't persist this run.
+    }
+  }
+  watch(
+    () => (circuitManager.openTabs?.value || []).map(t => t.id).join('|'),
+    () => {
+      if (!restoringTabs) saveOpenTabState()
+    }
+  )
 
   // Confirmation dialog state
   const showConfirmDialog = ref(false)
@@ -795,6 +827,7 @@ export function useAppController(circuitManager) {
       const hasExistingWork = canvasRef?.components?.length > 0 || canvasRef?.wires?.length > 0
   
       const doLoad = async () => {
+        restoringTabs = true
         // Clear canvas and reset circuits
         canvasRef?.clearCircuit?.()
         circuitManager.allCircuits.value.clear()
@@ -840,20 +873,25 @@ export function useAppController(circuitManager) {
           const circuitName = topLevelFilename.replace('.ggc', '')
           circuitManager.createCircuit(circuitName)
         } else {
-          // Open every circuit as a tab (so all .ggc files are visible)
-          for (const filename of allFiles) {
+          // Restore the previously open/closed set for this project (persisted across runs).
+          // First time we see the project (no saved state) → open every circuit.
+          const savedOpen = loadOpenTabState(resolvedDirPath)
+          const toOpen = savedOpen ? allFiles.filter(f => savedOpen.includes(f)) : allFiles
+          for (const filename of toOpen) {
             const circuit = circuitManager.getCircuitByFilename(filename)
             if (circuit) circuitManager.openTab(circuit.id)
           }
-          // Focus the double-clicked file if provided, otherwise the top-level circuit
+          // Focus the double-clicked file if provided, otherwise the top-level circuit — and
+          // ensure it's open even if it had been closed last session.
           const focusFilename = activeFile || topLevelFilename
-          const focusCircuit = circuitManager.getCircuitByFilename(focusFilename)
+          const focusCircuit =
+            circuitManager.getCircuitByFilename(focusFilename) ||
+            circuitManager.getCircuitByFilename(topLevelFilename)
           if (focusCircuit) circuitManager.openTab(focusCircuit.id)
-          else {
-            const topCircuit = circuitManager.getCircuitByFilename(topLevelFilename)
-            if (topCircuit) circuitManager.openTab(topCircuit.id)
-          }
         }
+
+        restoringTabs = false
+        saveOpenTabState() // persist the initial/restored set for this project
       }
   
       if (hasExistingWork) {
