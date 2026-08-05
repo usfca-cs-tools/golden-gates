@@ -89,7 +89,8 @@
     "loadError": "Error loading circuit: {error}",
     "saveError": "Error saving circuit: {error}",
     "fileNotSelected": "No file selected",
-    "invalidFormat": "Invalid file format"
+    "invalidFormat": "Invalid file format",
+    "savedAsComponent": "You can now insert '{name}' as a component using the command palette"
   },
   "dialogs": {
     "confirmDelete": "Are you sure you want to delete {name}?",

@@ -69,7 +69,7 @@
             :circuit="selectedCircuit"
             @update:component="updateComponent"
             @update:circuit="updateCircuit"
-            @action="handleInspectorAction"
+            @action="e => handleInspectorAction(e, $refs.canvas)"
           />
         </div>
 

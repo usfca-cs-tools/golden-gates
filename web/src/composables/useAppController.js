@@ -1137,13 +1137,18 @@ function resolveFilenameReferences() {
   /**
    * Handle inspector action events
    */
-  function handleInspectorAction(event) {
+  function handleInspectorAction(event, canvasRef = null) {
     const { action, circuit } = event
 
     switch (action) {
       case 'saveAsComponent':
         if (circuit) {
           const success = circuitManager.saveCircuitAsComponent(circuit.id)
+          if (success) {
+            canvasRef?.showInfoNotification?.(
+              t('fileOperations.savedAsComponent', { name: circuit.name })
+            )
+          }
         }
         break
 

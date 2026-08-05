@@ -9,7 +9,7 @@
       <Message
         v-for="notification in errorNotifications"
         :key="notification.id"
-        severity="error"
+        :severity="notification.severity || 'error'"
         :closable="true"
         @close="removeNotification(notification.id)"
         class="error-notification"
@@ -656,11 +656,13 @@ export default {
       activeCircuit.value?.wireJunctions.push(junctionData)
     }
 
-    // Error notification management
-    function showErrorNotification(message) {
+    // Notification management. Same toast stack for errors and positive/info messages;
+    // `severity` (PrimeVue Message) drives the color.
+    function showNotification(message, severity = 'error') {
       const notification = {
         id: ++notificationIdCounter,
-        message: message
+        message,
+        severity
       }
       errorNotifications.value.push(notification)
 
@@ -668,6 +670,14 @@ export default {
       window.setTimeout(() => {
         removeNotification(notification.id)
       }, 10000)
+    }
+
+    function showErrorNotification(message) {
+      showNotification(message, 'error')
+    }
+
+    function showInfoNotification(message) {
+      showNotification(message, 'success')
     }
 
     function clearAllNotifications() {
@@ -763,6 +773,7 @@ export default {
       // Error notifications
       errorNotifications,
       showErrorNotification,
+      showInfoNotification,
       removeNotification,
       clearAllNotifications,
 
