@@ -521,12 +521,13 @@ export default {
       return newComponent
     }
 
-    // --- Autoscroll while dragging items past the viewport edge (issue #3) ---
-    // When a drag reaches the visible edge, scroll the canvas and keep the drag following the
-    // cursor: the cursor stays put, we scroll under it, and re-running the drag with the same
-    // client point yields a further-out canvas coordinate (getMousePos uses the SVG's CTM).
+    // --- Autoscroll when a drag OR a rubber-band selection reaches the viewport edge (#3) ---
+    // Hold the cursor, scroll the canvas under it, and re-run the pointer handler with the same
+    // client point: getMousePos maps through the SVG CTM, so it yields a further-out canvas
+    // coordinate and the drag (or the selection rectangle) extends into the revealed area.
     let autoScrollFrame = null
-    let lastDragPoint = null // { clientX, clientY, svg }
+    let lastPointer = null // { clientX, clientY, svg }
+    const isManipulating = () => isDragging() || isSelecting.value
 
     function dragScrollVelocity(clientX, clientY) {
       const sc = scrollContainer.value
@@ -547,35 +548,37 @@ export default {
     function autoScrollStep() {
       autoScrollFrame = null
       const sc = scrollContainer.value
-      if (!sc || !isDragging() || !lastDragPoint) return
-      const { vx, vy } = dragScrollVelocity(lastDragPoint.clientX, lastDragPoint.clientY)
+      if (!sc || !isManipulating() || !lastPointer) return
+      const { vx, vy } = dragScrollVelocity(lastPointer.clientX, lastPointer.clientY)
       if (vx === 0 && vy === 0) return
       sc.scrollLeft = Math.max(0, sc.scrollLeft + vx)
       sc.scrollTop = Math.max(0, sc.scrollTop + vy)
-      // Cursor is held in place; the canvas just scrolled under it, so re-running the drag moves
-      // the items to follow. Synthesize a minimal event with the SVG as target for getMousePos.
+      // Cursor is held in place; the canvas just scrolled under it, so re-running the pointer
+      // handler moves the drag / extends the selection. Synthesize a minimal event with the SVG
+      // as target for getMousePos.
       handleMouseMove({
-        clientX: lastDragPoint.clientX,
-        clientY: lastDragPoint.clientY,
-        currentTarget: lastDragPoint.svg,
-        target: lastDragPoint.svg
+        clientX: lastPointer.clientX,
+        clientY: lastPointer.clientY,
+        currentTarget: lastPointer.svg,
+        target: lastPointer.svg
       })
       autoScrollFrame = requestAnimationFrame(autoScrollStep)
     }
 
     function stopAutoScroll() {
-      lastDragPoint = null
+      lastPointer = null
       if (autoScrollFrame !== null) {
         cancelAnimationFrame(autoScrollFrame)
         autoScrollFrame = null
       }
     }
 
-    // Wraps the canvas mousemove: run the normal handler, then drive autoscroll during a drag.
+    // Wraps the canvas mousemove: run the normal handler, then drive autoscroll while dragging
+    // items or rubber-band selecting.
     const onCanvasMouseMove = event => {
       handleMouseMove(event)
-      if (isDragging()) {
-        lastDragPoint = { clientX: event.clientX, clientY: event.clientY, svg: event.currentTarget }
+      if (isManipulating()) {
+        lastPointer = { clientX: event.clientX, clientY: event.clientY, svg: event.currentTarget }
         const { vx, vy } = dragScrollVelocity(event.clientX, event.clientY)
         if ((vx !== 0 || vy !== 0) && autoScrollFrame === null) {
           autoScrollFrame = requestAnimationFrame(autoScrollStep)
