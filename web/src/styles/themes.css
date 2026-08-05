@@ -39,6 +39,8 @@
   /* Error state colors */
   --color-component-error-fill: #fecaca;
   --color-component-error-stroke: #ef4444;
+  --color-component-pass-fill: #bbf7d0;
+  --color-component-pass-stroke: #22c55e;
   --color-component-warning-fill: #fed7aa;
   --color-component-warning-stroke: #f97316;
 
@@ -120,6 +122,8 @@
     /* Error state colors */
     --color-component-error-fill: #7f1d1d;
     --color-component-error-stroke: #f87171;
+    --color-component-pass-fill: #14532d;
+    --color-component-pass-stroke: #4ade80;
     --color-component-warning-fill: #c2410c;
     --color-component-warning-stroke: #fb923c;
 

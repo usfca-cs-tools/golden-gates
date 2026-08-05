@@ -958,17 +958,12 @@ export const componentRegistry = {
       outputs: []
     },
     // Dynamic size grows with the number of rows and total columns
-    getDimensions: props => {
-      const table = props.table || {}
-      const columnCount =
-        (table.inputNames?.length || 0) + (table.outputNames?.length || 0)
-      const rowCount = table.rows?.length || 0
-      const contentRows = (columnCount > 0 ? 1 : 0) + rowCount
-      return {
-        width: Math.max(GRID_SIZE * 5, GRID_SIZE * (columnCount * 1.5 + 1)),
-        height: Math.max(GRID_SIZE * 3, GRID_SIZE * (contentRows + 2))
-      }
-    },
+    // Compact box (name + result badge); keep in sync with TestNode.vue's boxWidth/boxHeight
+    // so the selection/bounds hitbox matches what's drawn.
+    getDimensions: props => ({
+      width: Math.max(GRID_SIZE * 4, String(props.label || 'TEST').length * 7.5 + GRID_SIZE * 2.5),
+      height: GRID_SIZE * 2
+    }),
     // Give each new test a unique label: TEST0, TEST1, ...
     onCreate: (instance, index) => {
       instance.props.label = `TEST${index}`
