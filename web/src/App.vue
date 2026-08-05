@@ -800,10 +800,16 @@ body {
 /* Inspector panel styles */
 .inspector-panel {
   flex-shrink: 0;
+  display: flex;
+  flex-direction: column;
   background-color: var(--color-panel-bg);
   border-left: 1px solid var(--color-border-light);
   box-shadow: var(--shadow-medium);
-  overflow-y: auto;
+  /* The header sits above the inspector; let the inspector fill the rest and scroll its own
+     content. Previously both this panel and the inspector had overflow-y:auto AND the inspector
+     was height:100%, so panel = header + full-height inspector always overflowed by the header's
+     height, showing a scrollbar even with almost no content. */
+  overflow: hidden;
   position: relative;
   transition: width 0.2s ease;
 }
