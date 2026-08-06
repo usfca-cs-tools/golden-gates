@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest'
 import { useFileService } from '@/composables/useFileService'
 
-const { buildCircuitData } = useFileService()
+const { buildCircuitData, parseAndValidateJSON } = useFileService()
 
 // A canvas input the user has driven to 1, plus the transient lastUpdate bookkeeping.
 const clr = () => ({
@@ -29,5 +29,29 @@ describe('buildCircuitData — input value handling', () => {
     const out = data.components.find(c => c.id === 'clr')
     expect(out.props.value).toBe(1)
     expect(out.props.lastUpdate).toBeUndefined() // pure UI bookkeeping still dropped
+  })
+})
+
+// A Test's pass/fail is a run outcome, not saved state — persisting it made a reopened circuit
+// claim its tests passed before they were ever run.
+const testComp = () => ({
+  id: 't',
+  type: 'test',
+  x: 0,
+  y: 0,
+  props: { label: 'AND', status: 'pass', table: { inputNames: [], outputNames: [], rows: [] } }
+})
+
+describe('test component status (transient run result)', () => {
+  it('is dropped when saving', () => {
+    const out = buildCircuitData([testComp()], [], []).components.find(c => c.id === 't')
+    expect(out.props.status).toBeUndefined()
+    expect(out.props.label).toBe('AND') // real config is preserved
+  })
+
+  it('is cleared when loading (handles files saved before this fix)', () => {
+    const doc = JSON.stringify({ version: '1.4', components: [testComp()], wires: [] })
+    const parsed = parseAndValidateJSON(doc)
+    expect(parsed.components.find(c => c.id === 't').props.status).toBeUndefined()
   })
 })

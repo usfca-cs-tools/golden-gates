@@ -43,6 +43,12 @@ function buildCircuitData(
       const { lastUpdate, ...props } = component.props || {}
       return { ...componentWithoutJsId, props, ports }
     }
+    if (component.type === 'test') {
+      // A Test's pass/fail is a run RESULT, not saved state — drop it so a reopened circuit
+      // shows 'pending' until the tests are actually run.
+      const { status, ...props } = component.props || {}
+      return { ...componentWithoutJsId, props, ports }
+    }
     return { ...componentWithoutJsId, ports }
   }
 
@@ -374,6 +380,12 @@ export function useFileService() {
 
       // Migrate data format if needed
       const migratedData = migrateCircuitData(circuitData)
+
+      // A Test's pass/fail is a run result, never restored — a freshly opened circuit shows
+      // 'pending' until you run it. (Handles files saved before we stopped persisting status.)
+      for (const comp of migratedData.components || []) {
+        if (comp.type === 'test' && comp.props) delete comp.props.status
+      }
 
       return migratedData
     } catch (err) {
