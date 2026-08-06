@@ -23,7 +23,7 @@ describe('PriorityEncoder', () => {
       const rect = wrapper.find('rect')
       expect(rect.exists()).toBe(true)
       expect(rect.attributes('width')).toBe(String(3 * GRID_SIZE))
-      expect(rect.attributes('height')).toBe(String(8 * GRID_SIZE)) // (4-1)*2 + 2 = 8
+      expect(rect.attributes('height')).toBe(String(6 * GRID_SIZE)) // (4-1)*1+2=5, floored at minHeight 6
     })
 
     it('renders correct number of input connection points', () => {
@@ -35,7 +35,7 @@ describe('PriorityEncoder', () => {
       expect(inputs[0].attributes('cy')).toBe(String(GRID_SIZE)) // First at y=1
       expect(inputs[0].attributes('data-port')).toBe('0')
 
-      expect(inputs[3].attributes('cy')).toBe(String(7 * GRID_SIZE)) // Last at y=7 (1 + 3*2)
+      expect(inputs[3].attributes('cy')).toBe(String(4 * GRID_SIZE)) // Last at y=4 (1 + 3*1)
       expect(inputs[3].attributes('data-port')).toBe('3')
     })
 
@@ -91,7 +91,7 @@ describe('PriorityEncoder', () => {
 
       // Component should have minimum height (check via outputs spacing)
       expect(inputs[0].attributes('cy')).toBe(String(GRID_SIZE))
-      expect(inputs[1].attributes('cy')).toBe(String(3 * GRID_SIZE))
+      expect(inputs[1].attributes('cy')).toBe(String(2 * GRID_SIZE))
     })
 
     it('renders up to 16 inputs maximum', async () => {
@@ -101,16 +101,16 @@ describe('PriorityEncoder', () => {
 
       // Check that inputs are properly spaced
       expect(inputs[0].attributes('cy')).toBe(String(GRID_SIZE))
-      expect(inputs[15].attributes('cy')).toBe(String(31 * GRID_SIZE)) // 1 + 15*2
+      expect(inputs[15].attributes('cy')).toBe(String(16 * GRID_SIZE)) // 1 + 15*1
     })
 
-    it('maintains 2 grid unit spacing between inputs', async () => {
+    it('maintains 1 grid unit spacing between inputs', async () => {
       // Use selectorBits: 2 to get 4 inputs, test first 3
       const inputs = wrapper.findAll('.connection-point.input')
 
       expect(inputs[0].attributes('cy')).toBe(String(GRID_SIZE))
-      expect(inputs[1].attributes('cy')).toBe(String(3 * GRID_SIZE))
-      expect(inputs[2].attributes('cy')).toBe(String(5 * GRID_SIZE))
+      expect(inputs[1].attributes('cy')).toBe(String(2 * GRID_SIZE))
+      expect(inputs[2].attributes('cy')).toBe(String(3 * GRID_SIZE))
     })
   })
 
@@ -158,7 +158,7 @@ describe('PriorityEncoder', () => {
       const rotationGroup = wrapper.findAll('g')[1]
       // x=2 (not the 1.5 body center of a 3-wide body) so rotated ports stay on the grid
       const centerX = 2 * GRID_SIZE
-      const centerY = (8 * GRID_SIZE) / 2
+      const centerY = Math.round(6 / 2) * GRID_SIZE // totalHeight=6 → center vertex 3
       expect(rotationGroup.attributes('transform')).toBe(`rotate(180, ${centerX}, ${centerY})`)
     })
   })

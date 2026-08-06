@@ -3,6 +3,12 @@ export const GRID_SIZE = 15
 export const DOT_SIZE = 2
 export const CONNECTION_DOT_RADIUS = 3
 
+// Vertical distance (in grid units) between adjacent I/O ports on multi-port bodies —
+// subcircuits and plexers (mux/decoder/priority-encoder). One grid unit keeps circuits compact
+// on small laptop screens. Logic gates deliberately keep their own 2-unit idiom so a centered
+// output always lands between two inputs on a vertex (see LogicGate.vue / componentFactory.js).
+export const PORT_PITCH = 1
+
 // Coordinate conversion utilities
 export function gridToPixel(gridCoord) {
   if (typeof gridCoord === 'number') {

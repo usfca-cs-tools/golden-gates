@@ -74,7 +74,7 @@
 import { defineComponent } from 'vue'
 import { useComponentView, draggableProps } from '../composables/useComponentView'
 import { useSelectorBits } from '../composables/useSelectorBits'
-import { COLORS, CONNECTION_DOT_RADIUS, GRID_SIZE } from '../utils/constants'
+import { COLORS, CONNECTION_DOT_RADIUS, GRID_SIZE, PORT_PITCH } from '../utils/constants'
 
 const { selectorBitsProp } = useSelectorBits()
 
@@ -124,7 +124,7 @@ export default defineComponent({
     // Total height to accommodate all inputs on grid vertices
     totalHeight() {
       const { calculatePortBasedHeight } = useSelectorBits()
-      return calculatePortBasedHeight(this.numInputs, 2, 4, 2) // inputSpacing=2, minHeight=4, margin=2
+      return calculatePortBasedHeight(this.numInputs, PORT_PITCH, 4, 2) // minHeight=4, margin=2
     },
     // Multiplexer is 2 grid units wide
     width() {
@@ -149,7 +149,10 @@ export default defineComponent({
       return this.width * GRID_SIZE
     },
     outputY() {
-      return (this.totalHeight * GRID_SIZE) / 2
+      // Snap the output (and thus the rotation center) to a whole vertex. At PORT_PITCH=1 the
+      // body height is odd, so the true midpoint would be a half-vertex — unreachable by wires
+      // and off-grid under rotation. getConnections rounds identically.
+      return Math.round(this.totalHeight / 2) * GRID_SIZE
     },
     selectorX() {
       return (this.width * GRID_SIZE) / 2
@@ -162,7 +165,7 @@ export default defineComponent({
     getInputY(index) {
       // Use shared port positioning utility
       const { getPortY } = useSelectorBits()
-      return getPortY(index, 2, 1) * GRID_SIZE // 2 spacing, 1 margin, convert to pixels
+      return getPortY(index, PORT_PITCH, 1) * GRID_SIZE // PORT_PITCH spacing, 1 margin, to pixels
     }
   }
 })

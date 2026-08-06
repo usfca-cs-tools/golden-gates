@@ -1,4 +1,4 @@
-import { GRID_SIZE } from './constants'
+import { GRID_SIZE, PORT_PITCH } from './constants'
 import { createGateRegistryEntry, rotateConnections, rotatableConnections } from './componentFactory'
 import { gateDefinitions } from '../config/gateDefinitions'
 
@@ -393,7 +393,7 @@ export const componentRegistry = {
       const numInputs = Math.pow(2, props.selectorBits || 2)
 
       // Calculate height same as Vue component
-      const inputSpacing = 2 // 2 grid units between inputs
+      const inputSpacing = PORT_PITCH
       const baseHeight = (numInputs - 1) * inputSpacing
       const minHeight = 4 // Minimum height in grid units
       const totalHeight = Math.max(baseHeight + 2, minHeight) // Add 1 grid unit margin top/bottom
@@ -437,7 +437,7 @@ export const componentRegistry = {
       const numInputs = Math.pow(2, props.selectorBits || 2)
 
       // Calculate height same as Vue component and getConnections
-      const inputSpacing = 2 // 2 grid units between inputs
+      const inputSpacing = PORT_PITCH
       const baseHeight = (numInputs - 1) * inputSpacing
       const minHeight = 4 // Minimum height in grid units
       const totalHeight = Math.max(baseHeight + 2, minHeight) // Add 1 grid unit margin top/bottom
@@ -470,7 +470,7 @@ export const componentRegistry = {
       const selectorPosition = props.selectorPosition || 'bottom'
 
       // Calculate height same as Vue component
-      const outputSpacing = 2
+      const outputSpacing = PORT_PITCH
       const baseHeight = (numOutputs - 1) * outputSpacing
       const totalHeight = Math.max(baseHeight + 2, 4)
 
@@ -490,19 +490,20 @@ export const componentRegistry = {
         outputs.push({
           name: i.toString(),
           x: 2, // Right edge of 2-unit wide component
-          y: firstOutputY + i * 2 // 2 grid units between outputs
+          y: firstOutputY + i * PORT_PITCH
         })
       }
 
-      // Rotate about the body center (width/2, height/2) to match Decoder.vue.
+      // Rotate about the body center, snapped to a whole vertex (odd heights at PORT_PITCH=1);
+      // Decoder.vue's rotateCenterY rounds identically.
       return rotateConnections({ inputs, outputs }, props.rotation || 0, {
         x: 1,
-        y: totalHeight / 2
+        y: Math.round(totalHeight / 2)
       })
     },
     getDimensions: props => {
       const numOutputs = Math.pow(2, props.selectorBits || 2)
-      const outputSpacing = 2
+      const outputSpacing = PORT_PITCH
       const baseHeight = (numOutputs - 1) * outputSpacing
       const totalHeight = Math.max(baseHeight + 2, 4)
 
@@ -881,7 +882,7 @@ export const componentRegistry = {
       const numInputs = Math.pow(2, props.selectorBits || 2)
 
       // Calculate height same as Vue component
-      const inputSpacing = 2
+      const inputSpacing = PORT_PITCH
       const baseHeight = (numInputs - 1) * inputSpacing
       const totalHeight = Math.max(baseHeight + 2, 6)
 
@@ -892,7 +893,7 @@ export const componentRegistry = {
         inputs.push({
           name: i.toString(),
           x: 0,
-          y: margin + i * 2 // 2 grid units between inputs
+          y: margin + i * PORT_PITCH
         })
       }
 
@@ -910,16 +911,17 @@ export const componentRegistry = {
         }
       ]
 
-      // Body is 3 wide (odd) so its true center x=1.5 would push ports off-grid;
-      // rotate about x=2 instead (PriorityEncoder.vue uses the same center).
+      // Body is 3 wide (odd) so its true center x=1.5 would push ports off-grid; rotate about
+      // x=2 instead, and snap y to a whole vertex (odd heights at PORT_PITCH=1). PriorityEncoder.vue
+      // uses the same center.
       return rotateConnections({ inputs, outputs }, props.rotation || 0, {
         x: 2,
-        y: totalHeight / 2
+        y: Math.round(totalHeight / 2)
       })
     },
     getDimensions: props => {
       const numInputs = Math.pow(2, props.selectorBits || 2)
-      const inputSpacing = 2
+      const inputSpacing = PORT_PITCH
       const baseHeight = (numInputs - 1) * inputSpacing
       const totalHeight = Math.max(baseHeight + 2, 6)
 
@@ -1022,7 +1024,7 @@ export const componentRegistry = {
       // Calculate grid-aligned dimensions
       const maxPorts = Math.max(inputs.length, outputs.length, 1)
       const minHeight = 4 // 2 above + 2 below (in grid units)
-      const heightForPorts = maxPorts * 2 // 2 grid units per port
+      const heightForPorts = (maxPorts - 1) * PORT_PITCH + 2 // 1 margin + PORT_PITCH per gap + 1 margin
       const height = Math.max(minHeight, heightForPorts)
       const width = 6 // 6 grid units wide
 
@@ -1036,9 +1038,9 @@ export const componentRegistry = {
                 // Single input at center
                 y = height / 2
               } else {
-                // Multiple inputs: use consistent 2 grid unit spacing
+                // Multiple inputs: PORT_PITCH grid units apart
                 const topMargin = 1 // 1 grid unit from top
-                const inputSpacing = 2 // 2 grid units per input
+                const inputSpacing = PORT_PITCH
                 y = topMargin + index * inputSpacing
               }
 
@@ -1079,9 +1081,9 @@ export const componentRegistry = {
                 // Single output at center
                 y = height / 2
               } else {
-                // Multiple outputs: use consistent 2 grid unit spacing
+                // Multiple outputs: same pitch as inputs
                 const topMargin = 1 // 1 grid unit from top
-                const outputSpacing = 2 // 2 grid units per output
+                const outputSpacing = PORT_PITCH
                 y = topMargin + index * outputSpacing
               }
 
