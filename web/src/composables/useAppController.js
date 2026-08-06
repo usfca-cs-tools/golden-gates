@@ -864,7 +864,7 @@ export function useAppController(circuitManager) {
             console.warn(`Failed to load ${filename}:`, err)
           }
         }
-  
+
         // Resolve filename → circuitId cross-references
         resolveFilenameReferences()
 
@@ -1028,6 +1028,12 @@ function resolveFilenameReferences() {
       })
     }
 
+    // The components we just re-loaded from disk carry their file's STALE, ephemeral circuitIds
+    // (coined in some prior session). Re-derive them from the stable filename refs — otherwise a
+    // stale id silently resolves to whatever circuit happens to hold it this load (the bug where
+    // a counter's register slot showed a 5-bit EQ).
+    resolveFilenameReferences()
+
     if (canvasRef.setLoadingState) {
       canvasRef.setLoadingState(false)
     }
@@ -1054,7 +1060,9 @@ function resolveFilenameReferences() {
       return true
     }
 
-    const filename = `${circuit.name}.ggc`
+    // Use the file this circuit was loaded from, not its name — they can differ (e.g. a file
+    // whose internal name was edited), and deriving from the name would read the wrong file.
+    const filename = circuit.sourceFilename || `${circuit.name}.ggc`
     const fileExists = projectFiles.includes(filename)
 
     circuitManager.navigateToCircuit(circuitId)
