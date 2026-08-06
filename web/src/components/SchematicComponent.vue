@@ -72,7 +72,7 @@
 import { computed } from 'vue'
 import BaseCircuitComponent from './BaseCircuitComponent.vue'
 import { draggableProps } from '../composables/useComponentView'
-import { GRID_SIZE, COLORS } from '../utils/constants'
+import { GRID_SIZE, COLORS, PORT_PITCH } from '../utils/constants'
 
 export default {
   name: 'SchematicComponent',
@@ -203,10 +203,10 @@ export default {
       // Width: 6 grid units (90px) - should be divisible by GRID_SIZE
       const width = 6 * GRID_SIZE
 
-      // Height: Ensure connection points align with grid
-      // Need at least 2 grid units above and below, plus 2 grid units per port
+      // Height: Ensure connection points align with grid.
+      // 1 grid unit margin above the first port + PORT_PITCH per gap + 1 below the last.
       const minHeight = 4 * GRID_SIZE // 2 above + 2 below
-      const heightForPorts = maxPorts * 2 * GRID_SIZE // 2 grid units per port
+      const heightForPorts = ((maxPorts - 1) * PORT_PITCH + 2) * GRID_SIZE
       const height = Math.max(minHeight, heightForPorts)
 
       return { x: 0, y: 0, width, height }
@@ -233,9 +233,9 @@ export default {
           // Single input at center
           y = bounds.height / 2
         } else {
-          // Multiple inputs: use consistent 2 grid unit spacing
+          // Multiple inputs: PORT_PITCH grid units apart
           const topMargin = GRID_SIZE // 1 grid unit from top
-          const inputSpacing = 2 * GRID_SIZE // 2 grid units per input
+          const inputSpacing = PORT_PITCH * GRID_SIZE
           y = topMargin + index * inputSpacing
         }
 
@@ -264,9 +264,9 @@ export default {
           // Single output at center
           y = bounds.height / 2
         } else {
-          // Multiple outputs: use same logic as inputs for better alignment
+          // Multiple outputs: same pitch as inputs
           const topMargin = GRID_SIZE // 1 grid unit from top
-          const outputSpacing = 2 * GRID_SIZE // 2 grid units per output (same as inputs)
+          const outputSpacing = PORT_PITCH * GRID_SIZE
           y = topMargin + index * outputSpacing
         }
 

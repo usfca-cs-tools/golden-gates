@@ -3,7 +3,7 @@
     <!-- Rotation group centered on component -->
     <!-- Rotate about x=2 (not the true 1.5 center of a 3-wide body) so ports stay on
          the grid; getConnections uses the same center. -->
-    <g :transform="`rotate(${rotation}, ${2 * GRID_SIZE}, ${(height * GRID_SIZE) / 2})`">
+    <g :transform="`rotate(${rotation}, ${2 * GRID_SIZE}, ${rotateCenterY})`">
       <!-- Priority Encoder body (rectangle) -->
       <rect
         :width="width * GRID_SIZE"
@@ -93,7 +93,7 @@
 import { defineComponent } from 'vue'
 import { useComponentView, draggableProps } from '../composables/useComponentView'
 import { useSelectorBits } from '../composables/useSelectorBits'
-import { COLORS, CONNECTION_DOT_RADIUS, GRID_SIZE } from '../utils/constants'
+import { COLORS, CONNECTION_DOT_RADIUS, GRID_SIZE, PORT_PITCH } from '../utils/constants'
 
 const { selectorBitsProp } = useSelectorBits()
 
@@ -138,17 +138,22 @@ export default defineComponent({
     },
     totalHeight() {
       const { calculatePortBasedHeight } = useSelectorBits()
-      return calculatePortBasedHeight(this.numInputs, 2, 6, 2) // inputSpacing=2, minHeight=6, margin=2
+      return calculatePortBasedHeight(this.numInputs, PORT_PITCH, 6, 2) // minHeight=6, margin=2
     },
     height() {
       return this.totalHeight
+    },
+    // Rotate about a whole vertex (odd body heights at PORT_PITCH=1); getConnections rounds
+    // identically so drawn dots match computed ports.
+    rotateCenterY() {
+      return Math.round(this.totalHeight / 2) * GRID_SIZE
     }
   },
   methods: {
     getInputY(index: number) {
       // Use shared port positioning utility
       const { getPortY } = useSelectorBits()
-      return getPortY(index, 2, 1) * GRID_SIZE // 2 spacing, 1 margin, convert to pixels
+      return getPortY(index, PORT_PITCH, 1) * GRID_SIZE // PORT_PITCH spacing, 1 margin, to pixels
     },
     getInumOutputY() {
       // Place inum output at 1/3 height, rounded to grid

@@ -1,7 +1,7 @@
 <template>
   <g :transform="`translate(${x * GRID_SIZE}, ${y * GRID_SIZE})`">
     <!-- Rotation group centered on component -->
-    <g :transform="`rotate(${rotation}, ${(width * GRID_SIZE) / 2}, ${(height * GRID_SIZE) / 2})`">
+    <g :transform="`rotate(${rotation}, ${(width * GRID_SIZE) / 2}, ${rotateCenterY})`">
       <!-- Decoder body (trapezoid - mirror of multiplexer) -->
       <path
         :d="decoderPath"
@@ -69,7 +69,7 @@
 import { defineComponent } from 'vue'
 import { useComponentView, draggableProps } from '../composables/useComponentView'
 import { useSelectorBits } from '../composables/useSelectorBits'
-import { COLORS, CONNECTION_DOT_RADIUS, GRID_SIZE } from '../utils/constants'
+import { COLORS, CONNECTION_DOT_RADIUS, GRID_SIZE, PORT_PITCH } from '../utils/constants'
 
 const { selectorBitsProp } = useSelectorBits()
 
@@ -119,10 +119,15 @@ export default defineComponent({
     },
     totalHeight() {
       const { calculatePortBasedHeight } = useSelectorBits()
-      return calculatePortBasedHeight(this.numOutputs, 2, 4, 2) // outputSpacing=2, minHeight=4, margin=2
+      return calculatePortBasedHeight(this.numOutputs, PORT_PITCH, 4, 2) // minHeight=4, margin=2
     },
     height() {
       return this.totalHeight
+    },
+    // Rotate about a whole vertex (odd body heights at PORT_PITCH=1 have a half-vertex midpoint);
+    // getConnections rounds identically so drawn dots match computed ports.
+    rotateCenterY() {
+      return Math.round(this.totalHeight / 2) * GRID_SIZE
     },
     // SVG path for the decoder shape (trapezoid - mirror of multiplexer)
     decoderPath() {
@@ -153,7 +158,7 @@ export default defineComponent({
     getOutputY(index: number) {
       // Use shared port positioning utility
       const { getPortY } = useSelectorBits()
-      return getPortY(index, 2, 1) * GRID_SIZE // 2 spacing, 1 margin, convert to pixels
+      return getPortY(index, PORT_PITCH, 1) * GRID_SIZE // PORT_PITCH spacing, 1 margin, to pixels
     }
   }
 })

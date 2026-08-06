@@ -35,7 +35,7 @@ describe('Decoder', () => {
 
       const selInput = inputs[0]
       expect(selInput.attributes('cx')).toBe(String(GRID_SIZE * 1)) // Center of 2-unit wide
-      expect(selInput.attributes('cy')).toBe(String(8 * GRID_SIZE)) // Bottom position by default
+      expect(selInput.attributes('cy')).toBe(String(5 * GRID_SIZE)) // Bottom (totalHeight=5 at pitch 1)
       expect(selInput.attributes('data-port')).toBe('0')
     })
 
@@ -48,7 +48,7 @@ describe('Decoder', () => {
       expect(outputs[0].attributes('cy')).toBe(String(GRID_SIZE)) // First at y=1
       expect(outputs[0].attributes('data-port')).toBe('0')
 
-      expect(outputs[3].attributes('cy')).toBe(String(7 * GRID_SIZE)) // Last at y=7 (1 + 3*2)
+      expect(outputs[3].attributes('cy')).toBe(String(4 * GRID_SIZE)) // Last at y=4 (1 + 3*1)
       expect(outputs[3].attributes('data-port')).toBe('3')
     })
 
@@ -87,7 +87,7 @@ describe('Decoder', () => {
       // Component should have minimum height (check via computed property or visual result)
       // We can't easily test the path height, so just verify outputs are rendered
       expect(outputs[0].attributes('cy')).toBe(String(GRID_SIZE))
-      expect(outputs[1].attributes('cy')).toBe(String(3 * GRID_SIZE))
+      expect(outputs[1].attributes('cy')).toBe(String(2 * GRID_SIZE))
     })
 
     it('renders up to 16 outputs maximum (4 selector bits)', async () => {
@@ -97,10 +97,10 @@ describe('Decoder', () => {
 
       // Check that outputs are properly spaced
       expect(outputs[0].attributes('cy')).toBe(String(GRID_SIZE))
-      expect(outputs[15].attributes('cy')).toBe(String(31 * GRID_SIZE)) // 1 + 15*2
+      expect(outputs[15].attributes('cy')).toBe(String(16 * GRID_SIZE)) // 1 + 15*1
     })
 
-    it('maintains 2 grid unit spacing between outputs', async () => {
+    it('maintains 1 grid unit spacing between outputs', async () => {
       // Use default selectorBits: 2 to get 4 outputs, test first 3
       const outputs = wrapper.findAll('.connection-point.output')
 
@@ -108,8 +108,8 @@ describe('Decoder', () => {
       const y1 = parseInt(outputs[1].attributes('cy'))
       const y2 = parseInt(outputs[2].attributes('cy'))
 
-      expect(y1 - y0).toBe(2 * GRID_SIZE)
-      expect(y2 - y1).toBe(2 * GRID_SIZE)
+      expect(y1 - y0).toBe(GRID_SIZE)
+      expect(y2 - y1).toBe(GRID_SIZE)
     })
   })
 
@@ -159,7 +159,7 @@ describe('Decoder', () => {
       await wrapper.setProps({ rotation: 180 })
       const rotationGroup = wrapper.findAll('g')[1]
       const centerX = (2 * GRID_SIZE) / 2 // 2 grid units wide
-      const centerY = (8 * GRID_SIZE) / 2
+      const centerY = Math.round(5 / 2) * GRID_SIZE // totalHeight=5 → center snapped to vertex 3
       expect(rotationGroup.attributes('transform')).toBe(`rotate(180, ${centerX}, ${centerY})`)
     })
   })

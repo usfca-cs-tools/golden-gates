@@ -49,19 +49,19 @@ describe('multiplexer getConnections under rotation', () => {
 
   it('is unchanged at rotation 0', () => {
     const r0 = mux.getConnections({ ...base, rotation: 0 })
-    // 4 data inputs + sel + 1 output
+    // 4 data inputs + sel + 1 output. totalHeight=(4-1)*1+2=5, output at round(5/2)=3.
     expect(r0.inputs).toHaveLength(5)
     expect(r0.outputs).toHaveLength(1)
-    expect(r0.outputs[0]).toMatchObject({ name: '0', x: 2, y: 4 })
+    expect(r0.outputs[0]).toMatchObject({ name: '0', x: 2, y: 3 })
     expect(r0.inputs[0]).toMatchObject({ name: '0', x: 0, y: 1 })
   })
 
   it('holds the output fixed and moves data inputs when rotated', () => {
     const r90 = mux.getConnections({ ...base, rotation: 90 })
     // output is the rotation center -> unmoved
-    expect(r90.outputs[0]).toMatchObject({ name: '0', x: 2, y: 4 })
-    // input "0" base (0,1) about center (2,4): translated (-2,-3) -> 90 -> (3,-2) -> (5,2)
-    expect(r90.inputs[0]).toMatchObject({ name: '0', x: 5, y: 2 })
+    expect(r90.outputs[0]).toMatchObject({ name: '0', x: 2, y: 3 })
+    // input "0" base (0,1) about center (2,3): translated (-2,-2) -> 90 -> (2,-2) -> (4,1)
+    expect(r90.inputs[0]).toMatchObject({ name: '0', x: 4, y: 1 })
   })
 })
 
