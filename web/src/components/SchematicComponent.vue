@@ -4,7 +4,7 @@
     :y="y"
     :id="id"
     :selected="selected"
-    :label="componentLabel"
+    :label="''"
     :body-bounds="componentBounds"
     :label-position="labelPosition"
     :input-connections="inputConnections"
@@ -17,9 +17,8 @@
     @startDrag="$emit('startDrag', $event)"
     @doubleClick="handleDoubleClick"
   >
-    <!-- No center label: the frame carries only the input/output names; the filename is a
-         caption below the component (see #content). -->
-    <template #label></template>
+    <!-- No center label (label="" above): the frame carries only the input/output names; the
+         filename is a caption below the component (see #content). -->
 
     <!-- Custom labels for inputs and outputs, plus the filename caption -->
     <template #content>

@@ -21,9 +21,11 @@
       />
     </slot>
 
-    <!-- Component label -->
+    <!-- Component label (omitted entirely when the label is empty — e.g. schematic components
+         show their filename as a caption instead of a center label) -->
     <slot name="label">
       <text
+        v-if="label"
         :x="labelPosition.x"
         :y="labelPosition.y"
         text-anchor="middle"
