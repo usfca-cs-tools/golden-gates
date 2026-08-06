@@ -1175,6 +1175,11 @@ function resolveFilenameReferences() {
       (focusFilename && circuitManager.getCircuitByFilename(focusFilename)) ||
       (files[0] && circuitManager.getCircuitByFilename(files[0].filename))
     if (focus) circuitManager.openTab(focus.id)
+
+    // Loading a project replaced every circuit (allCircuits was cleared above), so any undo
+    // snapshots now reference deleted tabs — including the empty default circuit captured by the
+    // clearCircuit() at the top. Drop them so a later undo can't restore a dead snapshot.
+    canvasRef?.resetUndoHistory?.()
   }
 
   /**

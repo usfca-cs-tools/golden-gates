@@ -58,4 +58,32 @@ describe('undo repro', () => {
     expect(cm.activeCircuit.value.components.length).toBe(1) // NOT wiped
     expect(cm.activeCircuit.value.components[0].x).toBe(2) // restored to pre-drag
   })
+
+  // Regression: "open a project, move an output, Cmd-Z wipes the whole circuit." The empty default
+  // circuit_1 got snapshotted (clearCircuit during project load), then the load deleted circuit_1;
+  // undo must not splice that dead snapshot into the now-active project circuit.
+  it('undo skips a snapshot whose tab no longer exists', () => {
+    const cm = useCircuitModel() // default empty circuit_1 is active
+    const undo = useUndoHistory(cm)
+
+    undo.pushSnapshot() // snapshots the empty circuit_1 (as clearCircuit would during a load)
+
+    // Simulate loadCircuitsFromFiles: replace every circuit with a populated project.
+    cm.allCircuits.value.clear()
+    const proj = cm.createCircuit('project', { id: 'project', openTab: false })
+    proj.components = [{ id: 'o1', type: 'output', x: 1, y: 1, props: {} }]
+    cm.openTab('project')
+
+    undo.undo() // pops the dead circuit_1 snapshot
+    expect(cm.activeCircuit.value.components.length).toBe(1) // project intact, not wiped
+  })
+
+  it('clear() empties the history', () => {
+    const cm = useCircuitModel()
+    const undo = useUndoHistory(cm)
+    undo.pushSnapshot()
+    expect(undo.canUndo.value).toBe(true)
+    undo.clear()
+    expect(undo.canUndo.value).toBe(false)
+  })
 })

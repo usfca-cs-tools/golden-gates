@@ -58,21 +58,34 @@ export function useUndoHistory(circuitManager) {
     if (history.value.length === 0) return
     const prev = history.value.pop()
 
+    // A snapshot restores the tab it was captured on. If that circuit no longer exists — its tab
+    // was closed, or loading a project replaced every circuit — skip it. Splicing an old (often
+    // empty) snapshot into whatever circuit is now active would wipe the current one. This is the
+    // guard that stops "open a project, edit, undo -> whole circuit vanishes".
+    if (prev.tabId && !circuitManager.allCircuits?.value?.has(prev.tabId)) return
+
     // Switch to the tab the snapshot was taken on, if different
     if (prev.tabId && prev.tabId !== circuitManager.activeTabId?.value) {
       circuitManager.navigateToCircuit?.(prev.tabId)
     }
 
     const circuit = circuitManager.activeCircuit?.value
-    if (!circuit) return
+    // Only restore if we're actually on the snapshot's tab (navigate may have no-op'd).
+    if (!circuit || (prev.tabId && circuitManager.activeTabId?.value !== prev.tabId)) return
 
     circuit.components.splice(0, circuit.components.length, ...prev.components)
     circuit.wires.splice(0, circuit.wires.length, ...prev.wires)
     circuit.wireJunctions.splice(0, circuit.wireJunctions.length, ...prev.wireJunctions)
   }
 
+  /** Drop all history — e.g. when loading a project replaces every circuit, so old snapshots
+   * reference tabs that no longer exist. */
+  function clear() {
+    history.value = []
+  }
+
   /** True when there is at least one snapshot to restore. */
   const canUndo = computed(() => history.value.length > 0)
 
-  return { pushSnapshot, undo, canUndo }
+  return { pushSnapshot, undo, clear, canUndo }
 }

@@ -910,7 +910,8 @@ export default {
       navigateToCircuit,
 
       // Undo
-      undo: () => undoHistory.undo()
+      undo: () => undoHistory.undo(),
+      resetUndoHistory: () => undoHistory.clear()
     }
   }
 }
