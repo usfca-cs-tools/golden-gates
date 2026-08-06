@@ -203,10 +203,27 @@ export function useFileService() {
     return window.electronAPI.writeCircuitFile(dirPath, filename, content)
   }
 
+  // Oldest file format this build will open. Pre-release: we fail fast and loud on anything
+  // older rather than carrying migration shims for formats no real project uses yet.
+  const MIN_FILE_VERSION = [1, 4]
+
   const validateCircuitData = circuitData => {
     // Validate the circuit data structure
     if (!circuitData || typeof circuitData !== 'object') {
       throw new Error('Invalid circuit file: not an object')
+    }
+
+    // Strict version gate — reject old formats loudly instead of silently migrating them.
+    const parts = String(circuitData.version || '').split('.').map(n => parseInt(n, 10) || 0)
+    const [major, minor] = [parts[0] || 0, parts[1] || 0]
+    const [minMajor, minMinor] = MIN_FILE_VERSION
+    if (!circuitData.version || major < minMajor || (major === minMajor && minor < minMinor)) {
+      const err = new Error(
+        `This circuit is an old file format (version ${circuitData.version || 'unknown'}). ` +
+          `This build opens ${minMajor}.${minMinor}+ only — re-save it with a current build.`
+      )
+      err.code = 'UNSUPPORTED_VERSION'
+      throw err
     }
 
     if (!Array.isArray(circuitData.components)) {

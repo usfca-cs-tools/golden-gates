@@ -891,6 +891,11 @@ export function useAppController(circuitManager) {
             // Make available as a draggable component in the sidebar (for all files)
             circuitManager.saveCircuitAsComponent(circuit.id)
           } catch (err) {
+            // An old-format file fails the whole open, loudly (the outer catch alerts).
+            if (err?.code === 'UNSUPPORTED_VERSION') {
+              err.message = `${filename}: ${err.message}`
+              throw err
+            }
             console.warn(`Failed to load ${filename}:`, err)
           }
         }
@@ -1126,11 +1131,13 @@ function resolveFilenameReferences() {
     circuitManager.availableComponents.value.clear()
     circuitManager.openTabs.value = []
 
+    const usedCircuitIds = new Set()
     for (const { filename, content } of files) {
       try {
         if (!content) continue
         const circuitData = parseAndValidateJSON(content)
         const circuit = circuitManager.createCircuit(circuitData.name, {
+          id: deriveCircuitId(filename, usedCircuitIds),
           sourceFilename: filename,
           hasUnsavedChanges: false,
           openTab: false
@@ -1138,13 +1145,17 @@ function resolveFilenameReferences() {
         circuit.components = circuitData.components || []
         circuit.wires = circuitData.wires || []
         circuit.wireJunctions = circuitData.wireJunctions || []
-        if (circuitData.label) circuit.label = circuitData.label
         if (circuitData.interface) {
           circuit.properties = circuit.properties || {}
           circuit.properties.interface = circuitData.interface
         }
         circuitManager.saveCircuitAsComponent(circuit.id)
       } catch (err) {
+        // An old-format file fails the whole open, loudly.
+        if (err?.code === 'UNSUPPORTED_VERSION') {
+          err.message = `${filename}: ${err.message}`
+          throw err
+        }
         console.warn(`Failed to load ${filename}:`, err)
       }
     }
@@ -1178,7 +1189,13 @@ function resolveFilenameReferences() {
     }
     if (files.length === 0) return
 
-    const load = () => loadCircuitsFromFiles(canvasRef, files, files[0].filename)
+    const load = async () => {
+      try {
+        await loadCircuitsFromFiles(canvasRef, files, files[0].filename)
+      } catch (err) {
+        canvasRef?.showErrorNotification?.(err?.message || 'Failed to open circuits')
+      }
+    }
     const hasExistingWork = canvasRef?.components?.length > 0 || canvasRef?.wires?.length > 0
     if (hasExistingWork) {
       showConfirmation({
