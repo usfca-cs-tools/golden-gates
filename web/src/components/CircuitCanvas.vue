@@ -38,8 +38,8 @@
             patternUnits="userSpaceOnUse"
           >
             <rect
-              :x="gridSize * zoom - dotSize * zoom / 2"
-              :y="gridSize * zoom - dotSize * zoom / 2"
+              :x="gridSize * zoom - (dotSize * zoom) / 2"
+              :y="gridSize * zoom - (dotSize * zoom) / 2"
               :width="dotSize * zoom"
               :height="dotSize * zoom"
               :fill="actualGridDotColor"
@@ -439,9 +439,11 @@ export default {
       selectedComponents,
       selection.selectedWires,
       snapToGrid,
-      wireJunctions
+      wireJunctions,
+      props.circuitManager // needed so schematic-component (subcircuit) ports resolve for connected drag
     )
-    const { dragging, startDrag, startWireDrag, updateDrag, endDrag, isDragging } = dragAndDrop
+    const { dragging, startDrag, startWireDrag, updateDrag, endDrag, nudgeSelection, isDragging } =
+      dragAndDrop
 
     // Canvas interactions (controller layer) - must come after selection and dragAndDrop
     const canvasInteractions = useCanvasController(
