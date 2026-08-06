@@ -754,17 +754,16 @@ export function useAppController(circuitManager) {
             label: circuit.label,
             interface: circuit.properties?.interface
           }
-          // Rewrite schematic-component circuitIds to filename refs so cross-file
-          // references survive a reload (resolveFilenameReferences reads them back).
+          // Subcircuit refs are persisted by filename ONLY. circuitId is an in-memory,
+          // filename-derived handle (re-derived on load), so we strip it from the file. The
+          // filename comes from the referenced circuit's current sourceFilename, so a rename
+          // still propagates to its parents.
           const componentsForSave = circuit.components.map(comp => {
-            if (comp.type === 'schematic-component' && comp.props?.circuitId) {
-              const ref = circuitManager.allCircuits.value.get(comp.props.circuitId)
-              if (ref) {
-                const refFilename = ref.sourceFilename || `${ref.name}.ggc`
-                return { ...comp, props: { ...comp.props, filename: refFilename } }
-              }
-            }
-            return comp
+            if (comp.type !== 'schematic-component') return comp
+            const ref = circuitManager.allCircuits.value.get(comp.props?.circuitId)
+            const { circuitId, ...props } = comp.props || {}
+            const filename = ref?.sourceFilename || props.filename
+            return { ...comp, props: { ...props, ...(filename ? { filename } : {}) } }
           })
 
           const circuitData = buildCircuitData(
