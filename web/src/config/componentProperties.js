@@ -519,7 +519,7 @@ export const componentPropertySchema = {
         label: 'Filename',
         type: 'text',
         required: true,
-        help: 'Saved as <name>.ggc — letters, digits, underscore'
+        help: 'Rename here, not in Finder/Explorer. The app tracks circuits by filename.'
       },
       {
         // Retired: the subcircuit no longer draws a center label — only input/output names
