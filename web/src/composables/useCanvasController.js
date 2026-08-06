@@ -19,7 +19,7 @@ export function useCanvasController(
   const { clearSelection, selectComponent, deleteSelected, checkAndClearJustFinished } = selection
   const { startWireDrawing, completeWire, addWireWaypoint, cancelWireDrawing, drawingWire } =
     wireManagement
-  const { isDragging, updateDrag, endDrag, nudgeSelection } = dragAndDrop
+  const { isDragging, updateDrag, endDrag, cancelDrag, nudgeSelection } = dragAndDrop
   const { activeCircuit } = circuitManager
 
   // Component controller for component-related logic
@@ -708,9 +708,13 @@ export function useCanvasController(
       }
     }
 
-    // Cancel wire drawing with Escape
-    if (event.key === 'Escape' && drawingWire.value) {
-      cancelWireDrawing()
+    // Escape cancels an in-progress wire drawing or drag (restoring pre-drag positions).
+    if (event.key === 'Escape') {
+      if (drawingWire.value) {
+        cancelWireDrawing()
+      } else if (isDragging()) {
+        cancelDrag()
+      }
     }
   }
 

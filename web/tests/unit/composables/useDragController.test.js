@@ -364,6 +364,19 @@ describe('useDragController - connected drag (wires follow ports)', () => {
     expect(wires.value[0].points).toEqual([{ x: 4, y: 2 }, { x: 10, y: 2 }])
   })
 
+  it('cancelDrag restores pre-drag positions and ends the drag', () => {
+    selectedComponents.value.add('A')
+    dragController.startDrag({ id: 'A', offsetX: 0, offsetY: 0, event: {} })
+    dragController.updateDrag({ x: 40, y: 100 }) // move A down
+    expect(components.value[0].y).not.toBe(2)
+
+    const cancelled = dragController.cancelDrag()
+    expect(cancelled).toBe(true)
+    expect(components.value[0]).toMatchObject({ x: 2, y: 2 })
+    expect(wires.value[0].points).toEqual([{ x: 3, y: 2 }, { x: 10, y: 2 }])
+    expect(dragController.isDragging()).toBe(false)
+  })
+
   it('an unrelated, unselected wire is untouched', () => {
     wires.value.push({
       id: 'other',

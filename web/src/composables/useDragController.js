@@ -406,6 +406,21 @@ export function useDragController(
     return moved
   }
 
+  // Abort the in-progress drag (Escape): restore everything to its pre-drag position by applying a
+  // zero delta, then drop the drag without snapping or finalizing. A later mouseup no-ops because
+  // dragging is cleared. (The pre-drag undo snapshot stays on the stack; undoing it is a no-op since
+  // state is already restored.)
+  function cancelDrag() {
+    if (!dragging.value) return false
+    if (dragging.value.isWireDrag) {
+      applyRigidLists(0, 0)
+    } else {
+      applyConnectedMove(dragging.value.context, { x: 0, y: 0 }, {})
+    }
+    dragging.value = null
+    return true
+  }
+
   function isDragging() {
     return dragging.value !== null
   }
@@ -416,6 +431,7 @@ export function useDragController(
     startWireDrag,
     updateDrag,
     endDrag,
+    cancelDrag,
     nudgeSelection,
     isDragging
   }
