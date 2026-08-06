@@ -339,9 +339,8 @@ export default {
           }
           circuit.sourceFilename = `${updatedCircuit.name}.ggc`
         }
-        // Update reactive properties
+        // Update reactive properties (the circuit "label" is retired — name only)
         circuit.name = updatedCircuit.name
-        circuit.label = updatedCircuit.label
         circuit.properties = {
           ...circuit.properties,
           ...updatedCircuit.properties

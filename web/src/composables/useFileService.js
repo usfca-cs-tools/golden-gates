@@ -70,7 +70,7 @@ function buildCircuitData(
     version: '1.4',
     timestamp: new Date().toISOString(),
     name: circuitMetadata.name || 'Untitled Circuit',
-    label: circuitMetadata.label || circuitMetadata.name || 'Untitled Circuit',
+    // The circuit "label" is retired — the subcircuit shows its filename, not a separate label.
     interface: circuitMetadata.interface,
     nextCircuitId,
     components: sanitizedComponents,

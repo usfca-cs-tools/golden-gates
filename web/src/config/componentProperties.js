@@ -520,17 +520,9 @@ export const componentPropertySchema = {
         type: 'text',
         required: true,
         help: 'Rename here, not in Finder/Explorer. The app tracks circuits by filename.'
-      },
-      {
-        // Retired: the subcircuit no longer draws a center label — only input/output names
-        // inside the frame and the filename as a caption below it. Kept in data for backward
-        // compatibility but hidden from the inspector.
-        name: 'label',
-        label: 'Display Label',
-        type: 'text',
-        hidden: true,
-        help: 'Label shown when used as a component'
       }
+      // The circuit "label" is retired — no separate Display Label field; the subcircuit shows
+      // its filename as a caption.
     ],
     actions: [
       {
