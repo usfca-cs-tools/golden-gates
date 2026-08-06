@@ -187,10 +187,13 @@ export function useAppController(circuitManager) {
         return
       }
 
-      // Log the generated GGL program for debugging and verification
-      console.log('\n=== ggl.view GGL Program ===')
+      // Log the generated GGL program for debugging. The console truncates the DISPLAY of a
+      // very long single string (a circuit with big ROMs is hundreds of KB), so also stash the
+      // full source on window — `copy(__ggl)` in DevTools grabs the whole thing.
+      window.__ggl = program
+      console.log(`\n=== ggl.view GGL Program (${program.length} chars) ===`)
       console.log(program)
-      console.log('=== End of Program ===\n')
+      console.log('=== End of Program — full source at window.__ggl, e.g. copy(__ggl) ===\n')
 
       // Execute the generated program (ggl.view already inlined the hierarchy, so there
       // are no per-subcircuit MEMFS modules to write).
