@@ -101,9 +101,17 @@ export function useAppController(circuitManager) {
   /**
    * Create a new circuit with auto-generated name
    */
+  // A filename-derived id that's unique against the circuits already in memory. Used when
+  // creating a circuit that isn't coming from the openProject batch, so new circuits get the
+  // same stable, readable id scheme as loaded ones instead of a `circuit_N` placeholder.
+  function uniqueCircuitId(nameOrFilename) {
+    return deriveCircuitId(nameOrFilename, new Set(circuitManager.allCircuits.value.keys()))
+  }
+
   function createNewCircuit() {
     const circuitCount = circuitManager.allCircuits.value.size + 1
-    circuitManager.createCircuit(`Circuit${circuitCount}`)
+    const name = `Circuit${circuitCount}`
+    circuitManager.createCircuit(name, { id: uniqueCircuitId(name) })
   }
 
   /**
@@ -893,7 +901,7 @@ export function useAppController(circuitManager) {
         if (allFiles.length === 0) {
           // Empty repo — create blank circuit named after the directory
           const circuitName = topLevelFilename.replace('.ggc', '')
-          circuitManager.createCircuit(circuitName)
+          circuitManager.createCircuit(circuitName, { id: uniqueCircuitId(circuitName) })
         } else {
           // Restore the previously open/closed set for this project (persisted across runs).
           // First time we see the project (no saved state) → open every circuit.
