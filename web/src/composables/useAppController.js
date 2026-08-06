@@ -174,7 +174,9 @@ export function useAppController(circuitManager) {
       // plain, inspectable artifact in between. The front-end 'run' maps to run_async (the
       // browser's free-running clock + live inputs); 'test' evaluates each Test.
       const model = buildRunModel(canvasRef)
-      const gglMode = mode === 'test' ? 'test' : 'run_async'
+      // 'test_async' awaits the cooperative evaluate_async so a long clocked Test yields to the
+      // event loop (responsive UI, live updates, working Stop) instead of freezing the tab.
+      const gglMode = mode === 'test' ? 'test_async' : 'run_async'
 
       // Register the Python->Vue callbacks (including the structured-error channel) BEFORE
       // generation, since generateProgramFromModel can itself raise a structured CircuitError
