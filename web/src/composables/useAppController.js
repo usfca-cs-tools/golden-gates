@@ -9,6 +9,26 @@ import { usePythonEngine } from './usePythonEngine'
 const SELF_CONTAINED_ERROR_CODES = new Set(['portNotFullyConnected'])
 
 /**
+ * A circuit's runtime id, derived from its filename. Making the id a pure function of the
+ * filename means it's STABLE across loads (a reload can't reshuffle ids the way the old
+ * `circuit_${n++}` counter did) and the generated GGL reads `sub_register_8_bit` instead of
+ * `sub_circuit_2`. Sanitize to a valid identifier; if two filenames sanitize to the same base
+ * (e.g. `a-b` and `a_b`), pass a `used` set to get a deterministic-within-load suffix.
+ */
+export function deriveCircuitId(filename, used = null) {
+  const base =
+    String(filename || 'circuit')
+      .replace(/\.ggc$/i, '')
+      .replace(/[^0-9a-zA-Z_]/g, '_') || 'circuit'
+  if (!used) return base
+  let id = base
+  let n = 2
+  while (used.has(id)) id = `${base}_${n++}`
+  used.add(id)
+  return id
+}
+
+/**
  * Circuit Operations - Business logic for circuit management
  * Provides controller layer functionality for circuit operations
  */
@@ -835,14 +855,17 @@ export function useAppController(circuitManager) {
         circuitManager.openTabs.value = []
   
         // Load every .ggc file into memory
+        const usedCircuitIds = new Set()
         for (const filename of allFiles) {
           try {
             const content = await readCircuitFile(resolvedDirPath, filename)
             if (!content) continue
             const circuitData = parseAndValidateJSON(content)
-  
-            // Create the circuit (suppress auto-tab; we'll open the top-level manually)
+
+            // Create the circuit with a STABLE, filename-derived id (suppress auto-tab; we'll
+            // open the top-level manually).
             const circuit = circuitManager.createCircuit(circuitData.name, {
+              id: deriveCircuitId(filename, usedCircuitIds),
               sourceFilename: filename,
               hasUnsavedChanges: false,
               openTab: false             // don't auto-open every sub-circuit as a tab
