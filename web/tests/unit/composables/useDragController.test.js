@@ -354,6 +354,19 @@ describe('useDragController - connected drag (wires follow ports)', () => {
     expect(components.value[0].y).toBeCloseTo(2)
   })
 
+  it('Shift axis-lock latches on the first move and holds it (no mid-drag flip)', () => {
+    selectedComponents.value.add('A') // A at (2,2), GRID_SIZE=20
+    dragController.startDrag({ id: 'A', offsetX: 0, offsetY: 0, event: {} })
+    // First move committed on X: to (5, 2.5) -> delta (3, 0.5) -> latch X
+    dragController.updateDrag({ x: 100, y: 50 }, { axisLock: true })
+    expect(components.value[0].x).toBeCloseTo(5)
+    expect(components.value[0].y).toBeCloseTo(2)
+    // Now drag dominantly on Y: to (3, 8) -> delta (1, 6). Must STAY latched to X.
+    dragController.updateDrag({ x: 60, y: 160 }, { axisLock: true })
+    expect(components.value[0].y).toBeCloseTo(2) // still X-locked, no Y movement
+    expect(components.value[0].x).toBeCloseTo(3)
+  })
+
   it('nudgeSelection moves the selection and follows the wire', () => {
     selectedComponents.value.add('A')
     const moved = dragController.nudgeSelection({ x: 1, y: 0 })

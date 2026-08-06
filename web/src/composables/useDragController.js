@@ -112,6 +112,7 @@ export function useDragController(
       wires: wireRecords,
       junctions,
       refId: comps[0]?.id ?? null,
+      lockedAxis: null, // set once Shift-drag commits to an axis; held until Shift is released
       lastDelta: { x: 0, y: 0 }
     }
   }
@@ -122,8 +123,16 @@ export function useDragController(
     let dx = rawDelta.x
     let dy = rawDelta.y
     if (opts.axisLock) {
-      if (Math.abs(dx) >= Math.abs(dy)) dy = 0
-      else dx = 0
+      // Latch the axis on the first committed movement and HOLD it for the rest of the drag. If we
+      // instead recomputed the dominant axis every move, the lock would flip axes mid-drag (start
+      // on X, drift in Y) — yanking components and re-routing their wires onto the other axis.
+      if (!context.lockedAxis && Math.max(Math.abs(dx), Math.abs(dy)) > 0.5) {
+        context.lockedAxis = Math.abs(dx) >= Math.abs(dy) ? 'x' : 'y'
+      }
+      if (context.lockedAxis === 'x') dy = 0
+      else if (context.lockedAxis === 'y') dx = 0
+    } else if (context.lockedAxis) {
+      context.lockedAxis = null // Shift released: resume free movement, re-latch on the next press
     }
     const delta = { x: dx, y: dy }
     context.lastDelta = delta
