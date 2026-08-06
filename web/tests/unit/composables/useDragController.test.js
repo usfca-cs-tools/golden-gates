@@ -7,6 +7,12 @@ vi.mock('../../../src/utils/constants', () => ({
   GRID_SIZE: 20
 }))
 
+// Drive port anchoring from a per-component fixture (`testPorts`); components without it (the
+// existing suite) resolve to no ports, exactly as a typeless component would.
+vi.mock('../../../src/utils/portGeometry', () => ({
+  computeComponentPorts: component => component?.testPorts || []
+}))
+
 describe('useDragController - Mixed Selection Drag Fix', () => {
   let components, wires, selectedComponents, selectedWires, wireJunctions, dragController
   let mockSnapToGrid
@@ -72,8 +78,8 @@ describe('useDragController - Mixed Selection Drag Fix', () => {
 
       // Verify drag state includes both components and wires
       expect(dragController.dragging.value).toBeTruthy()
-      expect(dragController.dragging.value.components.length).toBe(1)
-      expect(dragController.dragging.value.wires.length).toBe(1)
+      expect(dragController.dragging.value.context.components.length).toBe(1)
+      expect(dragController.dragging.value.context.wires.length).toBe(1)
       expect(dragController.dragging.value.isWireDrag).toBeFalsy()
 
       // Update drag position
@@ -254,8 +260,8 @@ describe('useDragController - Mixed Selection Drag Fix', () => {
         event: { metaKey: false, ctrlKey: false }
       })
 
-      expect(dragController.dragging.value.components.length).toBe(1)
-      expect(dragController.dragging.value.wires.length).toBe(1)
+      expect(dragController.dragging.value.context.components.length).toBe(1)
+      expect(dragController.dragging.value.context.wires.length).toBe(1)
       expect(dragController.dragging.value.isWireDrag).toBeFalsy()
 
       dragController.endDrag(mockSnapToGrid)
@@ -273,5 +279,129 @@ describe('useDragController - Mixed Selection Drag Fix', () => {
 
       dragController.endDrag(mockSnapToGrid)
     })
+  })
+})
+
+describe('useDragController - connected drag (wires follow ports)', () => {
+  let components, wires, selectedComponents, selectedWires, wireJunctions, dragController, mockSnapToGrid
+
+  const isOrthogonal = pts =>
+    pts.slice(0, -1).every((p, i) => p.x === pts[i + 1].x || p.y === pts[i + 1].y)
+
+  beforeEach(() => {
+    // A: output port at offset (1,0) -> abs (3,2). B: input port at offset (0,0) -> abs (10,2).
+    components = ref([
+      { id: 'A', x: 2, y: 2, testPorts: [{ name: '0', x: 1, y: 0, direction: 'output' }] },
+      { id: 'B', x: 10, y: 2, testPorts: [{ name: '0', x: 0, y: 0, direction: 'input' }] }
+    ])
+    // Straight horizontal wire from A's output to B's input.
+    wires = ref([
+      {
+        id: 'w',
+        points: [{ x: 3, y: 2 }, { x: 10, y: 2 }],
+        startConnection: { pos: { x: 3, y: 2 } },
+        endConnection: { pos: { x: 10, y: 2 } }
+      }
+    ])
+    selectedComponents = ref(new Set())
+    selectedWires = ref(new Set())
+    wireJunctions = ref([])
+    mockSnapToGrid = vi.fn(pos => pos) // identity: integer grid coords already
+
+    dragController = useDragController(
+      components,
+      wires,
+      selectedComponents,
+      selectedWires,
+      mockSnapToGrid,
+      wireJunctions,
+      null
+    )
+  })
+
+  it('a boundary wire stretches: moved end follows the port, far end stays', () => {
+    selectedComponents.value.add('A')
+    dragController.startDrag({ id: 'A', offsetX: 0, offsetY: 0, event: {} })
+    dragController.updateDrag({ x: 40, y: 100 }) // A -> (2,5): delta (0,3)
+    dragController.endDrag()
+
+    const w = wires.value[0]
+    expect(w.points).toEqual([{ x: 3, y: 5 }, { x: 10, y: 5 }, { x: 10, y: 2 }])
+    expect(w.points[0]).toEqual({ x: 3, y: 5 }) // start follows A's moved port
+    expect(w.points[w.points.length - 1]).toEqual({ x: 10, y: 2 }) // B's port unchanged
+    expect(isOrthogonal(w.points)).toBe(true)
+    expect(w.startConnection.pos).toEqual({ x: 3, y: 5 })
+    expect(w.endConnection.pos).toEqual({ x: 10, y: 2 })
+  })
+
+  it('a wire with both ends on moving components translates rigidly', () => {
+    selectedComponents.value.add('A')
+    selectedComponents.value.add('B')
+    dragController.startDrag({ id: 'A', offsetX: 0, offsetY: 0, event: {} })
+    dragController.updateDrag({ x: 40, y: 100 }) // delta (0,3) applied to both A and B
+    dragController.endDrag()
+
+    expect(wires.value[0].points).toEqual([{ x: 3, y: 5 }, { x: 10, y: 5 }])
+  })
+
+  it('Shift axis-lock zeros the minor axis of the drag', () => {
+    selectedComponents.value.add('A')
+    dragController.startDrag({ id: 'A', offsetX: 0, offsetY: 0, event: {} })
+    // Toward (5, 3.2): delta (3, 1.2) -> |x| dominates -> lock to x
+    dragController.updateDrag({ x: 100, y: 64 }, { axisLock: true })
+
+    expect(components.value[0].x).toBeCloseTo(5)
+    expect(components.value[0].y).toBeCloseTo(2)
+  })
+
+  it('Shift axis-lock latches on the first move and holds it (no mid-drag flip)', () => {
+    selectedComponents.value.add('A') // A at (2,2), GRID_SIZE=20
+    dragController.startDrag({ id: 'A', offsetX: 0, offsetY: 0, event: {} })
+    // First move committed on X: to (5, 2.5) -> delta (3, 0.5) -> latch X
+    dragController.updateDrag({ x: 100, y: 50 }, { axisLock: true })
+    expect(components.value[0].x).toBeCloseTo(5)
+    expect(components.value[0].y).toBeCloseTo(2)
+    // Now drag dominantly on Y: to (3, 8) -> delta (1, 6). Must STAY latched to X.
+    dragController.updateDrag({ x: 60, y: 160 }, { axisLock: true })
+    expect(components.value[0].y).toBeCloseTo(2) // still X-locked, no Y movement
+    expect(components.value[0].x).toBeCloseTo(3)
+  })
+
+  it('nudgeSelection moves the selection and follows the wire', () => {
+    selectedComponents.value.add('A')
+    const moved = dragController.nudgeSelection({ x: 1, y: 0 })
+
+    expect(moved).toBe(true)
+    expect(components.value[0].x).toBe(3)
+    expect(wires.value[0].points[0]).toEqual({ x: 4, y: 2 }) // A's port at (2+1)+1 = 4
+    expect(wires.value[0].points).toEqual([{ x: 4, y: 2 }, { x: 10, y: 2 }])
+  })
+
+  it('cancelDrag restores pre-drag positions and ends the drag', () => {
+    selectedComponents.value.add('A')
+    dragController.startDrag({ id: 'A', offsetX: 0, offsetY: 0, event: {} })
+    dragController.updateDrag({ x: 40, y: 100 }) // move A down
+    expect(components.value[0].y).not.toBe(2)
+
+    const cancelled = dragController.cancelDrag()
+    expect(cancelled).toBe(true)
+    expect(components.value[0]).toMatchObject({ x: 2, y: 2 })
+    expect(wires.value[0].points).toEqual([{ x: 3, y: 2 }, { x: 10, y: 2 }])
+    expect(dragController.isDragging()).toBe(false)
+  })
+
+  it('an unrelated, unselected wire is untouched', () => {
+    wires.value.push({
+      id: 'other',
+      points: [{ x: 20, y: 20 }, { x: 24, y: 20 }],
+      startConnection: { pos: { x: 20, y: 20 } },
+      endConnection: { pos: { x: 24, y: 20 } }
+    })
+    selectedComponents.value.add('A')
+    dragController.startDrag({ id: 'A', offsetX: 0, offsetY: 0, event: {} })
+    dragController.updateDrag({ x: 40, y: 100 })
+    dragController.endDrag()
+
+    expect(wires.value[1].points).toEqual([{ x: 20, y: 20 }, { x: 24, y: 20 }])
   })
 })

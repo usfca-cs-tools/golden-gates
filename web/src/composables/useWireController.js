@@ -1,6 +1,7 @@
 import { ref, computed } from 'vue'
 import { componentRegistry } from '../utils/componentRegistry'
 import { GRID_SIZE, gridToPixel, pixelToGrid } from '../utils/constants'
+import { routeOrthogonal } from '../utils/orthogonalRouting'
 
 export function useWireController(components, gridSize, callbacks = {}, circuitManager = null) {
   // Wire state - use passed refs or create local ones
@@ -80,24 +81,8 @@ export function useWireController(components, gridSize, callbacks = {}, circuitM
       y: Math.round(mousePos.y / GRID_SIZE)
     }
 
-    // Add orthogonal points based on current direction (same logic as getPreviewPoint)
-    if (wireDirection.value === 'horizontal') {
-      // Horizontal first
-      if (snappedPos.x !== lastPoint.x) {
-        wirePoints.value.push({ x: snappedPos.x, y: lastPoint.y })
-      }
-      if (snappedPos.x !== lastPoint.x || snappedPos.y !== lastPoint.y) {
-        wirePoints.value.push(snappedPos)
-      }
-    } else {
-      // Vertical first
-      if (snappedPos.y !== lastPoint.y) {
-        wirePoints.value.push({ x: lastPoint.x, y: snappedPos.y })
-      }
-      if (snappedPos.x !== lastPoint.x || snappedPos.y !== lastPoint.y) {
-        wirePoints.value.push(snappedPos)
-      }
-    }
+    // Add orthogonal points (corner then waypoint) based on current direction
+    wirePoints.value.push(...routeOrthogonal(lastPoint, snappedPos, wireDirection.value))
 
     // Toggle direction for next segment
     wireDirection.value = wireDirection.value === 'horizontal' ? 'vertical' : 'horizontal'
@@ -179,25 +164,7 @@ export function useWireController(components, gridSize, callbacks = {}, circuitM
     // Add the final connection point using orthogonal routing to avoid diagonal lines
     if (wirePoints.value.length > 0) {
       const lastPoint = wirePoints.value[wirePoints.value.length - 1]
-
-      // Apply the same orthogonal routing logic as addWireWaypoint
-      if (wireDirection.value === 'horizontal') {
-        // Horizontal first
-        if (connectionPos.x !== lastPoint.x) {
-          wirePoints.value.push({ x: connectionPos.x, y: lastPoint.y })
-        }
-        if (connectionPos.x !== lastPoint.x || connectionPos.y !== lastPoint.y) {
-          wirePoints.value.push(connectionPos)
-        }
-      } else {
-        // Vertical first
-        if (connectionPos.y !== lastPoint.y) {
-          wirePoints.value.push({ x: lastPoint.x, y: connectionPos.y })
-        }
-        if (connectionPos.x !== lastPoint.x || connectionPos.y !== lastPoint.y) {
-          wirePoints.value.push(connectionPos)
-        }
-      }
+      wirePoints.value.push(...routeOrthogonal(lastPoint, connectionPos, wireDirection.value))
     } else {
       // If no waypoints, just add the connection point directly
       wirePoints.value.push(connectionPos)
@@ -269,23 +236,7 @@ export function useWireController(components, gridSize, callbacks = {}, circuitM
     }
 
     // Create orthogonal path based on current direction
-    if (wireDirection.value === 'horizontal') {
-      // Horizontal first
-      if (snappedPos.x !== lastPoint.x) {
-        previewPoints.push({ x: snappedPos.x, y: lastPoint.y })
-      }
-      if (snappedPos.x !== lastPoint.x || snappedPos.y !== lastPoint.y) {
-        previewPoints.push(snappedPos)
-      }
-    } else {
-      // Vertical first
-      if (snappedPos.y !== lastPoint.y) {
-        previewPoints.push({ x: lastPoint.x, y: snappedPos.y })
-      }
-      if (snappedPos.x !== lastPoint.x || snappedPos.y !== lastPoint.y) {
-        previewPoints.push(snappedPos)
-      }
-    }
+    previewPoints.push(...routeOrthogonal(lastPoint, snappedPos, wireDirection.value))
 
     return previewPoints
   }

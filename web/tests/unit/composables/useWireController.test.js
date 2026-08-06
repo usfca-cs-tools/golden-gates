@@ -163,9 +163,10 @@ describe('useWireController', () => {
 
       expect(mockCallbacks.addWire).toHaveBeenCalledWith({
         id: expect.stringMatching(/^wire_\d+$/),
+        // A straight horizontal run: start -> end, no redundant corner (routeOrthogonal
+        // drops a corner that coincides with an endpoint).
         points: [
           { x: 7, y: 6 }, // start point
-          { x: 10, y: 6 }, // intermediate orthogonal point
           { x: 10, y: 6 } // end point
         ],
         startConnection: {

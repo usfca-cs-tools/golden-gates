@@ -19,7 +19,7 @@ export function useCanvasController(
   const { clearSelection, selectComponent, deleteSelected, checkAndClearJustFinished } = selection
   const { startWireDrawing, completeWire, addWireWaypoint, cancelWireDrawing, drawingWire } =
     wireManagement
-  const { isDragging, updateDrag, endDrag } = dragAndDrop
+  const { isDragging, updateDrag, endDrag, cancelDrag, nudgeSelection } = dragAndDrop
   const { activeCircuit } = circuitManager
 
   // Component controller for component-related logic
@@ -585,9 +585,9 @@ export function useCanvasController(
       return
     }
 
-    // Handle dragging
+    // Handle dragging. Shift locks the move to the dominant axis (live — checked each move).
     if (isDragging()) {
-      updateDrag(pos)
+      updateDrag(pos, { axisLock: event.shiftKey })
     }
   }
 
@@ -684,11 +684,37 @@ export function useCanvasController(
         deleteSelectedElements()
         return
       }
+
+      // Arrow-key nudge: move the selection by whole grid cells (Shift = a larger step). Wires
+      // follow/stretch via the same connected-move logic as dragging.
+      const NUDGE = {
+        ArrowLeft: { x: -1, y: 0 },
+        ArrowRight: { x: 1, y: 0 },
+        ArrowUp: { x: 0, y: -1 },
+        ArrowDown: { x: 0, y: 1 }
+      }
+      if (NUDGE[event.key] && !drawingWire.value) {
+        const hasSelection =
+          selection.selectedComponents.value.size > 0 || selection.selectedWires.value.size > 0
+        if (!hasSelection) return
+        event.preventDefault()
+        const step = event.shiftKey ? 10 : 1
+        const dir = NUDGE[event.key]
+        undoCallbacks.pushSnapshot?.()
+        if (nudgeSelection({ x: dir.x * step, y: dir.y * step })) {
+          circuitManager.markCircuitAsModified(circuitManager.activeTabId.value)
+        }
+        return
+      }
     }
 
-    // Cancel wire drawing with Escape
-    if (event.key === 'Escape' && drawingWire.value) {
-      cancelWireDrawing()
+    // Escape cancels an in-progress wire drawing or drag (restoring pre-drag positions).
+    if (event.key === 'Escape') {
+      if (drawingWire.value) {
+        cancelWireDrawing()
+      } else if (isDragging()) {
+        cancelDrag()
+      }
     }
   }
 
