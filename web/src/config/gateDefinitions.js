@@ -91,21 +91,25 @@ export const gateDefinitions = {
     logicClass: 'Not',
     pythonModule: 'logic',
     getSvgPath: (h, padding) => {
-      // NOT gate: Triangle with negation circle (MIL-STD-806B)
+      // NOT gate: Triangle with negation circle (MIL-STD-806B).
+      // The bubble's right edge lands on the 45px (3 grid unit) vertex so the output connection
+      // point sits on the grid — see outputOffset. The triangle tip meets the bubble at 35px.
       const centerY = h / 2
-      const triangleWidth = GRID_SIZE * 2 // 30px triangle width
+      const radius = 5
+      const triangleWidth = GRID_SIZE * 3 - 2 * radius // 35px: tip touches the bubble's left edge
       return `
         M 0 ${-padding}
         L ${triangleWidth} ${centerY}
         L 0 ${h + padding}
         L 0 ${-padding}
         Z
-        M ${triangleWidth + 10} ${centerY}
-        A 5 5 0 1 1 ${triangleWidth} ${centerY}
-        A 5 5 0 1 1 ${triangleWidth + 10} ${centerY}
+        M ${triangleWidth + 2 * radius} ${centerY}
+        A ${radius} ${radius} 0 1 1 ${triangleWidth} ${centerY}
+        A ${radius} ${radius} 0 1 1 ${triangleWidth + 2 * radius} ${centerY}
       `
     },
-    outputOffset: 5, // Move output to right edge of negation circle (triangle is 30px + circle is 10px + 5px to edge)
+    outputOffset: 0, // Output at 3 grid units (45px): input(0)→output(45) spans 3 grid units, so a
+    // 90/180/270° rotation about the output keeps both connection points on the grid.
     // NOT gate has only one input
     getInputPositions: numInputs => {
       // For NOT gate, always return single centered input
