@@ -126,11 +126,12 @@
             @update:modelValue="updateProp(prop.name, $event)"
           />
 
-          <!-- Bit range table for splitter -->
+          <!-- Bit range table for splitter (inputBits) and merger (outputBits) -->
           <BitRangeTable
             v-else-if="prop.type === 'bit-range-table'"
             :modelValue="getPropValue(prop.name, prop.default)"
-            :inputBits="getPropValue('inputBits', 8)"
+            :inputBits="getPropValue('inputBits', 0)"
+            :outputBits="getPropValue('outputBits', 0)"
             @update:modelValue="updateProp(prop.name, $event)"
           />
 
