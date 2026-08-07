@@ -67,8 +67,9 @@ export default {
     },
     // The value/width propagating on this wire, when known (issue #133). Only multi-bit
     // buses show a hover tooltip; single-bit wires keep just the high/low coloring.
+    // A string when it comes from the engine (exact 64-bit; formatBusValue parses with BigInt).
     value: {
-      type: Number,
+      type: [Number, String],
       default: null
     },
     bits: {

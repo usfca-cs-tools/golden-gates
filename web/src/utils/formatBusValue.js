@@ -8,8 +8,15 @@
  * Returns '' when there's no value to show (e.g. before a run), so callers can guard on it.
  */
 export function formatBusValue(value, bits) {
-  if (value == null || Number.isNaN(Number(value))) return ''
-  const v = Number(value)
+  if (value == null) return ''
+  // Values arrive from the engine as strings so a >2**53 (64-bit) bus value is exact; parse with
+  // BigInt. Guard against a non-integer/garbage value by returning '' rather than throwing.
+  let v
+  try {
+    v = BigInt(value)
+  } catch {
+    return ''
+  }
   const hexDigits = Math.max(1, Math.ceil((bits || 1) / 4))
   const hex = v.toString(16).toUpperCase().padStart(hexDigits, '0')
   return `${v}  ·  0x${hex}`
