@@ -23,6 +23,7 @@ import Multiply from '../components/Multiply.vue'
 import Divide from '../components/Divide.vue'
 import Shift from '../components/Shift.vue'
 import Compare from '../components/Compare.vue'
+import SignExtend from '../components/SignExtend.vue'
 import TestNode from '../components/TestNode.vue'
 
 // Registry of all available circuit components
@@ -828,6 +829,33 @@ export const componentRegistry = {
         instance.props.label = '<<'
       }
     }
+  },
+
+  signExtend: {
+    component: SignExtend,
+    label: 'Sign Extender',
+    icon: 'pi pi-arrows-h',
+    category: 'arithmetic',
+    requiresNamedPorts: true,
+    defaultProps: {
+      inBits: 8,
+      outBits: 16,
+      label: 'SE',
+      rotation: 0
+    },
+    dimensions: {
+      width: GRID_SIZE * 4,
+      height: GRID_SIZE * 2
+    },
+    // Matches the engine's SignExtend ports ('in'/'out'). Even dimensions + a (2,1) rotation
+    // centre keep both ports on integer grid vertices at every rotation.
+    getConnections: rotatableConnections(
+      {
+        inputs: [{ name: 'in', x: 0, y: 1 }],
+        outputs: [{ name: 'out', x: 4, y: 1 }]
+      },
+      { x: 2, y: 1 }
+    )
   },
 
   compare: {

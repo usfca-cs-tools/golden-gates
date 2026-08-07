@@ -235,6 +235,13 @@ export const commandGroups = {
         componentType: 'compare',
         action: 'addComponent',
         params: ['compare']
+      },
+      {
+        id: 'insert-sign-extend',
+        labelKey: 'commands.insert.signExtend',
+        componentType: 'signExtend',
+        action: 'addComponent',
+        params: ['signExtend']
       }
     ]
   },

@@ -425,6 +425,16 @@ export const componentPropertySchema = {
       commonProperties.rotation
     ]
   },
+  // Sign extender properties (distinct input/output widths, so two numeric fields)
+  signExtend: {
+    title: 'Sign Extender Properties',
+    properties: [
+      { ...commonProperties.label, default: 'SE' },
+      { name: 'inBits', type: 'number', label: 'Input Bits', default: 8, min: 1, max: 64, showButtons: true },
+      { name: 'outBits', type: 'number', label: 'Output Bits', default: 16, min: 1, max: 64, showButtons: true },
+      commonProperties.rotation
+    ]
+  },
   // ROM properties
   rom: {
     title: 'ROM Properties',

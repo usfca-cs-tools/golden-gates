@@ -112,7 +112,7 @@ describe('body-center rotated components stay grid-aligned', () => {
   // Arithmetic (static ports wrapped) + register + decoder — all rotate about an
   // integer body center, so ports must remain on integer grid vertices at every angle.
   // priorityEncoder has an odd (3) width so it rotates about x=2, not its 1.5 center.
-  const types = ['adder', 'subtract', 'multiply', 'divide', 'compare', 'shift', 'register', 'decoder', 'priorityEncoder']
+  const types = ['adder', 'subtract', 'multiply', 'divide', 'compare', 'shift', 'signExtend', 'register', 'decoder', 'priorityEncoder']
 
   for (const type of types) {
     const cfg = componentRegistry[type]

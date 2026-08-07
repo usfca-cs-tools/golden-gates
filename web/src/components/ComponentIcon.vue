@@ -104,6 +104,19 @@
       </text>
     </template>
 
+    <!-- Sign extender: a left-facing arrow + '1' (the sign bit extended leftward) -->
+    <template v-else-if="componentType === 'signExtend'">
+      <text
+        :x="iconTextX"
+        :y="iconTextY"
+        :font-size="iconTextFontSize"
+        class="component-icon-text"
+        :fill="color"
+      >
+        &#8592;1
+      </text>
+    </template>
+
     <!-- Test: a circle with a checkmark, matching the on-canvas status badge.
          Uses a square (30x30) viewBox so it fills the icon like the others. -->
     <template v-else-if="componentType === 'test'">
