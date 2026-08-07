@@ -54,18 +54,28 @@ export default {
     let lastEmittedValue = props.modelValue
     let lastEmittedBase = props.base
 
+    // Calculate bits from max value
+    const bits = computed(() => Math.ceil(Math.log2(props.max + 1)))
+
+    // Exact max for the current width (2^bits - 1) as BigInt, so 64-bit range checks don't round
+    // (props.max is a Number and loses precision past 2**53).
+    const maxBig = computed(() => 2n ** BigInt(bits.value) - 1n)
+
     // Check if a value overflows the current bit width
     const checkOverflow = value => {
-      if (value > props.max) {
+      let v
+      try {
+        v = BigInt(value)
+      } catch {
+        return false
+      }
+      if (v > maxBig.value) {
         isValid.value = false
         errorMessage.value = `Overflows ${bits.value} bits`
         return true
       }
       return false
     }
-
-    // Calculate bits from max value
-    const bits = computed(() => Math.ceil(Math.log2(props.max + 1)))
 
     // Convert number to display string
     const displayValue = computed(() => {
@@ -75,44 +85,41 @@ export default {
       return formatWithLeadingZeros(props.modelValue, props.base, bits.value)
     })
 
-    // Parse string to number without range checking
+    // Parse string to a BigInt without range checking, or null if malformed. BigInt keeps 64-bit
+    // values exact (parseInt/Number would round past 2**53, corrupting the value sent to the engine).
     const parseNumberRaw = str => {
       str = str.trim()
       if (str === '') return null
-
-      let num
-
-      // Binary
-      if (str.startsWith('0b') || str.startsWith('0B')) {
-        const binaryStr = str.slice(2)
-        if (!/^[01]+$/.test(binaryStr)) return null
-        num = parseInt(binaryStr, 2)
+      try {
+        // Binary
+        if (str.startsWith('0b') || str.startsWith('0B')) {
+          const binaryStr = str.slice(2)
+          if (!/^[01]+$/.test(binaryStr)) return null
+          return BigInt('0b' + binaryStr)
+        }
+        // Hexadecimal
+        else if (str.startsWith('0x') || str.startsWith('0X')) {
+          const hexStr = str.slice(2)
+          if (!/^[0-9a-fA-F]+$/.test(hexStr)) return null
+          return BigInt('0x' + hexStr)
+        }
+        // Decimal
+        else {
+          if (!/^[0-9]+$/.test(str)) return null
+          return BigInt(str)
+        }
+      } catch {
+        return null
       }
-      // Hexadecimal
-      else if (str.startsWith('0x') || str.startsWith('0X')) {
-        const hexStr = str.slice(2)
-        if (!/^[0-9a-fA-F]+$/.test(hexStr)) return null
-        num = parseInt(hexStr, 16)
-      }
-      // Decimal
-      else {
-        if (!/^[0-9]+$/.test(str)) return null
-        num = parseInt(str, 10)
-      }
-
-      return isNaN(num) ? null : num
     }
 
-    // Parse string to number with range checking
+    // Parse string to a BigInt with range checking (returns null if out of range).
     const parseNumber = str => {
       const num = parseNumberRaw(str)
       if (num === null) return null
-
-      // Check if number is within range
-      if (num < props.min || num > props.max) {
+      if (num < BigInt(props.min ?? 0) || num > maxBig.value) {
         return null
       }
-
       return num
     }
 
@@ -192,12 +199,14 @@ export default {
           detectedBase = 10
         }
 
-        // Track what we're emitting
-        lastEmittedValue = num
+        // Emit the value as a decimal string: it's a BigInt (exact 64-bit) and must stay
+        // JSON-serializable and reach the engine exactly (view.py int(str), update_input).
+        const valueStr = num.toString()
+        lastEmittedValue = valueStr
         lastEmittedBase = detectedBase
 
         // Emit both changes at once to avoid stale component issues
-        emit('update:both', { value: num, base: detectedBase })
+        emit('update:both', { value: valueStr, base: detectedBase })
       } else {
         // Check if it's a partial entry or out of range
         const partialOk =
@@ -209,13 +218,9 @@ export default {
           newValue === '0X'
 
         if (!partialOk && validation.valid) {
-          // Valid format but out of range
-          const testNum = parseInt(
-            newValue.replace(/^0[xXbB]/, ''),
-            newValue.match(/^0[xX]/) ? 16 : newValue.match(/^0[bB]/) ? 2 : 10
-          )
-
-          if (!isNaN(testNum)) {
+          // Valid format but out of range -> surface the overflow message.
+          const testNum = parseNumberRaw(newValue)
+          if (testNum !== null) {
             checkOverflow(testNum)
           }
         }

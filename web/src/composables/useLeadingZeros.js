@@ -6,17 +6,23 @@
  * @returns {string} - Formatted string representation
  */
 export function formatWithLeadingZeros(value, base, bits) {
+  // Values can be a decimal string (exact 64-bit) or a Number; parse with BigInt so a value above
+  // 2**53 formats without rounding. Guard a bad value to 0 rather than throwing.
+  let v
+  try {
+    v = BigInt(value ?? 0)
+  } catch {
+    v = 0n
+  }
   if (base === 16) {
     // Calculate hex digits needed (4 bits per hex digit)
     const hexDigits = Math.ceil(bits / 4)
-    const hexString = value.toString(16).padStart(hexDigits, '0')
-    return '0x' + hexString
+    return '0x' + v.toString(16).padStart(hexDigits, '0')
   } else if (base === 2) {
     // Pad binary to full bit width
-    const binaryString = value.toString(2).padStart(bits, '0')
-    return '0b' + binaryString
+    return '0b' + v.toString(2).padStart(bits, '0')
   } else {
-    return value.toString(10)
+    return v.toString(10)
   }
 }
 
