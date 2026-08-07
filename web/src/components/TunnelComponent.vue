@@ -1,10 +1,12 @@
 <template>
   <g :transform="`translate(${x * GRID_SIZE}, ${y * GRID_SIZE})`">
-    <!-- Label above (always upright) -->
+    <!-- Label beside the symbol (always upright), on the side opposite the connection so a column
+         of tunnels reads cleanly: right at 0°, left at 180°. -->
     <text
-      :x="GRID_SIZE"
-      y="-5"
-      text-anchor="middle"
+      :x="labelAttrs.x"
+      :y="labelAttrs.y"
+      :text-anchor="labelAttrs.anchor"
+      :dominant-baseline="labelAttrs.baseline"
       class="component-label"
     >
       {{ label }}
@@ -53,6 +55,20 @@ export default defineComponent({
   },
   emits: ['startDrag'],
   computed: {
+    // The connection dot is at the triangle tip; the label goes beside the flat (base) side,
+    // opposite the tip, vertically centred on the connection level. Right at 0°, left at 180°.
+    // 90°/270° (vertical tunnels, uncommon) keep the label above.
+    labelAttrs() {
+      const PAD = 5
+      if (this.rotation === 180) {
+        return { x: GRID_SIZE - PAD, y: GRID_SIZE, anchor: 'end', baseline: 'central' }
+      }
+      if (this.rotation === 90 || this.rotation === 270) {
+        return { x: GRID_SIZE, y: -5, anchor: 'middle', baseline: 'auto' }
+      }
+      // 0° (default)
+      return { x: GRID_SIZE + PAD, y: GRID_SIZE, anchor: 'start', baseline: 'central' }
+    },
     trianglePoints() {
       const width = GRID_SIZE
       const height = GRID_SIZE
