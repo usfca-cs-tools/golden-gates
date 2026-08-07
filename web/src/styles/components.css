@@ -71,6 +71,18 @@
   stroke: var(--color-component-selected-stroke);
 }
 
+/* Error/warning stroke — placed after .selected so a mis-wired splitter/merger
+   reads red (or orange) even while selected, matching every other component. */
+.splitter-body.has-warning,
+.merger-body.has-warning {
+  stroke: var(--color-component-warning-stroke);
+}
+
+.splitter-body.has-error,
+.merger-body.has-error {
+  stroke: var(--color-component-error-stroke);
+}
+
 .component-body:hover {
   fill: var(--color-component-hover-fill, #f0f0f0);
 }

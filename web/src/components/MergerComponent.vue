@@ -9,7 +9,7 @@
       :y1="0"
       :x2="GRID_SIZE"
       :y2="height"
-      :class="['merger-body', { selected: selected }]"
+      :class="['merger-body', { selected, 'has-error': hasError, 'has-warning': hasWarning }]"
       :stroke-width="8"
       :data-component-id="id"
       @mousedown="handleMouseDown"
@@ -74,7 +74,10 @@ export default defineComponent({
     x: { type: Number, default: 0 },
     y: { type: Number, default: 0 },
     selected: { type: Boolean, default: false },
-    rotation: { type: Number, default: 0 }
+    rotation: { type: Number, default: 0 },
+    // Set by the error system when this merger has a simulation error/warning
+    hasError: { type: Boolean, default: false },
+    hasWarning: { type: Boolean, default: false }
   },
   emits: ['startDrag'],
   computed: {
