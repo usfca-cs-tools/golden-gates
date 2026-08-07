@@ -104,7 +104,7 @@
       </text>
     </template>
 
-    <!-- Sign extender: 'SE' glyph -->
+    <!-- Sign extender: a left-facing arrow + '1' (the sign bit extended leftward) -->
     <template v-else-if="componentType === 'signExtend'">
       <text
         :x="iconTextX"
@@ -113,7 +113,7 @@
         class="component-icon-text"
         :fill="color"
       >
-        SE
+        &#8592;1
       </text>
     </template>
 
