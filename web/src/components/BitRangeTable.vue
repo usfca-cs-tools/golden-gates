@@ -63,15 +63,17 @@ const props = defineProps({
   },
   inputBits: {
     type: Number,
-    default: 8
+    default: 0
   },
   outputBits: {
     type: Number,
-    default: 8
+    default: 0
   }
 })
 
-// Use inputBits for splitter, outputBits for merger
+// Use inputBits for splitter, outputBits for merger. Defaults are 0 (falsy) so the
+// width that is actually set wins — otherwise a component without inputBits (the merger)
+// would inherit an 8-bit default and clamp its ranges to 7 bits.
 const maxBits = computed(() => props.inputBits || props.outputBits || 8)
 
 const emit = defineEmits(['update:modelValue'])
