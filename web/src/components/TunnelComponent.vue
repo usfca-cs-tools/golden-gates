@@ -61,12 +61,18 @@ export default defineComponent({
     labelAttrs() {
       const PAD = 5
       if (this.rotation === 180) {
+        // tip/connection on the right, wide part on the left -> label left
         return { x: GRID_SIZE - PAD, y: GRID_SIZE, anchor: 'end', baseline: 'central' }
       }
-      if (this.rotation === 90 || this.rotation === 270) {
-        return { x: GRID_SIZE, y: -5, anchor: 'middle', baseline: 'auto' }
+      if (this.rotation === 90) {
+        // tip/connection at the top, wide part at the bottom -> label below the wide part
+        return { x: GRID_SIZE, y: GRID_SIZE + PAD + 3, anchor: 'middle', baseline: 'central' }
       }
-      // 0° (default)
+      if (this.rotation === 270) {
+        // tip/connection at the bottom, wide part at the top -> label above the wide part
+        return { x: GRID_SIZE, y: GRID_SIZE - PAD - 3, anchor: 'middle', baseline: 'central' }
+      }
+      // 0° (default): tip/connection on the left, wide part on the right -> label right
       return { x: GRID_SIZE + PAD, y: GRID_SIZE, anchor: 'start', baseline: 'central' }
     },
     trianglePoints() {

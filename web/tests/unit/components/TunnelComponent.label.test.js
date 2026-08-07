@@ -24,4 +24,20 @@ describe('Tunnel label placement', () => {
     expect(Number(t.attributes('x'))).toBeLessThan(GRID_SIZE)
     expect(Number(t.attributes('y'))).toBe(GRID_SIZE)
   })
+
+  it('is below the wide part at 90° (tip/connection is at the top)', () => {
+    const t = label(90)
+    expect(t.attributes('text-anchor')).toBe('middle')
+    expect(Number(t.attributes('x'))).toBe(GRID_SIZE)
+    expect(Number(t.attributes('y'))).toBeGreaterThan(GRID_SIZE) // below the base
+  })
+
+  it('is above the wide part at 270° (tip/connection is at the bottom)', () => {
+    const t = label(270)
+    expect(t.attributes('text-anchor')).toBe('middle')
+    expect(Number(t.attributes('x'))).toBe(GRID_SIZE)
+    const y = Number(t.attributes('y'))
+    expect(y).toBeLessThan(GRID_SIZE) // above the base...
+    expect(y).toBeGreaterThan(0) // ...but not up at the old y=-5
+  })
 })
