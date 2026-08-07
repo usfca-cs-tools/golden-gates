@@ -104,6 +104,19 @@
       </text>
     </template>
 
+    <!-- Sign extender: 'SE' glyph -->
+    <template v-else-if="componentType === 'signExtend'">
+      <text
+        :x="iconTextX"
+        :y="iconTextY"
+        :font-size="iconTextFontSize"
+        class="component-icon-text"
+        :fill="color"
+      >
+        SE
+      </text>
+    </template>
+
     <!-- Test: a circle with a checkmark, matching the on-canvas status badge.
          Uses a square (30x30) viewBox so it fills the icon like the others. -->
     <template v-else-if="componentType === 'test'">

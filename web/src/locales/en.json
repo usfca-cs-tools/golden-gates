@@ -193,7 +193,8 @@
       "multiply": "Multiply",
       "divide": "Divide",
       "shift": "Shift",
-      "compare": "Compare"
+      "compare": "Compare",
+      "signExtend": "Sign Extender"
     },
     "commandPalette": {
       "placeholder": "Type a command or search...",
