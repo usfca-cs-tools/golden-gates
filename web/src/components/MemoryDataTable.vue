@@ -93,7 +93,7 @@ const props = defineProps({
   dataBits: {
     type: Number,
     default: 8,
-    validator: value => value >= 1 && value <= 32
+    validator: value => value >= 1 && value <= 64
   },
   highlightAddress: {
     type: Number,
