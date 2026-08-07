@@ -44,18 +44,18 @@
       <table class="memory-table">
         <tbody>
           <tr v-for="row in numRows" :key="row">
-            <td v-for="col in 8" :key="col" class="memory-cell">
+            <td v-for="col in columns" :key="col" class="memory-cell" :style="{ minWidth: cellMinWidth }">
               <div class="cell-address">
-                {{ formatAddress((row - 1) * 8 + (col - 1)) }}
+                {{ formatAddress((row - 1) * columns + (col - 1)) }}
               </div>
               <input
-                :value="formatData(getDataAt((row - 1) * 8 + (col - 1)))"
-                @input="updateDataAt((row - 1) * 8 + (col - 1), $event.target.value)"
-                @focus="handleCellFocus((row - 1) * 8 + (col - 1))"
+                :value="formatData(getDataAt((row - 1) * columns + (col - 1)))"
+                @input="updateDataAt((row - 1) * columns + (col - 1), $event.target.value)"
+                @focus="handleCellFocus((row - 1) * columns + (col - 1))"
                 @blur="handleCellBlur"
                 class="cell-input"
                 :class="{
-                  active: activeCellIndex === (row - 1) * 8 + (col - 1),
+                  active: activeCellIndex === (row - 1) * columns + (col - 1),
                   readonly: !editable
                 }"
                 :readonly="!editable"
@@ -116,7 +116,16 @@ const fileInput = ref(null)
 
 // Computed
 const totalCells = computed(() => Math.pow(2, props.addressBits))
-const numRows = computed(() => Math.ceil(totalCells.value / 8))
+// Columns per row: fewer for wider data so a full cell (e.g. 16 hex digits for 64-bit) isn't
+// clipped and the table stays a reasonable width.
+const columns = computed(() => {
+  const hexDigits = Math.ceil(props.dataBits / 4)
+  return hexDigits <= 8 ? 8 : hexDigits <= 16 ? 4 : 2
+})
+const numRows = computed(() => Math.ceil(totalCells.value / columns.value))
+// Cell width scaled to the data width so all hex digits are visible (monospace), never below the
+// original 5rem floor.
+const cellMinWidth = computed(() => `${Math.max(5, Math.ceil(props.dataBits / 4) * 0.7 + 1)}rem`)
 // Exact max cell value (2^dataBits - 1) as BigInt, so 64-bit data isn't rounded past 2**53.
 const maxDataValue = computed(() => 2n ** BigInt(props.dataBits) - 1n)
 
@@ -404,7 +413,8 @@ function parseJsonFile(text) {
 .table-container {
   position: relative;
   max-height: 300px;
-  overflow-y: auto;
+  /* Horizontal scroll too, so wide data (e.g. 64-bit binary) doesn't clip. */
+  overflow: auto;
   border: 1px solid var(--color-border-light);
   border-radius: 6px;
   background: var(--color-panel-bg);
