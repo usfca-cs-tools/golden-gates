@@ -105,7 +105,7 @@ export default defineComponent({
     bits: {
       type: Number,
       default: 1,
-      validator: (value: number) => value >= 1 && value <= 32
+      validator: (value: number) => value >= 1 && value <= 64
     },
     label: {
       type: String,

@@ -113,7 +113,7 @@ export default defineComponent({
     dataBits: {
       type: Number,
       default: 8,
-      validator: (value: number) => value >= 1 && value <= 32
+      validator: (value: number) => value >= 1 && value <= 64
     },
     data: {
       type: Array,

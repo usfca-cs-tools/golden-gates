@@ -273,8 +273,10 @@ __ggl_program
     }
 
     try {
+      // BigInt() yields the exact integer literal (from a decimal string, or the exact value of a
+      // legacy Number) so a 64-bit input reaches the engine without 2**53 rounding.
       await pyodideInstance.value.runPythonAsync(
-        `circuit0.update_input("${componentId}", ${value})`
+        `circuit0.update_input("${componentId}", ${BigInt(value)})`
       )
     } catch (err) {
       console.warn('Could not update input:', err.message)

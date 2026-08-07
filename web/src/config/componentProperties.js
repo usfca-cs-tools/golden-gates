@@ -14,7 +14,7 @@ const commonProperties = {
     label: 'Bits',
     default: 1,
     min: 1,
-    max: 32,
+    max: 64,
     showButtons: true
   },
   rotation: {
@@ -445,7 +445,7 @@ export const componentPropertySchema = {
         label: 'Data Bits',
         default: 8,
         min: 1,
-        max: 32,
+        max: 64,
         showButtons: true
       },
       {
@@ -476,7 +476,7 @@ export const componentPropertySchema = {
         label: 'Data Bits',
         default: 8,
         min: 1,
-        max: 32,
+        max: 64,
         showButtons: true
       },
       {

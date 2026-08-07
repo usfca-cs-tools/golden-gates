@@ -44,18 +44,18 @@
       <table class="memory-table">
         <tbody>
           <tr v-for="row in numRows" :key="row">
-            <td v-for="col in 8" :key="col" class="memory-cell">
+            <td v-for="col in columns" :key="col" class="memory-cell" :style="{ minWidth: cellMinWidth }">
               <div class="cell-address">
-                {{ formatAddress((row - 1) * 8 + (col - 1)) }}
+                {{ formatAddress((row - 1) * columns + (col - 1)) }}
               </div>
               <input
-                :value="formatData(getDataAt((row - 1) * 8 + (col - 1)))"
-                @input="updateDataAt((row - 1) * 8 + (col - 1), $event.target.value)"
-                @focus="handleCellFocus((row - 1) * 8 + (col - 1))"
+                :value="formatData(getDataAt((row - 1) * columns + (col - 1)))"
+                @input="updateDataAt((row - 1) * columns + (col - 1), $event.target.value)"
+                @focus="handleCellFocus((row - 1) * columns + (col - 1))"
                 @blur="handleCellBlur"
                 class="cell-input"
                 :class="{
-                  active: activeCellIndex === (row - 1) * 8 + (col - 1),
+                  active: activeCellIndex === (row - 1) * columns + (col - 1),
                   readonly: !editable
                 }"
                 :readonly="!editable"
@@ -93,7 +93,7 @@ const props = defineProps({
   dataBits: {
     type: Number,
     default: 8,
-    validator: value => value >= 1 && value <= 32
+    validator: value => value >= 1 && value <= 64
   },
   highlightAddress: {
     type: Number,
@@ -116,8 +116,18 @@ const fileInput = ref(null)
 
 // Computed
 const totalCells = computed(() => Math.pow(2, props.addressBits))
-const numRows = computed(() => Math.ceil(totalCells.value / 8))
-const maxDataValue = computed(() => Math.pow(2, props.dataBits) - 1)
+// Columns per row: fewer for wider data so a full cell (e.g. 16 hex digits for 64-bit) isn't
+// clipped and the table stays a reasonable width.
+const columns = computed(() => {
+  const hexDigits = Math.ceil(props.dataBits / 4)
+  return hexDigits <= 8 ? 8 : hexDigits <= 16 ? 4 : 2
+})
+const numRows = computed(() => Math.ceil(totalCells.value / columns.value))
+// Cell width scaled to the data width so all hex digits are visible (monospace), never below the
+// original 5rem floor.
+const cellMinWidth = computed(() => `${Math.max(5, Math.ceil(props.dataBits / 4) * 0.7 + 1)}rem`)
+// Exact max cell value (2^dataBits - 1) as BigInt, so 64-bit data isn't rounded past 2**53.
+const maxDataValue = computed(() => 2n ** BigInt(props.dataBits) - 1n)
 
 // Initialize data array if empty
 const data = ref([...props.modelValue])
@@ -159,26 +169,27 @@ function getDataAt(index) {
 function updateDataAt(index, valueStr) {
   if (index >= totalCells.value || !props.editable) return
 
-  // Parse value based on current base
-  let value = 0
+  // Parse value in the current base with BigInt (parseInt/Number would round 64-bit cells past
+  // 2**53 and corrupt the value sent to the engine).
+  let value = 0n
   valueStr = valueStr.trim()
-
   if (valueStr !== '') {
-    if (displayBase.value === 2) {
-      value = parseInt(valueStr, 2) || 0
-    } else if (displayBase.value === 16) {
-      value = parseInt(valueStr, 16) || 0
-    } else {
-      value = parseInt(valueStr, 10) || 0
+    try {
+      if (displayBase.value === 2) value = BigInt('0b' + valueStr.replace(/^0[bB]/, ''))
+      else if (displayBase.value === 16) value = BigInt('0x' + valueStr.replace(/^0[xX]/, ''))
+      else value = BigInt(valueStr)
+    } catch {
+      value = 0n
     }
   }
 
-  // Clamp to valid range
-  value = Math.max(0, Math.min(value, maxDataValue.value))
+  // Clamp to [0, maxDataValue]
+  if (value < 0n) value = 0n
+  else if (value > maxDataValue.value) value = maxDataValue.value
 
-  // Update data
+  // Store as an exact decimal string (JSON-safe; view.py int() reads it exactly).
   const newData = [...data.value]
-  newData[index] = value
+  newData[index] = value.toString()
   data.value = newData
   emit('update:modelValue', newData)
 }
@@ -192,13 +203,20 @@ function formatAddress(index) {
 }
 
 function formatData(value) {
+  // Cells are decimal strings (or legacy Numbers); parse with BigInt so 64-bit data displays exactly.
+  let v
+  try {
+    v = BigInt(value ?? 0)
+  } catch {
+    v = 0n
+  }
   if (displayBase.value === 2) {
-    return value.toString(2).padStart(props.dataBits, '0')
+    return v.toString(2).padStart(props.dataBits, '0')
   } else if (displayBase.value === 16) {
     const hexDigits = Math.ceil(props.dataBits / 4)
-    return value.toString(16).toUpperCase().padStart(hexDigits, '0')
+    return v.toString(16).toUpperCase().padStart(hexDigits, '0')
   } else {
-    return value.toString(10)
+    return v.toString(10)
   }
 }
 
@@ -290,12 +308,15 @@ function parseMemoryFile(text) {
     }
 
     let value
-    if (/^0x/i.test(token)) value = parseInt(token.slice(2), 16)
-    else if (/^0b/i.test(token)) value = parseInt(token.slice(2), 2)
-    else value = parseInt(token, 16) // bare token = hex, per the v2.0 raw convention
-
-    if (Number.isNaN(value)) continue
-    for (let i = 0; i < count; i++) values.push(Math.floor(value))
+    try {
+      if (/^0x/i.test(token)) value = BigInt(token)
+      else if (/^0b/i.test(token)) value = BigInt(token)
+      else value = BigInt('0x' + token) // bare token = hex, per the v2.0 raw convention
+    } catch {
+      continue
+    }
+    // Store exact decimal strings so 64-bit cells survive (parseInt rounds past 2**53).
+    for (let i = 0; i < count; i++) values.push(value.toString())
   }
 
   return values
@@ -314,29 +335,24 @@ function parseJsonFile(text) {
   const values = []
 
   for (const item of array) {
-    let value = 0
-
-    if (typeof item === 'number') {
-      value = item
-    } else if (typeof item === 'string') {
-      if (item.startsWith('0x') || item.startsWith('0X')) {
-        value = parseInt(item, 16)
-      } else if (item.startsWith('0b') || item.startsWith('0B')) {
-        value = parseInt(item.substr(2), 2)
-      } else if (/^[0-9a-fA-F]+$/.test(item)) {
-        // Hex string without 0x prefix (all hex digits)
-        value = parseInt(item, 16)
+    // BigInt keeps 64-bit values exact; store decimal strings. (A JSON *number* above 2**53 was
+    // already rounded by JSON.parse — use string values in the file for exact large data.)
+    let value
+    try {
+      if (typeof item === 'number') {
+        value = BigInt(Math.trunc(item))
+      } else if (typeof item === 'string') {
+        if (/^0[xXbB]/.test(item)) value = BigInt(item)
+        else if (/^[0-9a-fA-F]+$/.test(item))
+          value = BigInt('0x' + item) // bare hex digits
+        else value = BigInt(item) // decimal
       } else {
-        value = parseInt(item, 10)
+        value = BigInt(Math.trunc(Number(item)))
       }
-    } else {
-      // Try to convert to number
-      value = Number(item)
+    } catch {
+      continue
     }
-
-    if (!isNaN(value)) {
-      values.push(Math.floor(value)) // Ensure integer values
-    }
+    values.push(value.toString())
   }
 
   return values
@@ -397,7 +413,8 @@ function parseJsonFile(text) {
 .table-container {
   position: relative;
   max-height: 300px;
-  overflow-y: auto;
+  /* Horizontal scroll too, so wide data (e.g. 64-bit binary) doesn't clip. */
+  overflow: auto;
   border: 1px solid var(--color-border-light);
   border-radius: 6px;
   background: var(--color-panel-bg);

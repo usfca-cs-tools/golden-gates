@@ -87,7 +87,7 @@ describe('MultibaseNumberInput', () => {
       await input.setValue('123')
 
       expect(wrapper.emitted('update:both')).toBeTruthy()
-      expect(wrapper.emitted('update:both')[0][0]).toEqual({ value: 123, base: 10 })
+      expect(wrapper.emitted('update:both')[0][0]).toEqual({ value: '123', base: 10 })
     })
 
     it('should accept valid hexadecimal input', async () => {
@@ -97,7 +97,7 @@ describe('MultibaseNumberInput', () => {
       await input.setValue('0xff')
 
       expect(wrapper.emitted('update:both')).toBeTruthy()
-      expect(wrapper.emitted('update:both')[0][0]).toEqual({ value: 255, base: 16 })
+      expect(wrapper.emitted('update:both')[0][0]).toEqual({ value: '255', base: 16 })
     })
 
     it('should accept valid binary input', async () => {
@@ -107,7 +107,7 @@ describe('MultibaseNumberInput', () => {
       await input.setValue('0b101')
 
       expect(wrapper.emitted('update:both')).toBeTruthy()
-      expect(wrapper.emitted('update:both')[0][0]).toEqual({ value: 5, base: 2 })
+      expect(wrapper.emitted('update:both')[0][0]).toEqual({ value: '5', base: 2 })
     })
 
     it('should handle uppercase prefixes', async () => {
@@ -117,7 +117,21 @@ describe('MultibaseNumberInput', () => {
       await input.setValue('0XFF')
 
       expect(wrapper.emitted('update:both')).toBeTruthy()
-      expect(wrapper.emitted('update:both')[0][0]).toEqual({ value: 255, base: 16 })
+      expect(wrapper.emitted('update:both')[0][0]).toEqual({ value: '255', base: 16 })
+    })
+
+    it('parses a 64-bit value exactly (BigInt, not rounded like parseInt)', async () => {
+      const wrapper = createWrapper({ base: 16, max: Math.pow(2, 64) - 1 })
+      const input = wrapper.find('input')
+
+      await input.setValue('0x0100000000000000') // 2**56
+
+      // parseInt would stringify the double as 72057594037927940 (off by 4) and corrupt the value
+      // sent to the engine; BigInt keeps it exact.
+      expect(wrapper.emitted('update:both')[0][0]).toEqual({
+        value: '72057594037927936',
+        base: 16
+      })
     })
 
     it('should reject invalid characters for decimal', async () => {
@@ -178,7 +192,7 @@ describe('MultibaseNumberInput', () => {
       await input.setValue('50')
 
       expect(wrapper.emitted('update:both')).toBeTruthy()
-      expect(wrapper.emitted('update:both')[0][0]).toEqual({ value: 50, base: 10 })
+      expect(wrapper.emitted('update:both')[0][0]).toEqual({ value: '50', base: 10 })
     })
   })
 
@@ -190,7 +204,7 @@ describe('MultibaseNumberInput', () => {
       await input.setValue('123') // No prefix = decimal
 
       expect(wrapper.emitted('update:both')).toBeTruthy()
-      expect(wrapper.emitted('update:both')[0][0]).toEqual({ value: 123, base: 10 })
+      expect(wrapper.emitted('update:both')[0][0]).toEqual({ value: '123', base: 10 })
     })
 
     it('should detect hexadecimal base from input', async () => {
@@ -200,7 +214,7 @@ describe('MultibaseNumberInput', () => {
       await input.setValue('0xff') // Hex prefix
 
       expect(wrapper.emitted('update:both')).toBeTruthy()
-      expect(wrapper.emitted('update:both')[0][0]).toEqual({ value: 255, base: 16 })
+      expect(wrapper.emitted('update:both')[0][0]).toEqual({ value: '255', base: 16 })
     })
 
     it('should detect binary base from input', async () => {
@@ -210,7 +224,7 @@ describe('MultibaseNumberInput', () => {
       await input.setValue('0b101') // Binary prefix
 
       expect(wrapper.emitted('update:both')).toBeTruthy()
-      expect(wrapper.emitted('update:both')[0][0]).toEqual({ value: 5, base: 2 })
+      expect(wrapper.emitted('update:both')[0][0]).toEqual({ value: '5', base: 2 })
     })
   })
 
@@ -255,7 +269,7 @@ describe('MultibaseNumberInput', () => {
       await input.setValue('0xff')
 
       expect(wrapper.emitted('update:both')).toBeTruthy()
-      expect(wrapper.emitted('update:both')[0][0]).toEqual({ value: 255, base: 16 })
+      expect(wrapper.emitted('update:both')[0][0]).toEqual({ value: '255', base: 16 })
     })
 
     it('should not emit when input is invalid', async () => {

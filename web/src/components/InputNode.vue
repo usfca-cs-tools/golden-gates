@@ -51,7 +51,8 @@ export default defineComponent({
     ...draggableProps,
     // IO props
     label: { type: String, default: 'IN' },
-    value: { type: Number, default: 0 },
+    // A decimal string for exact 64-bit values (entered via BigInt); Number for legacy/small.
+    value: { type: [Number, String], default: 0 },
     base: { type: Number, default: 10 },
     bits: { type: Number, default: 1 },
     rotation: { type: Number, default: 0 }
@@ -59,18 +60,17 @@ export default defineComponent({
   emits: ['startDrag'],
   computed: {
     formattedValue() {
-      // Handle null/undefined value
-      const val = this.value ?? 0
+      // Parse with BigInt so a value above 2**53 formats exactly.
+      let val
+      try {
+        val = BigInt(this.value ?? 0)
+      } catch {
+        return String(this.value ?? '')
+      }
 
       // Format value based on base
       if (this.base === 16) {
-        return (
-          '0x' +
-          val
-            .toString(16)
-            .padStart(Math.ceil(this.bits / 4), '0')
-            .toUpperCase()
-        )
+        return '0x' + val.toString(16).padStart(Math.ceil(this.bits / 4), '0').toUpperCase()
       } else if (this.base === 2) {
         return '0b' + val.toString(2).padStart(this.bits, '0')
       } else {
