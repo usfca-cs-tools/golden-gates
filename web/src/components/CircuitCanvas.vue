@@ -311,11 +311,13 @@ export default {
       return removeComponentBase(componentId)
     }
 
-    const updateComponent = (componentId, updates) => {
-      if (props.autosave) {
+    const updateComponent = (component, options = {}) => {
+      // Transient simulation writebacks shouldn't churn autosave (or mark dirty — see
+      // updateComponentInCircuit): they carry no change worth persisting or restoring.
+      if (!options.transient && props.autosave) {
         props.autosave.immediateAutosave()
       }
-      return updateComponentBase(componentId, updates)
+      return updateComponentBase(component, options)
     }
 
     const clearCurrentCircuit = () => {

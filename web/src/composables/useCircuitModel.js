@@ -329,13 +329,16 @@ export function useCircuitModel() {
   }
 
   // Update a component in a circuit
-  function updateComponentInCircuit(circuitId, updatedComponent) {
+  function updateComponentInCircuit(circuitId, updatedComponent, { transient = false } = {}) {
     const circuit = allCircuits.value.get(circuitId)
     if (circuit) {
       const index = circuit.components.findIndex(comp => comp.id === updatedComponent.id)
       if (index !== -1) {
         circuit.components[index] = updatedComponent
-        markCircuitAsModified(circuitId)
+        // Simulation writebacks (output values, step highlights, memory, error state) are
+        // transient — they never change what's saved to disk, so they must not mark the
+        // circuit unsaved. Genuine edits (the inspector) omit the flag and still mark dirty.
+        if (!transient) markCircuitAsModified(circuitId)
         return true
       }
     }
@@ -343,8 +346,8 @@ export function useCircuitModel() {
   }
 
   // Update a component in the current circuit
-  function updateComponent(updatedComponent) {
-    return updateComponentInCircuit(activeTabId.value, updatedComponent)
+  function updateComponent(updatedComponent, options) {
+    return updateComponentInCircuit(activeTabId.value, updatedComponent, options)
   }
 
   // Clear a circuit

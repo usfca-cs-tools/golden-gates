@@ -151,7 +151,7 @@ export function useAppController(circuitManager) {
               errorDetails: {}
             }
           }
-          canvasRef.updateComponent(clearedComponent)
+          canvasRef.updateComponent(clearedComponent, { transient: true })
         }
       })
     }
@@ -357,7 +357,7 @@ export function useAppController(circuitManager) {
           lastUpdate: Date.now()
         }
       }
-      canvasRef.updateComponent(updatedComponent)
+      canvasRef.updateComponent(updatedComponent, { transient: true })
     }
   }
 
@@ -373,10 +373,13 @@ export function useAppController(circuitManager) {
     // shared structured-error path (handleCircuitComponentError), same as
     // open-input and bit-width errors — the engine raises a CircuitError.
     const passed = !!(result && result.passed)
-    canvasRef.updateComponent({
-      ...component,
-      props: { ...component.props, status: passed ? 'pass' : 'fail', lastUpdate: Date.now() }
-    })
+    canvasRef.updateComponent(
+      {
+        ...component,
+        props: { ...component.props, status: passed ? 'pass' : 'fail', lastUpdate: Date.now() }
+      },
+      { transient: true }
+    )
   }
 
   /**
@@ -396,7 +399,7 @@ export function useAppController(circuitManager) {
         stepDuration: stepData.duration || 500
       }
     }
-    canvasRef.updateComponent(updatedComponent)
+    canvasRef.updateComponent(updatedComponent, { transient: true })
 
     // Auto-clear step highlighting after duration
     if (isActive) {
@@ -411,7 +414,7 @@ export function useAppController(circuitManager) {
               stepActive: false
             }
           }
-          canvasRef.updateComponent(clearedComponent)
+          canvasRef.updateComponent(clearedComponent, { transient: true })
         }
       }, duration)
     }
@@ -558,9 +561,9 @@ export function useAppController(circuitManager) {
 
     // Use circuitManager.updateComponent if canvasRef is stale (post-navigation)
     if (canvasRef?.updateComponent) {
-      canvasRef.updateComponent(updatedComponent)
+      canvasRef.updateComponent(updatedComponent, { transient: true })
     } else if (circuitManager?.updateComponent) {
-      circuitManager.updateComponent(updatedComponent)
+      circuitManager.updateComponent(updatedComponent, { transient: true })
     }
 
     // Show global error notification - try canvasRef first, fall back to console if stale
@@ -608,7 +611,7 @@ export function useAppController(circuitManager) {
         errorDetails: errorData.details || {}
       }
     }
-    canvasRef.updateComponent(updatedComponent)
+    canvasRef.updateComponent(updatedComponent, { transient: true })
 
     // Show global error notification using the same system as front-end errors
     if (isError && canvasRef?.showErrorNotification) {
@@ -676,7 +679,7 @@ export function useAppController(circuitManager) {
     updatedComponent.props.data[address] = value
 
     // Update the component in the canvas
-    canvasRef.updateComponent(updatedComponent)
+    canvasRef.updateComponent(updatedComponent, { transient: true })
   }
 
   /**

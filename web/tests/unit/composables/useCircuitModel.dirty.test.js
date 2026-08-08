@@ -34,4 +34,24 @@ describe('useCircuitModel dirty tracking', () => {
     cm.addComponentToCircuit(circuit.id, { id: 'x', type: 'input', props: {} })
     expect(cm.getCircuit(circuit.id).hasUnsavedChanges).toBe(true)
   })
+
+  it('a transient update (simulation writeback) does not mark the circuit modified', () => {
+    const cm = useCircuitModel()
+    const circuit = cm.createCircuit('c4')
+    cm.addComponentToCircuit(circuit.id, { id: 'out1', type: 'output', props: {} })
+    cm.markCircuitAsSaved(circuit.id)
+
+    // Running a circuit writes transient state (output values, step highlights, …) back onto
+    // components with { transient: true }; that must NOT dirty the circuit.
+    cm.updateComponentInCircuit(
+      circuit.id,
+      { id: 'out1', type: 'output', props: { value: '42' } },
+      { transient: true }
+    )
+    expect(cm.getCircuit(circuit.id).hasUnsavedChanges).toBe(false)
+
+    // A genuine edit (no flag) still marks it.
+    cm.updateComponentInCircuit(circuit.id, { id: 'out1', type: 'output', props: { value: '99' } })
+    expect(cm.getCircuit(circuit.id).hasUnsavedChanges).toBe(true)
+  })
 })
