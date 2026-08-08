@@ -347,7 +347,6 @@ export const componentRegistry = {
     icon: 'pi pi-exclamation-triangle',
     category: 'wires',
     defaultProps: {
-      bits: 1,
       label: '',
       rotation: 0,
       direction: 'input'

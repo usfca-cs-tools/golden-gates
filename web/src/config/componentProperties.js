@@ -281,18 +281,10 @@ export const componentPropertySchema = {
         label: 'Label',
         default: ''
       },
-      {
-        name: 'bits',
-        type: 'number',
-        label: 'Bits',
-        default: 1,
-        min: 1,
-        max: 64,
-        showButtons: true
-      },
-      // No Direction control: a tunnel's direction is inferred from what it's wired to
-      // (a tunnel fed by a driver publishes to the net; one that drives a sink reads from
-      // it). ggl.view derives it at run time, so the user never picks it.
+      // No Bits control: a tunnel is a named wire and has no width of its own — it carries
+      // whatever the net's driver produces. No Direction control either: the direction is
+      // inferred from what it's wired to (a tunnel fed by a driver publishes to the net; one
+      // that drives a sink reads from it). ggl.view derives both at run time.
       commonProperties.rotation
     ]
   },
