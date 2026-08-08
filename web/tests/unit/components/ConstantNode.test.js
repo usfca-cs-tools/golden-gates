@@ -66,21 +66,24 @@ describe('ConstantNode', () => {
   })
 
   describe('visual representation', () => {
-    it('should render as rounded rectangle with dynamic fill for draggability', () => {
+    it('renders the value with no surrounding box, draggable via an invisible hitbox', () => {
       const wrapper = mount(ConstantNode, {
         props: {
           id: 'const1',
           x: 0,
-          y: 0
+          y: 0,
+          value: 42
         }
       })
 
-      const rect = wrapper.find('rect')
-      // Should have dynamic fill (not fill="none") for draggability
-      expect(rect.attributes('fill')).toBeDefined()
-      expect(rect.attributes('fill')).not.toBe('none')
-      expect(rect.attributes('rx')).toBe('3')
-      expect(rect.attributes('ry')).toBe('3')
+      // No visible shape: the only rect is the transparent drag hitbox (no rounded corners).
+      const rects = wrapper.findAll('rect')
+      expect(rects.length).toBe(1)
+      expect(rects[0].classes()).toContain('constant-hitbox')
+      expect(rects[0].attributes('fill')).toBe('transparent')
+      expect(rects[0].attributes('rx')).toBeUndefined()
+      // The value is drawn as plain text next to the connection point.
+      expect(wrapper.find('text.component-value').text()).toBe('42')
     })
 
     it('should have a single output connection point', () => {

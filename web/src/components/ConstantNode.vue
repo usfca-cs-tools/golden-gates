@@ -2,30 +2,41 @@
   <g :transform="`translate(${x * GRID_SIZE}, ${y * GRID_SIZE})`">
     <!-- Rotation group centered on output point -->
     <g :transform="`rotate(${rotation}, ${GRID_SIZE}, 0)`">
-      <!-- Value display (above the square, centered on component) -->
-      <text :x="(GRID_SIZE - 5) / 2" y="-15" text-anchor="middle" class="component-value">
-        {{ formattedValue }}
-      </text>
+      <!-- Invisible hitbox over the value keeps the shapeless constant draggable
+           (.component-value / .component-label are pointer-events:none). -->
+      <rect
+        :x="GRID_SIZE - 6 - valueWidth"
+        y="-9"
+        :width="valueWidth + 12"
+        height="18"
+        fill="transparent"
+        class="constant-hitbox"
+        @mousedown="handleMouseDown"
+      />
 
-      <!-- Label -->
-      <text x="-10" y="5" text-anchor="end" font-size="14" class="component-label">
+      <!-- Label (e.g. C0), above the value -->
+      <text
+        v-if="label"
+        :x="GRID_SIZE - 6"
+        y="-13"
+        text-anchor="end"
+        class="component-label"
+        :style="stateStyle"
+      >
         {{ label }}
       </text>
 
-      <!-- Constant rounded rectangle with outline only -->
-      <rect
-        x="-5"
-        :y="-(GRID_SIZE + 5) / 2"
-        :width="GRID_SIZE + 5"
-        :height="GRID_SIZE + 5"
-        rx="3"
-        ry="3"
-        :fill="fillColor"
-        :stroke="strokeColor"
-        :stroke-width="strokeWidth"
-        class="component-body constant-body"
-        @mousedown="handleMouseDown"
-      />
+      <!-- Value drawn next to the connection point, with no surrounding shape -->
+      <text
+        :x="GRID_SIZE - 6"
+        y="0"
+        dominant-baseline="central"
+        text-anchor="end"
+        class="component-value"
+        :style="stateStyle"
+      >
+        {{ formattedValue }}
+      </text>
 
       <!-- Output connection point (right side, centered - on grid vertex) -->
       <circle
@@ -78,16 +89,26 @@ export default defineComponent({
       } else {
         return val.toString()
       }
+    },
+    // Approximate pixel width of the value (monospace 12px ≈ 7.2px/char), used to size the
+    // invisible drag hitbox so it tracks the number's footprint at any length.
+    valueWidth() {
+      return Math.max(GRID_SIZE, this.formattedValue.length * 7.2)
+    },
+    // With no box to color, the text itself carries selection/error state; normal state
+    // falls through to the .component-value / .component-label fill.
+    stateStyle() {
+      if (this.hasError) return { fill: COLORS.componentErrorStroke }
+      if (this.hasWarning) return { fill: COLORS.componentWarningStroke }
+      if (this.selected) return { fill: COLORS.componentSelectedStroke }
+      return {}
     }
   },
   setup(props, { emit }) {
-    const { handleMouseDown, fillColor, strokeColor, strokeWidth } = useComponentView(props, emit)
+    const { handleMouseDown } = useComponentView(props, emit)
 
     return {
       handleMouseDown,
-      fillColor,
-      strokeColor,
-      strokeWidth,
       COLORS,
       CONNECTION_DOT_RADIUS,
       GRID_SIZE
@@ -99,7 +120,7 @@ export default defineComponent({
 <style scoped>
 @import '../styles/components.css';
 
-.constant-body {
-  /* Use dynamic colors from useComponentView like other components */
+.constant-hitbox {
+  cursor: move;
 }
 </style>
