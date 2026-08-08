@@ -269,10 +269,15 @@ async function importFile(file) {
     const text = await file.text()
     const values = parseMemoryFile(text)
 
-    // Truncate or pad to match total cells
+    // Truncate or pad to match total cells. values[i] is an exact decimal string, so clamp
+    // to [0, 2^dataBits - 1] with BigInt — Math.min/Math.max throw on BigInt operands (which
+    // is what broke importing >53-bit, and in fact any, data). Store the exact decimal string.
     const newData = new Array(totalCells.value).fill(0)
     for (let i = 0; i < Math.min(values.length, totalCells.value); i++) {
-      newData[i] = Math.max(0, Math.min(values[i], maxDataValue.value))
+      let v = BigInt(values[i])
+      if (v < 0n) v = 0n
+      else if (v > maxDataValue.value) v = maxDataValue.value
+      newData[i] = v.toString()
     }
 
     data.value = newData

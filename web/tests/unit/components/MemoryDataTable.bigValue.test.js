@@ -1,5 +1,5 @@
 import { describe, it, expect, vi } from 'vitest'
-import { mount } from '@vue/test-utils'
+import { mount, flushPromises } from '@vue/test-utils'
 
 vi.mock('vue-i18n', () => ({ useI18n: () => ({ t: k => k }) }))
 
@@ -41,5 +41,24 @@ describe('MemoryDataTable 64-bit cells', () => {
     const wrapper = mountTable({ modelValue: ['18446744073709551615', '0'] })
     const firstCell = wrapper.findAll('input.cell-input')[0]
     expect(firstCell.element.value).toBe('FFFFFFFFFFFFFFFF')
+  })
+
+  it('imports a hex memory file, clamping each word with BigInt (no Math.min on BigInt)', async () => {
+    // Regression: the clamp used Math.min(value, 2^dataBits-1). Once cells became exact and
+    // the max became a BigInt, that threw "Cannot convert a BigInt value to a number" on any
+    // import. Here 19-bit cells: bare tokens are hex (v2.0 raw) — 7FFFF is the max, 80000 is
+    // over (clamps), 1 passes through.
+    const wrapper = mountTable({ addressBits: 2, dataBits: 19 })
+    const fakeFile = { text: () => Promise.resolve('7FFFF 80000 1') }
+    const input = wrapper.find('input[type="file"]')
+    Object.defineProperty(input.element, 'files', { value: [fakeFile], configurable: true })
+
+    await input.trigger('change')
+    await flushPromises()
+
+    const last = wrapper.emitted('update:modelValue').slice(-1)[0][0]
+    expect(last[0]).toBe('524287') // 0x7FFFF, exact max
+    expect(last[1]).toBe('524287') // 0x80000 clamped to 2^19 - 1
+    expect(last[2]).toBe('1')
   })
 })
