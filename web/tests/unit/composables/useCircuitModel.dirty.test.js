@@ -49,6 +49,10 @@ describe('useCircuitModel dirty tracking', () => {
       { transient: true }
     )
     expect(cm.getCircuit(circuit.id).hasUnsavedChanges).toBe(false)
+    // ...but the component IS still updated — transient skips the dirty/autosave side
+    // effects, not the write, so live simulation feedback (output/bus values) is intact.
+    const out = cm.getCircuit(circuit.id).components.find(c => c.id === 'out1')
+    expect(out.props.value).toBe('42')
 
     // A genuine edit (no flag) still marks it.
     cm.updateComponentInCircuit(circuit.id, { id: 'out1', type: 'output', props: { value: '99' } })
