@@ -164,7 +164,8 @@
     "simulation": {
       "run": "Run",
       "runTests": "Run Tests",
-      "stop": "Stop"
+      "stop": "Stop",
+      "stepClock": "Step Clock"
     },
     "insert": {
       "andGate": "And Gate",
@@ -209,7 +210,8 @@
     "save": "s",
     "open": "o",
     "stop": "t",
-    "again": "a"
+    "again": "a",
+    "step": "."
   },
   "ui": {
     "toggleInspector": "Toggle Inspector",

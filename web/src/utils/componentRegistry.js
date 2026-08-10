@@ -158,7 +158,8 @@ export const componentRegistry = {
     category: 'io',
     defaultProps: {
       frequency: 1,
-      rotation: 0
+      rotation: 0,
+      mode: 'auto'
     },
     dimensions: {
       width: GRID_SIZE,

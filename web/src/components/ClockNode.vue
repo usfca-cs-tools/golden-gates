@@ -21,7 +21,7 @@
         :fill="fillColor"
         :stroke="strokeColor"
         :stroke-width="strokeWidth"
-        :class="componentClasses"
+        :class="[componentClasses, { 'clock-manual': mode === 'manual' }]"
         @mousedown="handleMouseDown"
       />
 
@@ -64,7 +64,7 @@ export default defineComponent({
     label: { type: String, default: 'CLK' },
     frequency: { type: Number, default: 1 },
     rotation: { type: Number, default: 0 },
-    mode: { type: String as () => 'auto' | 'manual', default: 'manual' }
+    mode: { type: String as () => 'auto' | 'manual', default: 'auto' }
   },
   emits: ['startDrag'],
   computed: {
@@ -128,5 +128,11 @@ export default defineComponent({
 
 .clock-signal {
   /* Clock signal should use same color as component stroke */
+}
+
+/* Manual clocks are hand-steppable: a click advances one edge while the sim runs.
+   The pointer cursor cues that the icon is interactive (a no-move click ticks it). */
+.clock-manual {
+  cursor: pointer;
 }
 </style>

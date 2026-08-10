@@ -4,13 +4,15 @@
     "save": "s",
     "open": "o",
     "stop": "a",
-    "again": "a"
+    "again": "a",
+    "step": "."
   },
   "commands": {
     "simulation": {
       "run": "Exécuter",
       "runTests": "Exécuter les tests",
-      "stop": "Arrêter"
+      "stop": "Arrêter",
+      "stepClock": "Avancer l'horloge"
     },
     "file": {
       "saveCircuit": "Sauvegarder Circuit",

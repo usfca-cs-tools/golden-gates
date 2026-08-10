@@ -264,6 +264,24 @@ __ggl_program
   }
 
   /**
+   * Advance a manual clock by one edge (rising or falling), then settle. The engine's
+   * tick() is a no-op unless a Manual-mode clock is connected, so this is safe to call
+   * regardless of clock mode; its output flows through the same update callback as a run.
+   */
+  async function stepClock() {
+    if (!pyodideInstance.value) {
+      console.warn('Pyodide not initialized, cannot step clock')
+      return
+    }
+    try {
+      await pyodideInstance.value.runPythonAsync('circuit0.tick()')
+    } catch (err) {
+      // circuit0 may not exist if no simulation has started
+      console.warn('Could not step clock:', err.message)
+    }
+  }
+
+  /**
    * Update an input node's value at runtime
    */
   async function updateInput(componentId, value) {
@@ -302,6 +320,7 @@ __ggl_program
 
     // Simulation control
     stopSimulation,
+    stepClock,
     updateInput
   }
 }

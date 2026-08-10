@@ -234,6 +234,12 @@ export default {
       type: Object,
       required: false,
       default: null
+    },
+    // Advance a manual clock one edge; invoked when a running manual clock is clicked.
+    stepClock: {
+      type: Function,
+      required: false,
+      default: null
     }
   },
   emits: ['selectionChanged', 'editSubcircuit'],
@@ -454,7 +460,11 @@ export default {
       wireManagement,
       selection,
       dragAndDrop,
-      { pushSnapshot: () => undoHistory.pushSnapshot(), undo: () => undoHistory.undo() }
+      {
+        pushSnapshot: () => undoHistory.pushSnapshot(),
+        undo: () => undoHistory.undo(),
+        stepClock: () => props.stepClock?.()
+      }
     )
 
     const {

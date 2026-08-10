@@ -41,6 +41,7 @@
             ref="canvas"
             :circuitManager="circuitManager"
             :autosave="autosave"
+            :step-clock="stepClock"
             @selectionChanged="handleSelectionChanged"
             @editSubcircuit="handleEditSubcircuit"
           />
@@ -142,6 +143,7 @@ export default {
       runSimulation,
       runTests,
       stopSimulation,
+      stepClock,
       saveCircuit,
       saveCircuitAs,
       openProject: openProjectInternal,
@@ -184,6 +186,7 @@ export default {
       runSimulation,
       runTests,
       stopSimulation,
+      stepClock,
       saveCircuit,
       saveCircuitAs,
       openProjectInternal,
@@ -244,6 +247,9 @@ export default {
           break
         case 'stopSimulation':
           this.stopSimulation()
+          break
+        case 'stepClock':
+          this.stepClock()
           break
       }
     },
@@ -606,6 +612,9 @@ export default {
       },
       stopSimulation: () => {
         this.stopSimulation()
+      },
+      stepClock: () => {
+        this.stepClock()
       },
       clearCircuit: () => {
         this.clearCircuit()

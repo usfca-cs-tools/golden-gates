@@ -64,6 +64,7 @@ export function useKeyboardShortcuts(commandActions, availableComponents = []) {
     const shortcuts = {
       run: t('shortcuts.run').toLowerCase(),
       stop: t('shortcuts.stop').toLowerCase(),
+      step: t('shortcuts.step').toLowerCase(),
       again: t('shortcuts.again').toLowerCase()
     }
 

@@ -218,6 +218,7 @@ export default {
         save: t('shortcuts.save'),
         open: t('shortcuts.open'),
         stop: t('shortcuts.stop'),
+        step: t('shortcuts.step'),
         again: t('shortcuts.again')
       }
 

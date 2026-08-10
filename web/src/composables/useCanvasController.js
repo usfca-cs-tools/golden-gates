@@ -603,6 +603,16 @@ export function useCanvasController(
         // A drag that actually moved something is an edit; mark dirty so the save-on-quit
         // prompt is reliable (drag-move otherwise bypasses the circuitManager mutators).
         circuitManager.markCircuitAsModified(circuitManager.activeTabId.value)
+      } else if (wasComponentDrag) {
+        // A no-move click on a Manual clock advances it one edge. stepClock() self-gates on
+        // isRunning, so clicking a stopped or Auto clock just leaves it selected (no tick).
+        const sel = selection.selectedComponents.value
+        if (sel.size === 1) {
+          const clicked = activeCircuit.value?.components.find(c => c.id === [...sel][0])
+          if (clicked?.type === 'clock' && clicked.props?.mode === 'manual') {
+            undoCallbacks.stepClock?.()
+          }
+        }
       }
 
       // Update last component position if we were dragging components

@@ -42,6 +42,13 @@ export const commandGroups = {
         icon: 'pi pi-stop',
         action: 'stopSimulation',
         shortcutKey: 'stop'
+      },
+      {
+        id: 'step-clock',
+        labelKey: 'commands.simulation.stepClock',
+        icon: 'pi pi-step-forward',
+        action: 'stepClock',
+        shortcutKey: 'step'
       }
     ]
   },

@@ -50,11 +50,19 @@ export function useAppController(circuitManager) {
     pyodide,
     executePythonProgram,
     generateProgramFromModel,
-    stopSimulation
+    stopSimulation,
+    stepClock: stepClockEngine
   } = usePythonEngine()
 
   // Simulation state
   const isRunning = ref(false)
+
+  // Advance a manual clock by one edge. Only meaningful while a simulation is running (the
+  // engine's tick() is a no-op otherwise, but gating here avoids poking a stopped circuit0).
+  function stepClock() {
+    if (!isRunning.value) return
+    stepClockEngine()
+  }
 
   // Persist which circuits are open (vs. closed-but-reopenable) per project, so the tab layout
   // survives across runs. Keyed by project dir; stored by sourceFilename since circuit ids are
@@ -1324,6 +1332,7 @@ function resolveFilenameReferences() {
     runTests,
     runCircuitSimulationWithHierarchy,
     stopSimulation,
+    stepClock,
     saveCircuit,
     saveCircuitAs,
     openProject,
