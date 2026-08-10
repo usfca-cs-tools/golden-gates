@@ -504,6 +504,13 @@ export const componentPropertySchema = {
       { name: 'stop_output_name', type: 'text', label: 'Stop output' },
       { name: 'stop_output_value', type: 'number', label: 'Stop value', default: 1 },
       {
+        name: 'max_cycles',
+        type: 'number',
+        label: 'Max clock cycles',
+        default: 1000,
+        min: 1
+      },
+      {
         name: 'reset_enabled',
         type: 'boolean',
         label: 'Pulse a reset input before running (clocked)'
