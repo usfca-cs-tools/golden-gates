@@ -376,16 +376,18 @@ export function useAppController(circuitManager) {
 
   /**
    * Handle Test evaluation results.
-   * Payload: { label, passed, failures, errors }. Drive the Test component's
-   * pass/fail badge and stash failures/errors for a tooltip.
+   *
+   * A passing Test emits { label, passed: true }; a failing one emits the structured error
+   * detail ({ error_code, ...fields }) from evaluate_async, which — unlike the synchronous
+   * grading path — returns a fail result instead of raising so the Run Tests pass runs every
+   * Test. We badge the component and, on failure, stack one localized toast per failing Test.
    */
   function handleTestUpdate(canvasRef, component, result) {
     if (component.type !== 'test') return
 
-    // Just the pass/fail badge. Failure/error DETAIL is surfaced through the
-    // shared structured-error path (handleCircuitComponentError), same as
-    // open-input and bit-width errors — the engine raises a CircuitError.
     const passed = !!(result && result.passed)
+
+    // Pass/fail badge on the canvas (the TestNode renders from `status`).
     canvasRef.updateComponent(
       {
         ...component,
@@ -393,6 +395,25 @@ export function useAppController(circuitManager) {
       },
       { transient: true }
     )
+
+    // Stack a toast per failing Test. Only the enriched fail event carries an error_code (the
+    // bare passed:false badge event from the synchronous _raise does not), so a failure yields
+    // exactly one toast. Since the pass no longer aborts at the first failure, each failing
+    // Test adds its own notification to the stack.
+    const errorCode = !passed ? result?.error_code : null
+    if (errorCode && canvasRef?.showErrorNotification) {
+      const label = component.props?.label || component.label
+      const description = label ? `Test "${label}"` : 'Test'
+      const templateVars = {
+        inputName: result.port_name || 'unknown',
+        outputName: result.port_name || 'unknown',
+        ...result
+      }
+      const message = t(`simulation.errors.${errorCode}`, templateVars)
+      canvasRef.showErrorNotification(
+        SELF_CONTAINED_ERROR_CODES.has(errorCode) ? message : `Error in ${description}: ${message}`
+      )
+    }
   }
 
   /**
