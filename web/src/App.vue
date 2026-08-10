@@ -42,6 +42,7 @@
             :circuitManager="circuitManager"
             :autosave="autosave"
             :step-clock="stepClock"
+            :toggle-input="toggleInput"
             @selectionChanged="handleSelectionChanged"
             @editSubcircuit="handleEditSubcircuit"
           />
@@ -332,6 +333,18 @@ export default {
           )
         }
       }
+    },
+
+    // Runtime click on a 1-bit input flips it between 0 and 1 and pushes the change live —
+    // the same one-click affordance the Manual clock has, so setting EN/CLR high or low
+    // doesn't require the property pane. Gated on isRunning so a click while stopped just
+    // selects the input for editing; updateComponent() handles the live update_input.
+    toggleInput(component) {
+      if (!this.isRunning || !component) return
+      const comp = this.$refs.canvas?.components.find(c => c.id === component.id)
+      if (!comp || comp.type !== 'input' || (comp.props?.bits ?? 1) !== 1) return
+      const next = Number(comp.props?.value) ? 0 : 1
+      this.updateComponent({ ...comp, props: { ...comp.props, value: next } })
     },
 
 

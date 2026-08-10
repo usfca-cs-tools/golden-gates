@@ -21,7 +21,7 @@
         :fill="fillColor"
         :stroke="strokeColor"
         :stroke-width="strokeWidth"
-        :class="componentClasses"
+        :class="[componentClasses, { 'input-toggleable': bits === 1 }]"
         @mousedown="handleMouseDown"
       />
 
@@ -99,4 +99,10 @@ export default defineComponent({
 
 <style scoped>
 @import '../styles/components.css';
+
+/* A 1-bit input is click-to-toggle while the sim runs (0 <-> 1), like the Manual clock.
+   The pointer cursor cues that it's interactive. */
+.input-toggleable {
+  cursor: pointer;
+}
 </style>

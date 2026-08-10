@@ -240,6 +240,12 @@ export default {
       type: Function,
       required: false,
       default: null
+    },
+    // Toggle a 1-bit input's value; invoked when a running 1-bit input is clicked.
+    toggleInput: {
+      type: Function,
+      required: false,
+      default: null
     }
   },
   emits: ['selectionChanged', 'editSubcircuit'],
@@ -463,7 +469,8 @@ export default {
       {
         pushSnapshot: () => undoHistory.pushSnapshot(),
         undo: () => undoHistory.undo(),
-        stepClock: () => props.stepClock?.()
+        stepClock: () => props.stepClock?.(),
+        toggleInput: component => props.toggleInput?.(component)
       }
     )
 
