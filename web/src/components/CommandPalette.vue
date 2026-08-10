@@ -215,6 +215,7 @@ export default {
       // Map shortcutKey to localized shortcut
       const shortcuts = {
         run: t('shortcuts.run'),
+        runTests: t('shortcuts.runTests'),
         save: t('shortcuts.save'),
         open: t('shortcuts.open'),
         stop: t('shortcuts.stop'),

@@ -34,7 +34,8 @@ export const commandGroups = {
         id: 'run-tests',
         labelKey: 'commands.simulation.runTests',
         icon: 'pi pi-check-circle',
-        action: 'runTests'
+        action: 'runTests',
+        shortcutKey: 'runTests'
       },
       {
         id: 'stop-simulation',

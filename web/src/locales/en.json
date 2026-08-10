@@ -209,9 +209,10 @@
     "run": "r",
     "save": "s",
     "open": "o",
-    "stop": "t",
+    "stop": ".",
+    "runTests": "t",
     "again": "a",
-    "step": "."
+    "step": "c"
   },
   "ui": {
     "toggleInspector": "Toggle Inspector",
@@ -230,6 +231,7 @@
   "simulation": {
     "initializing": "Initializing simulation engine...",
     "running": "Running simulation...",
+    "runningTests": "Running tests...",
     "noTests": "This circuit has no Test components to run.",
     "errors": {
       "bitWidthMismatch": "Input bit width ({actualBits}) does not match expected bit width ({expectedBits})",

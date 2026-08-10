@@ -3,9 +3,10 @@
     "run": "e",
     "save": "s",
     "open": "o",
-    "stop": "a",
+    "stop": ".",
+    "runTests": "t",
     "again": "a",
-    "step": "."
+    "step": "c"
   },
   "commands": {
     "simulation": {

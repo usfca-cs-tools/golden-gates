@@ -78,7 +78,11 @@
         <div v-if="isRunning || isPyodideLoading" class="simulation-loading">
           <i class="pi pi-spin pi-spinner"></i>
           <span>{{
-            isPyodideLoading ? $t('simulation.initializing') : $t('simulation.running')
+            isPyodideLoading
+              ? $t('simulation.initializing')
+              : isRunningTests
+                ? $t('simulation.runningTests')
+                : $t('simulation.running')
           }}</span>
         </div>
       </div>
@@ -152,6 +156,7 @@ export default {
       handleInspectorAction,
       showConfirmation,
       isRunning,
+      isRunningTests,
       isPyodideLoading,
       isPyodideReady,
       pyodideError,
@@ -195,6 +200,7 @@ export default {
       handleInspectorAction,
       showConfirmation,
       isRunning,
+      isRunningTests,
       isPyodideLoading,
       isPyodideReady,
       pyodideError,

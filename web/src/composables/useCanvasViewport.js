@@ -1,5 +1,18 @@
-import { ref, onMounted, onUnmounted, computed } from 'vue'
+import { ref, onMounted, onUnmounted, computed, watch } from 'vue'
 import { GRID_SIZE } from '../utils/constants'
+
+// Persist the zoom level so it's remembered across program runs (the desktop app relaunches
+// to the same magnification the student left off at). Clamped to the same [0.5, 2] range the
+// zoom controls enforce, so a stale/hand-edited value can't wedge the view.
+const ZOOM_STORAGE_KEY = 'gg.zoom'
+const ZOOM_MIN = 0.5
+const ZOOM_MAX = 2
+
+function loadPersistedZoom() {
+  const stored = parseFloat(localStorage.getItem(ZOOM_STORAGE_KEY))
+  if (!Number.isFinite(stored)) return 1
+  return Math.min(Math.max(stored, ZOOM_MIN), ZOOM_MAX)
+}
 
 export function useCanvasViewport() {
   // Container dimensions (viewport size)
@@ -14,10 +27,20 @@ export function useCanvasViewport() {
   const gridSize = ref(GRID_SIZE)
 
   // Zoom settings
-  const zoom = ref(1)
-  const minZoom = ref(0.5)
-  const maxZoom = ref(2)
+  const zoom = ref(loadPersistedZoom())
+  const minZoom = ref(ZOOM_MIN)
+  const maxZoom = ref(ZOOM_MAX)
   const zoomStep = ref(0.25)
+
+  // Remember the zoom level across runs. Every zoom mutation (zoomIn/zoomOut/resetZoom, or a
+  // pinch gesture) flows through this ref, so one watcher covers them all.
+  watch(zoom, value => {
+    try {
+      localStorage.setItem(ZOOM_STORAGE_KEY, String(value))
+    } catch {
+      /* ignore storage failures (private mode / quota) — persistence is best-effort */
+    }
+  })
 
   // Pan settings for two-finger gesture support
   const panX = ref(0)

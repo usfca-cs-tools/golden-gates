@@ -3,10 +3,62 @@
 // and listens for file save/open requests from the Vue side.
 
 
-const { app, BrowserWindow, ipcMain, dialog, Menu } = require('electron')
+const { app, BrowserWindow, ipcMain, dialog, Menu, screen } = require('electron')
 const fs = require('fs')
 const path = require('path')
 app.name = 'Golden Gates'
+
+// Remember the window's size and position across runs, so the app reopens where the user left
+// it. Persisted to a small JSON file in userData (no extra dependency). Best-effort: any read
+// or write failure just falls back to the default 1280x800.
+function windowStatePath() {
+  return path.join(app.getPath('userData'), 'window-state.json')
+}
+
+function loadWindowState() {
+  try {
+    const s = JSON.parse(fs.readFileSync(windowStatePath(), 'utf8'))
+    if (!Number.isFinite(s.width) || !Number.isFinite(s.height)) return null
+    // Drop a saved position that no longer overlaps any connected display (e.g. an external
+    // monitor was unplugged) so the window can't reopen off-screen; fall back to centering.
+    if (Number.isFinite(s.x) && Number.isFinite(s.y)) {
+      const visible = screen.getAllDisplays().some(d => {
+        const wa = d.workArea
+        return (
+          s.x < wa.x + wa.width &&
+          s.x + s.width > wa.x &&
+          s.y < wa.y + wa.height &&
+          s.y + s.height > wa.y
+        )
+      })
+      if (!visible) {
+        delete s.x
+        delete s.y
+      }
+    }
+    return s
+  } catch {
+    return null
+  }
+}
+
+let persistStateTimer = null
+function persistWindowState() {
+  if (!mainWindow || mainWindow.isDestroyed() || mainWindow.isMinimized()) return
+  try {
+    // getNormalBounds() is the un-maximized size, so a maximized session doesn't persist a
+    // full-screen rectangle that would be awkward to restore.
+    fs.writeFileSync(windowStatePath(), JSON.stringify(mainWindow.getNormalBounds()))
+  } catch {
+    /* ignore write failures */
+  }
+}
+
+// Debounce the persist so a drag-resize doesn't hammer the disk every frame.
+function scheduleWindowStateSave() {
+  clearTimeout(persistStateTimer)
+  persistStateTimer = setTimeout(persistWindowState, 400)
+}
 
 // Build identity, written at build time by scripts/gen-build-info.cjs and bundled
 // into the app. Missing => a bare `electron .` run that skipped the generator; fall
@@ -273,15 +325,25 @@ if (!gotTheLock) {
 }
 
 function createWindow() {
+  const savedState = loadWindowState()
   mainWindow = new BrowserWindow({
-    width: 1280,
-    height: 800,
+    width: savedState?.width ?? 1280,
+    height: savedState?.height ?? 800,
+    // Only restore an explicit position when we have a validated (on-screen) one; otherwise
+    // let the OS center the window as it does by default.
+    ...(Number.isFinite(savedState?.x) && Number.isFinite(savedState?.y)
+      ? { x: savedState.x, y: savedState.y }
+      : {}),
     icon: path.join(__dirname, 'assets/icon.icns'),
     webPreferences: {
       preload: path.join(__dirname, 'preload.cjs')
     }
   })
   mainWindow.loadFile('dist/index.html')
+
+  // Persist size/position as the user resizes or moves the window (debounced).
+  mainWindow.on('resize', scheduleWindowStateSave)
+  mainWindow.on('move', scheduleWindowStateSave)
 
   // Keep the View → Developer Tools checkbox in sync with the real DevTools state,
   // so it reflects reality even when DevTools is closed from its own toolbar or the
@@ -306,6 +368,7 @@ function createWindow() {
 
   // Proceed with the close/quit that was interrupted by the save prompt.
   const finishClose = () => {
+    persistWindowState() // flush final size/position before the window goes away
     readyToClose = true
     if (quitRequested) app.quit()
     else mainWindow.close()

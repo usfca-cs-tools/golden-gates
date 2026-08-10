@@ -212,7 +212,9 @@ export const componentRegistry = {
       const ranges = props.ranges || []
       const outputCount = ranges.length
       const minHeight = 4 // Minimum height in grid units
-      const totalHeight = Math.max(minHeight, outputCount + 1) // More spacing in grid units
+      // A single-output splitter is just a tap on one bit range — it doesn't need the tall
+      // body the multi-way layout reserves for spacing between branches, so keep it short.
+      const totalHeight = outputCount <= 1 ? 2 : Math.max(minHeight, outputCount + 1)
 
       // Single input on the left, centered
       const inputs = [
@@ -258,7 +260,9 @@ export const componentRegistry = {
     getDimensions: props => {
       const outputCount = (props.ranges || []).length
       const minHeight = 4 * GRID_SIZE // Increased minimum height
-      const height = Math.max(minHeight, (outputCount + 1) * GRID_SIZE) // More spacing
+      // Match getConnections: a single-output splitter gets a short 2-unit body.
+      const height =
+        outputCount <= 1 ? 2 * GRID_SIZE : Math.max(minHeight, (outputCount + 1) * GRID_SIZE)
       return {
         width: 2 * GRID_SIZE,
         height: height
@@ -290,7 +294,9 @@ export const componentRegistry = {
       const ranges = props.ranges || []
       const inputCount = ranges.length
       const minHeight = 4 // Minimum height in grid units
-      const totalHeight = Math.max(minHeight, inputCount + 1) // More spacing in grid units
+      // A single-input merger is just a tap feeding one bit range — no need for the tall
+      // body the multi-way layout reserves for spacing between branches, so keep it short.
+      const totalHeight = inputCount <= 1 ? 2 : Math.max(minHeight, inputCount + 1)
 
       // Multiple inputs on the left, evenly spaced with proper margins
       const inputs = ranges.map((_, index) => {
@@ -335,7 +341,9 @@ export const componentRegistry = {
     getDimensions: props => {
       const inputCount = (props.ranges || []).length
       const minHeight = 4 * GRID_SIZE // Increased minimum height
-      const height = Math.max(minHeight, (inputCount + 1) * GRID_SIZE) // More spacing
+      // Match getConnections: a single-input merger gets a short 2-unit body.
+      const height =
+        inputCount <= 1 ? 2 * GRID_SIZE : Math.max(minHeight, (inputCount + 1) * GRID_SIZE)
       return {
         width: 2 * GRID_SIZE,
         height: height

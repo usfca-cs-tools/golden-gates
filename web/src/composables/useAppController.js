@@ -56,6 +56,9 @@ export function useAppController(circuitManager) {
 
   // Simulation state
   const isRunning = ref(false)
+  // True only while a Run Tests pass is in flight (a subset of isRunning), so the loading
+  // indicator can say "Running tests..." instead of the generic "Running simulation...".
+  const isRunningTests = ref(false)
 
   // Advance a manual clock by one edge. Only meaningful while a simulation is running (the
   // engine's tick() is a no-op otherwise, but gating here avoids poking a stopped circuit0).
@@ -139,6 +142,7 @@ export function useAppController(circuitManager) {
     }
 
     isRunning.value = true
+    isRunningTests.value = mode === 'test'
 
     // Clear any existing error notifications when starting a new simulation
     if (canvasRef?.clearAllNotifications) {
@@ -226,6 +230,7 @@ export function useAppController(circuitManager) {
       }
     } finally {
       isRunning.value = false
+      isRunningTests.value = false
     }
   }
 
@@ -1317,6 +1322,7 @@ function resolveFilenameReferences() {
   return {
     // Simulation state
     isRunning,
+    isRunningTests,
     isPyodideLoading,
     isPyodideReady,
     pyodideError,

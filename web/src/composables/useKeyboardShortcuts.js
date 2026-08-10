@@ -57,12 +57,20 @@ export function useKeyboardShortcuts(commandActions, availableComponents = []) {
       return
     }
 
+    // Every shortcut below is an unmodified single key (r, t, ., c, a). Ignore anything with a
+    // Cmd/Ctrl/Alt modifier so these don't hijack system combos — e.g. Cmd+C must stay copy
+    // (not Step Clock, which is bare "c") and Cmd+R must stay reload (not Run, bare "r").
+    if (event.metaKey || event.ctrlKey || event.altKey) {
+      return
+    }
+
     // Handle single-key shortcuts
     const key = event.key.toLowerCase()
 
     // Get localized shortcut keys
     const shortcuts = {
       run: t('shortcuts.run').toLowerCase(),
+      runTests: t('shortcuts.runTests').toLowerCase(),
       stop: t('shortcuts.stop').toLowerCase(),
       step: t('shortcuts.step').toLowerCase(),
       again: t('shortcuts.again').toLowerCase()
