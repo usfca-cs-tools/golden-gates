@@ -149,22 +149,34 @@ export function useAppController(circuitManager) {
       canvasRef.clearAllNotifications()
     }
 
-    // Clear component error states from previous Pyodide errors
+    // Clear component error states from previous Pyodide errors, and — when starting a test
+    // run — reset stale pass/fail badges to 'pending' so the previous run's results don't
+    // linger over the new one. Both are folded into one pass, touching only components that
+    // actually carry stale state.
     if (canvasRef?.components) {
+      const resetTestBadges = mode === 'test'
       canvasRef.components.forEach(component => {
-        if (component.props?.hasError || component.props?.hasWarning) {
-          const clearedComponent = {
+        const hasErrorState = component.props?.hasError || component.props?.hasWarning
+        const staleTestBadge =
+          resetTestBadges &&
+          component.type === 'test' &&
+          component.props?.status &&
+          component.props.status !== 'pending'
+        if (!hasErrorState && !staleTestBadge) return
+
+        canvasRef.updateComponent(
+          {
             ...component,
             props: {
               ...component.props,
-              hasError: false,
-              hasWarning: false,
-              errorMessageId: '',
-              errorDetails: {}
+              ...(hasErrorState
+                ? { hasError: false, hasWarning: false, errorMessageId: '', errorDetails: {} }
+                : {}),
+              ...(staleTestBadge ? { status: 'pending', lastUpdate: Date.now() } : {})
             }
-          }
-          canvasRef.updateComponent(clearedComponent, { transient: true })
-        }
+          },
+          { transient: true }
+        )
       })
     }
 
