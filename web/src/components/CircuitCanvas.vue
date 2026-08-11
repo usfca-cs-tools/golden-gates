@@ -656,7 +656,9 @@ export default {
     }
 
     function handleStartDrag(dragInfo) {
-      undoHistory.pushSnapshot()
+      // No snapshot here: mousedown on a component also fires for a plain click (select, toggle
+      // a 1-bit input, step a clock) that changes nothing. The undo snapshot is taken on the
+      // first actual move instead (see handleMouseMove in useCanvasController).
       startDrag(dragInfo)
     }
 

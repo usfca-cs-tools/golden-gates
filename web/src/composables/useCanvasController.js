@@ -587,6 +587,13 @@ export function useCanvasController(
 
     // Handle dragging. Shift locks the move to the dominant axis (live — checked each move).
     if (isDragging()) {
+      // Snapshot the pre-move state on the FIRST move of a drag, not at mousedown. A plain
+      // click-to-select never reaches here, so it no longer pushes a redundant snapshot that
+      // would make undo "do nothing" and then over-shoot. updateDrag sets hasMoved, so this
+      // fires exactly once per drag, while the components are still at their original positions.
+      if (!dragAndDrop.dragging.value?.hasMoved) {
+        undoCallbacks.pushSnapshot?.()
+      }
       updateDrag(pos, { axisLock: event.shiftKey })
     }
   }

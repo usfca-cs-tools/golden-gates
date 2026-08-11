@@ -45,11 +45,13 @@ describe('undo repro', () => {
     expect(cm.activeCircuit.value.components[0].x).toBe(2)
   })
 
-  it('full drag path: startDrag(snapshot) -> move -> endDrag -> undo keeps the circuit', () => {
+  it('full drag path: startDrag -> first move snapshots -> endDrag -> undo keeps the circuit', () => {
     const { cm, selectedComponents, undo, drag } = harness()
     selectedComponents.value.add('c1')
-    undo.pushSnapshot() // handleStartDrag does this before startDrag
     drag.startDrag({ id: 'c1', offsetX: 0, offsetY: 0, event: {} })
+    // handleMouseMove snapshots on the FIRST move only (before applying it), while hasMoved
+    // is still false and the component is at its original position.
+    if (!drag.dragging.value?.hasMoved) undo.pushSnapshot()
     drag.updateDrag({ x: 5 * 15, y: 5 * 15 }) // move to (5,5)
     drag.endDrag()
     expect(cm.activeCircuit.value.components[0].x).toBe(5)
@@ -57,6 +59,15 @@ describe('undo repro', () => {
     undo.undo()
     expect(cm.activeCircuit.value.components.length).toBe(1) // NOT wiped
     expect(cm.activeCircuit.value.components[0].x).toBe(2) // restored to pre-drag
+  })
+
+  it('a click (startDrag with no move) leaves no snapshot on the stack', () => {
+    const { selectedComponents, undo, drag } = harness()
+    selectedComponents.value.add('c1')
+    // Mousedown-then-mouseup with no drag: handleMouseMove never runs, so nothing is snapshotted.
+    drag.startDrag({ id: 'c1', offsetX: 0, offsetY: 0, event: {} })
+    drag.endDrag()
+    expect(undo.canUndo.value).toBe(false) // no redundant snapshot -> undo won't "do nothing"
   })
 
   // Regression: "open a project, move an output, Cmd-Z wipes the whole circuit." The empty default
