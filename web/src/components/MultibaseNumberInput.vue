@@ -22,7 +22,9 @@ export default {
   name: 'MultibaseNumberInput',
   props: {
     modelValue: {
-      type: Number,
+      // A Number, or a decimal string for exact values (this component emits its value as a
+      // decimal string, and callers store it back as-is; formatWithLeadingZeros parses either).
+      type: [Number, String],
       default: 0
     },
     base: {
@@ -260,19 +262,31 @@ export default {
       }
     }
 
+    // Treat values that represent the same integer as equal, even across Number/string types:
+    // a caller may store our emitted decimal string back as a Number (the truth-table editor
+    // coerces cells), and a strict !== would then read that round-trip as an external change
+    // and wipe what the user is typing mid-edit.
+    const sameNum = (a, b) => {
+      try {
+        return BigInt(a ?? 0) === BigInt(b ?? 0)
+      } catch {
+        return a === b
+      }
+    }
+
     // Watch for external changes to modelValue or base
     watch(
       [() => props.modelValue, () => props.base],
       ([newValue, newBase], [oldValue, oldBase]) => {
-        // Only clear if the value actually changed from outside
-        // Don't clear if only the base changed but the value is the same
-        if (newValue !== oldValue && newValue !== lastEmittedValue) {
+        // Only clear if the value actually changed from outside (and isn't just our own emit
+        // coming back). Don't clear if only the base changed but the value is the same.
+        if (!sameNum(newValue, oldValue) && !sameNum(newValue, lastEmittedValue)) {
           inputValue.value = ''
           isValid.value = true
           errorMessage.value = ''
         }
         // Update our tracking when props change
-        if (newValue === lastEmittedValue && newBase === lastEmittedBase) {
+        if (sameNum(newValue, lastEmittedValue) && newBase === lastEmittedBase) {
           // This was our own change, keep tracking in sync
           lastEmittedValue = newValue
           lastEmittedBase = newBase

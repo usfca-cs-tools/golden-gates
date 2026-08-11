@@ -84,19 +84,19 @@
         <tbody>
           <tr v-for="(row, ri) in table.rows" :key="'row-' + ri">
             <td v-for="(name, ci) in table.inputNames" :key="'ic-' + ci" class="cell cell-input">
-              <InputNumber
-                v-model="row[ci]"
-                @update:modelValue="emitUpdate"
-                :showButtons="false"
+              <MultibaseNumberInput
+                :modelValue="row[ci]"
+                :base="10"
+                @update:both="setCell(row, ci, $event)"
                 class="value-input"
               />
             </td>
             <td class="divider-cell" v-if="table.inputNames.length || table.outputNames.length"></td>
             <td v-for="(name, ci) in table.outputNames" :key="'oc-' + ci" class="cell cell-output">
-              <InputNumber
-                v-model="row[table.inputNames.length + ci]"
-                @update:modelValue="emitUpdate"
-                :showButtons="false"
+              <MultibaseNumberInput
+                :modelValue="row[table.inputNames.length + ci]"
+                :base="10"
+                @update:both="setCell(row, table.inputNames.length + ci, $event)"
                 class="value-input"
               />
             </td>
@@ -123,8 +123,8 @@
 <script setup>
 import { ref, watch, computed } from 'vue'
 import InputText from 'primevue/inputtext'
-import InputNumber from 'primevue/inputnumber'
 import Button from 'primevue/button'
+import MultibaseNumberInput from './MultibaseNumberInput.vue'
 
 const props = defineProps({
   modelValue: {
@@ -197,6 +197,14 @@ function addRow() {
 
 function removeRow(index) {
   table.value.rows.splice(index, 1)
+  emitUpdate()
+}
+
+// Store a cell edited via MultibaseNumberInput. It emits { value } as a decimal string; keep
+// it as-is so the widget's own change-tracking (which compares against the string it emitted)
+// doesn't wipe the field mid-edit. emitUpdate() coerces cells to Number for the emitted model.
+function setCell(row, idx, payload) {
+  row[idx] = payload.value
   emitUpdate()
 }
 

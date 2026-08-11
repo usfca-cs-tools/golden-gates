@@ -100,6 +100,19 @@ describe('MultibaseNumberInput', () => {
       expect(wrapper.emitted('update:both')[0][0]).toEqual({ value: '255', base: 16 })
     })
 
+    it('keeps the typed text when the emitted value is stored back as a Number', async () => {
+      // The truth-table editor coerces cells to Number, so our emitted decimal string "255"
+      // comes back as modelValue 255. That round-trip must NOT be treated as an external
+      // change (which would wipe what the user typed). See sameNum() in the component.
+      const wrapper = createWrapper({ base: 10, max: 65535 })
+      const input = wrapper.find('input')
+
+      await input.setValue('0xff') // user types hex; component emits { value: '255' }
+      await wrapper.setProps({ modelValue: 255 }) // caller stores it back as a Number
+
+      expect(input.element.value).toBe('0xff') // still shows what was typed, not '255'
+    })
+
     it('should accept valid binary input', async () => {
       const wrapper = createWrapper({ base: 2 })
       const input = wrapper.find('input')
