@@ -100,6 +100,18 @@ describe('MultibaseNumberInput', () => {
       expect(wrapper.emitted('update:both')[0][0]).toEqual({ value: '255', base: 16 })
     })
 
+    it('accepts a full 64-bit value when bits=64 (no 53-bit overflow)', async () => {
+      const wrapper = createWrapper({ base: 16, bits: 64 })
+      const input = wrapper.find('input')
+
+      await input.setValue('0x464F4F4241520000') // 5066355251797426176, > 2**53
+
+      expect(wrapper.emitted('update:both')).toBeTruthy()
+      const last = wrapper.emitted('update:both').at(-1)[0]
+      expect(last.value).toBe('5066355251797426176') // exact, not rounded
+      expect(wrapper.find('.error-tooltip').exists()).toBe(false) // no "overflows" error
+    })
+
     it('keeps the typed text when the emitted value is stored back as a Number', async () => {
       // The truth-table editor coerces cells to Number, so our emitted decimal string "255"
       // comes back as modelValue 255. That round-trip must NOT be treated as an external

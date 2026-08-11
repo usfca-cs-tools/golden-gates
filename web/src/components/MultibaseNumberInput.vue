@@ -40,6 +40,13 @@ export default {
       type: Number,
       default: Number.MAX_SAFE_INTEGER
     },
+    // Bit width, used directly when provided. Prefer this over `max` for wide (e.g. 64-bit)
+    // fields: `max` is a Number and can't express 2**64-1 exactly, so deriving the width from
+    // it rounds. 0 means "derive from max" (the original behavior).
+    bits: {
+      type: Number,
+      default: 0
+    },
     placeholder: {
       type: String,
       default: '0, 0x0, 0b0'
@@ -56,8 +63,10 @@ export default {
     let lastEmittedValue = props.modelValue
     let lastEmittedBase = props.base
 
-    // Calculate bits from max value
-    const bits = computed(() => Math.ceil(Math.log2(props.max + 1)))
+    // Bit width: an explicit `bits` prop when given, otherwise derived from `max`.
+    const bits = computed(() =>
+      props.bits > 0 ? props.bits : Math.ceil(Math.log2(props.max + 1))
+    )
 
     // Exact max for the current width (2^bits - 1) as BigInt, so 64-bit range checks don't round
     // (props.max is a Number and loses precision past 2**53).

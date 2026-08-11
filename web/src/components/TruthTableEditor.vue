@@ -87,6 +87,7 @@
               <MultibaseNumberInput
                 :modelValue="row[ci]"
                 :base="10"
+                :bits="64"
                 @update:both="setCell(row, ci, $event)"
                 class="value-input"
               />
@@ -96,6 +97,7 @@
               <MultibaseNumberInput
                 :modelValue="row[table.inputNames.length + ci]"
                 :base="10"
+                :bits="64"
                 @update:both="setCell(row, table.inputNames.length + ci, $event)"
                 class="value-input"
               />
@@ -208,11 +210,24 @@ function setCell(row, idx, payload) {
   emitUpdate()
 }
 
+// Normalize a cell to an exact integer. Small values stay Numbers (compact, unchanged .ggc);
+// a value past the exact Number range becomes a decimal string so 64-bit test values survive
+// without 2**53 rounding. Codegen (view.py _row_list) does int(v), which accepts either.
+function normalizeCell(v) {
+  let big
+  try {
+    big = BigInt(v ?? 0)
+  } catch {
+    return 0
+  }
+  return big <= BigInt(Number.MAX_SAFE_INTEGER) ? Number(big) : big.toString()
+}
+
 function emitUpdate() {
   const width = table.value.inputNames.length + table.value.outputNames.length
   // Always emit rows padded/truncated to the exact total column count
   const rows = table.value.rows.map(row => {
-    const r = row.slice(0, width).map(v => Number(v) || 0)
+    const r = row.slice(0, width).map(normalizeCell)
     while (r.length < width) r.push(0)
     return r
   })
