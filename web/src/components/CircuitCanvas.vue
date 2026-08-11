@@ -500,6 +500,11 @@ export default {
     // Focus the canvas explicitly so a canvas click reliably returns focus (issue #132),
     // matching what already happens when clicking on a component.
     const onCanvasMouseDown = event => {
+      // Commit any focused inspector field BEFORE clearing the selection. Most fields apply
+      // edits live, but a PrimeVue InputNumber only commits on blur/enter; handleCanvasMouseDown
+      // deselects the component, so without this the field's blur-commit would fire after the
+      // component is gone and the edit would be lost (previously you had to press Tab).
+      document.activeElement?.blur?.()
       handleCanvasMouseDown(event)
       focusCanvas()
     }
