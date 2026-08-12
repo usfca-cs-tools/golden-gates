@@ -178,7 +178,7 @@ except ImportError as e:
    * Execute a Python program in Pyodide with proper error handling
    * Uses compile() with PyCF_ALLOW_TOP_LEVEL_AWAIT to support await in generated code
    */
-  async function executePythonProgram(gglProgram) {
+  async function executePythonProgram(gglProgram, { stepHighlighting = true } = {}) {
     if (!pyodideInstance.value) {
       throw new Error('Pyodide not initialized. Call initialize() first.')
     }
@@ -188,6 +188,9 @@ except ImportError as e:
 import js
 import ggl.callbacks
 ggl.callbacks.set_callback(js.window.__vueUpdateCallback)
+# Wire-highlight ('step') events are useful for an interactive run but flood the UI during a
+# batch test (hundreds of thousands of events), starving output-value and RAM-write updates.
+ggl.callbacks.set_step_enabled(${stepHighlighting ? 'True' : 'False'})
 
 try:
     # Compile and execute with async support

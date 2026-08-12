@@ -222,8 +222,10 @@ export function useAppController(circuitManager) {
       console.log('=== End of Program — full source at window.__ggl, e.g. copy(__ggl) ===\n')
 
       // Execute the generated program (ggl.view already inlined the hierarchy, so there
-      // are no per-subcircuit MEMFS modules to write).
-      await executePythonProgram(program)
+      // are no per-subcircuit MEMFS modules to write). Wire-highlight events are suppressed
+      // for a batch test run — they'd flood the UI and hide the RAM/output updates the user
+      // is actually watching — but kept for an interactive Run.
+      await executePythonProgram(program, { stepHighlighting: mode !== 'test' })
     } catch (err) {
       console.error('Hierarchical circuit simulation error:', err)
 
