@@ -469,6 +469,7 @@ export default {
       {
         pushSnapshot: () => undoHistory.pushSnapshot(),
         undo: () => undoHistory.undo(),
+        redo: () => undoHistory.redo(),
         stepClock: () => props.stepClock?.(),
         toggleInput: component => props.toggleInput?.(component)
       }
@@ -935,8 +936,9 @@ export default {
       // Circuit hierarchy methods
       navigateToCircuit,
 
-      // Undo
+      // Undo / redo
       undo: () => undoHistory.undo(),
+      redo: () => undoHistory.redo(),
       resetUndoHistory: () => undoHistory.clear()
     }
   }

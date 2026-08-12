@@ -61,6 +61,30 @@ describe('undo repro', () => {
     expect(cm.activeCircuit.value.components[0].x).toBe(2) // restored to pre-drag
   })
 
+  it('redo re-applies an undone change; a new edit clears the redo stack', () => {
+    const { cm, undo } = harness()
+    const circuit = cm.activeCircuit.value
+
+    undo.pushSnapshot()
+    circuit.components.push({ id: 'c2', type: 'output', x: 5, y: 5, props: {} })
+    expect(circuit.components.map(c => c.id)).toEqual(['c1', 'c2'])
+
+    undo.undo() // remove c2
+    expect(circuit.components.map(c => c.id)).toEqual(['c1'])
+    expect(undo.canRedo.value).toBe(true)
+
+    undo.redo() // bring c2 back
+    expect(circuit.components.map(c => c.id)).toEqual(['c1', 'c2'])
+    expect(undo.canRedo.value).toBe(false)
+
+    // Undo again, then make a fresh edit -> the redo timeline is forked/cleared.
+    undo.undo()
+    expect(undo.canRedo.value).toBe(true)
+    undo.pushSnapshot()
+    circuit.components.push({ id: 'c3', type: 'input', x: 1, y: 1, props: {} })
+    expect(undo.canRedo.value).toBe(false)
+  })
+
   it('a click (startDrag with no move) leaves no snapshot on the stack', () => {
     const { selectedComponents, undo, drag } = harness()
     selectedComponents.value.add('c1')

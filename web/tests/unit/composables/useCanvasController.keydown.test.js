@@ -6,7 +6,7 @@ import { useCanvasController } from '@/composables/useCanvasController'
 // listener. When the canvas is focused (which it is right after any click on it), one keypress
 // reaches both — so without a guard every shortcut runs twice, most visibly Cmd-Z undoing two
 // steps at once. These tests pin the per-event dedupe.
-function makeController(undo) {
+function makeController(undo, redo = () => {}) {
   return useCanvasController(
     {
       activeCircuit: ref({ components: [], wires: [], wireJunctions: [] }),
@@ -50,15 +50,16 @@ function makeController(undo) {
       nudgeSelection: vi.fn(),
       dragging: ref(null)
     },
-    { undo, pushSnapshot: vi.fn() }
+    { undo, redo, pushSnapshot: vi.fn() }
   )
 }
 
-function cmdZ() {
-  const ev = new KeyboardEvent('keydown', { key: 'z', metaKey: true })
+function keydown(opts) {
+  const ev = new KeyboardEvent('keydown', { metaKey: true, ...opts })
   ev.preventDefault = () => {}
   return ev
 }
+const cmdZ = () => keydown({ key: 'z' })
 
 describe('useCanvasController key handling', () => {
   it('runs a shortcut once even when the same event reaches both listeners', () => {
@@ -76,5 +77,15 @@ describe('useCanvasController key handling', () => {
     ctrl.handleKeyDown(cmdZ())
     ctrl.handleKeyDown(cmdZ())
     expect(undo).toHaveBeenCalledTimes(2)
+  })
+
+  it('Cmd+Shift+Z and Cmd+Y trigger redo, not undo', () => {
+    const undo = vi.fn()
+    const redo = vi.fn()
+    const ctrl = makeController(undo, redo)
+    ctrl.handleKeyDown(keydown({ key: 'Z', shiftKey: true })) // key is upper-case with Shift
+    ctrl.handleKeyDown(keydown({ key: 'y' }))
+    expect(redo).toHaveBeenCalledTimes(2)
+    expect(undo).not.toHaveBeenCalled()
   })
 })

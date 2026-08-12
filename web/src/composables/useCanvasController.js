@@ -675,10 +675,17 @@ export function useCanvasController(
     if (!isInputFocused) {
       const isCtrlOrCmd = event.ctrlKey || event.metaKey
 
-      // Undo
-      if (isCtrlOrCmd && event.key === 'z') {
+      // Undo / Redo. Shift+Z is Redo (event.key is 'Z' when Shift is held, so lower-case it);
+      // Ctrl/Cmd+Y is the Windows-style Redo.
+      if (isCtrlOrCmd && event.key.toLowerCase() === 'z') {
         event.preventDefault()
-        undoCallbacks.undo?.()
+        if (event.shiftKey) undoCallbacks.redo?.()
+        else undoCallbacks.undo?.()
+        return
+      }
+      if (isCtrlOrCmd && event.key.toLowerCase() === 'y') {
+        event.preventDefault()
+        undoCallbacks.redo?.()
         return
       }
 
