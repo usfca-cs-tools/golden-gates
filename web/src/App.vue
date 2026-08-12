@@ -11,11 +11,7 @@
         @accept="confirmDialog.acceptCallback"
         @reject="confirmDialog.rejectCallback"
       />
-      <CommandPalette
-        v-model="commandPaletteVisible"
-        :availableComponents="availableComponentsArray"
-        @command="handleCommand"
-      />
+      <CommandPalette v-model="commandPaletteVisible" @command="handleCommand" />
       <AppToolbar
         :circuitTabs="circuitTabs"
         :activeTabId="activeTabId"
@@ -25,9 +21,22 @@
         @closeTab="handleCloseTab"
         @showConfirmation="showConfirmation"
         @toggleInspector="inspectorVisible = !inspectorVisible"
+        @toggleSidebar="sidebarVisible = !sidebarVisible"
       />
 
       <div class="main-content">
+        <Sidebar
+          v-if="sidebarVisible"
+          :availableComponents="availableComponentsArray"
+          :projectName="projectName"
+          :activeCircuitId="activeTabId"
+          @insert="handleCommand"
+          @openCircuit="handleOpenCircuit"
+          @placeStart="handlePlaceStart"
+          @placeMove="handlePlaceMove"
+          @placeEnd="handlePlaceEnd"
+        />
+
         <div
           class="circuit-container"
           :class="{ 'drag-over': isDraggingOver }"
@@ -98,6 +107,7 @@ import ComponentIcon from './components/ComponentIcon.vue'
 import ConfirmationDialog from './components/ConfirmationDialog.vue'
 import CommandPalette from './components/CommandPalette.vue'
 import AppToolbar from './components/AppToolbar.vue'
+import Sidebar from './components/Sidebar.vue'
 import BrowserCompatibilityGuard from './components/BrowserCompatibilityGuard.vue'
 import { usePythonEngine } from './composables/usePythonEngine'
 
@@ -119,6 +129,7 @@ export default {
     ConfirmationDialog,
     CommandPalette,
     AppToolbar,
+    Sidebar,
     BrowserCompatibilityGuard
   },
   setup() {
@@ -170,7 +181,7 @@ export default {
     const { isVisible: commandPaletteVisible } = useCommandPalette()
 
     // Set up keyboard shortcuts - we'll set command actions in mounted
-    const { setCommandActions } = useKeyboardShortcuts(null, availableComponentsArray)
+    const { setCommandActions } = useKeyboardShortcuts(null)
 
     return {
       // Circuit manager
@@ -216,10 +227,15 @@ export default {
     return {
       inspectorVisible: true,
       inspectorExpanded: false,
+      // Sidebar visibility persists across sessions (default open). gg.-prefixed so
+      // clearAllCircuitData() leaves it alone.
+      sidebarVisible: localStorage.getItem('gg.sidebarVisible') !== 'false',
       selectedComponent: null,
       selectedCircuit: null,
       isDraggingOver: false,
       dragCounter: 0,
+      // Payload of an in-flight sidebar drag-to-place ({action, params}); null when idle.
+      pendingPlace: null,
     }
   },
   computed: {
@@ -228,10 +244,33 @@ export default {
       return {
         width: width + 'px'
       }
+    },
+    // Leaf name of the open project directory — same derivation as the OS title bar
+    // (mounted() watcher). Labels the sidebar's custom-circuits branch.
+    projectName() {
+      const dir = this.circuitManager.currentProjectDir.value
+      return (dir && dir.split(/[\\/]/).filter(Boolean).pop()) || ''
     }
   },
   methods: {
     handleCommand({ action, params }) {
+      // "Again" replays the last insert — resolve it before the switch, then fall through.
+      if (action === 'again') {
+        const last = this.readLastCommand()
+        if (!last) return
+        action = last.action
+        params = last.params
+      }
+
+      // Record inserts (from either the sidebar or the palette) so "Again" can replay them.
+      if (action === 'addComponent' || action === 'addCircuitComponent') {
+        try {
+          localStorage.setItem('gg.lastCommand', JSON.stringify({ action, params }))
+        } catch (e) {
+          /* localStorage unavailable — Again simply won't persist */
+        }
+      }
+
       // Handle command palette commands by calling the appropriate method directly
       switch (action) {
         case 'addComponent':
@@ -258,6 +297,67 @@ export default {
         case 'stepClock':
           this.stepClock()
           break
+      }
+    },
+
+    // Reopen a custom circuit's tab to edit it (double-click on a sidebar row).
+    handleOpenCircuit({ id }) {
+      this.circuitManager.openTab(id)
+    },
+
+    // Drag-to-place from the sidebar (pointer-driven). Resolve the payload into a concrete
+    // component (subcircuits need their schematic props) and arm the canvas; placeMove creates the
+    // live preview once the pointer is over the canvas and moves it, placeEnd commits or cancels.
+    handlePlaceStart({ action, params }) {
+      const canvas = this.$refs.canvas
+      if (!canvas) return
+      this.pendingPlace = { action, params }
+      if (action === 'addComponent') {
+        canvas.beginPlacement({ type: params[0], customProps: {} })
+      } else if (action === 'addCircuitComponent') {
+        const component = this.circuitManager.createSchematicComponent(params[0])
+        if (component) {
+          canvas.beginPlacement({ type: 'schematic-component', customProps: component.props })
+        }
+      }
+    },
+
+    handlePlaceMove({ clientX, clientY }) {
+      const canvas = this.$refs.canvas
+      if (canvas?.isPointInCanvas(clientX, clientY)) {
+        canvas.placeAt(clientX, clientY)
+      }
+    },
+
+    handlePlaceEnd({ clientX, clientY }) {
+      const canvas = this.$refs.canvas
+      let committed = false
+      if (canvas) {
+        if (canvas.isPointInCanvas(clientX, clientY)) {
+          canvas.placeAt(clientX, clientY) // ensure the component exists at the release point
+          committed = canvas.commitPlacement()
+        } else {
+          canvas.cancelPlacement()
+        }
+      }
+      // A committed drag-place is a real insert — record it so "Again" (A) can replay it.
+      if (committed && this.pendingPlace) {
+        try {
+          localStorage.setItem('gg.lastCommand', JSON.stringify(this.pendingPlace))
+        } catch (e) {
+          /* localStorage unavailable — Again just won't persist */
+        }
+      }
+      this.pendingPlace = null
+    },
+
+    // The last insert command, for "Again". Null if none recorded / storage unavailable.
+    readLastCommand() {
+      try {
+        const raw = localStorage.getItem('gg.lastCommand')
+        return raw ? JSON.parse(raw) : null
+      } catch (e) {
+        return null
       }
     },
 
@@ -681,6 +781,14 @@ export default {
       if (!this.selectedComponent && newCircuit) {
         this.selectedCircuit = newCircuit
       }
+    },
+
+    sidebarVisible(visible) {
+      try {
+        localStorage.setItem('gg.sidebarVisible', String(visible))
+      } catch (e) {
+        /* localStorage unavailable — visibility just won't persist */
+      }
     }
   },
 
@@ -717,6 +825,9 @@ body {
 
 .circuit-container {
   flex: 1;
+  /* Keep the canvas usable when both the left sidebar and the inspector are open, rather
+     than letting the two panels squeeze it to nothing. */
+  min-width: 340px;
   overflow: hidden;
   position: relative;
   background-color: var(--color-app-bg);

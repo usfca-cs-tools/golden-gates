@@ -209,7 +209,14 @@ function debounce(func, wait) {
   }
 }
 import { componentRegistry } from '../utils/componentRegistry'
-import { DOT_SIZE, COLORS, CONNECTION_DOT_RADIUS, gridToPixel } from '../utils/constants'
+import {
+  DOT_SIZE,
+  COLORS,
+  CONNECTION_DOT_RADIUS,
+  GRID_SIZE,
+  gridToPixel,
+  pixelToGrid
+} from '../utils/constants'
 import Wire from './Wire.vue'
 
 // Composables
@@ -492,7 +499,9 @@ export default {
       handleTouchStart,
       handleTouchMove,
       handleTouchEnd,
-      addComponentAtSmartPosition
+      addComponentAtSmartPosition,
+      addComponentAtPosition,
+      getComponentDimensions
     } = canvasInteractions
 
     // Clicking empty canvas starts a selection box and calls preventDefault() on the
@@ -546,6 +555,81 @@ export default {
         lastInsertGrid.value = { x: px, y: py }
       }
       return newComponent
+    }
+
+    // --- Drag-to-place from the sidebar --------------------------------------------------------
+    // Driven by POINTER events (from App), not native HTML5 drag-and-drop: Chromium throttles
+    // repaints during a native drag, so a DnD-driven preview lags ~1s behind the cursor. Pointer
+    // moves aren't throttled, matching normal component dragging. App calls beginPlacement() with
+    // the "what to create" payload, placeAt() on each pointer move over the canvas (creates the
+    // real component on first call, then moves it — so the preview IS the actual component with
+    // its ports), then commitPlacement() on release over the canvas or cancelPlacement() otherwise.
+    let placement = null // { payload, componentId, offset } while a sidebar drag is in flight
+
+    function beginPlacement(payload) {
+      placement = { payload, componentId: null, offset: { x: 0, y: 0 } }
+    }
+
+    // True when a client point is within the visible canvas viewport (used by App to decide
+    // whether a pointer move/release should place, and whether a release commits or cancels).
+    function isPointInCanvas(clientX, clientY) {
+      const sc = scrollContainer.value
+      if (!sc) return false
+      const r = sc.getBoundingClientRect()
+      return clientX >= r.left && clientX <= r.right && clientY >= r.top && clientY <= r.bottom
+    }
+
+    function placeAt(clientX, clientY) {
+      if (!placement) return
+      // Reuse getMousePos's proven screen->canvas transform by handing it a minimal event.
+      const cursor = pixelToGrid(getMousePos({ currentTarget: canvasSvg.value, clientX, clientY }))
+      if (!placement.componentId) {
+        // First placement: snapshot pre-add state, then create the real component.
+        undoHistory.pushSnapshot()
+        const created = addComponentAtPosition(
+          placement.payload.type,
+          cursor,
+          placement.payload.customProps || {}
+        )
+        placement.componentId = created?.id || null
+        if (!placement.componentId) {
+          // Creation failed (e.g. unknown type) — don't leave a phantom snapshot behind.
+          undoHistory.dropLastSnapshot()
+          return
+        }
+        // Grab the component from its middle, not its top-left corner: offset the anchor by half
+        // its size (grid units) so the cursor sits at the component's center as it follows.
+        const dims = getComponentDimensions(created)
+        placement.offset = {
+          x: Math.round(dims.width / GRID_SIZE / 2),
+          y: Math.round(dims.height / GRID_SIZE / 2)
+        }
+      }
+      const c = components.value.find(x => x.id === placement.componentId)
+      if (c) {
+        c.x = cursor.x - placement.offset.x
+        c.y = cursor.y - placement.offset.y
+      }
+    }
+
+    // Keep the placed component (release over the canvas). Returns true if something was placed.
+    function commitPlacement() {
+      const created = !!placement?.componentId
+      if (created) {
+        props.circuitManager.markCircuitAsModified(props.circuitManager.activeTabId.value)
+      }
+      placement = null
+      return created
+    }
+
+    // Abort (release off-canvas / Escape): remove the preview and discard its snapshot.
+    function cancelPlacement() {
+      if (placement && placement.componentId) {
+        const idx = components.value.findIndex(c => c.id === placement.componentId)
+        if (idx !== -1) components.value.splice(idx, 1)
+        undoHistory.dropLastSnapshot()
+      }
+      placement = null
     }
 
     // --- Autoscroll when a drag OR a rubber-band selection reaches the viewport edge (#3) ---
@@ -922,6 +1006,11 @@ export default {
       handleWireClick,
       handleWireMouseDown,
       addComponentAtSmartPosition: insertComponentInView,
+      beginPlacement,
+      placeAt,
+      commitPlacement,
+      cancelPlacement,
+      isPointInCanvas,
       clearCircuit,
       setLoadingState,
       updateComponent,

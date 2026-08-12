@@ -65,6 +65,25 @@ export function useComponentController(circuitManager, canvasOperations) {
   }
 
   /**
+   * Add a component at an explicit grid position (used by drag-to-place from the sidebar, where
+   * the user drops it exactly where they want). Shares createComponent's id/onCreate logic with
+   * addComponentAtSmartPosition; only the position source differs. `position` is in grid units.
+   */
+  function addComponentAtPosition(type, position, customProps = {}) {
+    if (!activeCircuit.value) {
+      console.warn('No current circuit available for component insertion')
+      return null
+    }
+
+    const component = createComponent(type, position.x, position.y, customProps)
+    if (!component) return null
+
+    addComponent(component)
+    lastComponentPosition.value = { x: position.x, y: position.y }
+    return component
+  }
+
+  /**
    * Get component configuration from registry
    */
   function getComponentConfig(type) {
@@ -185,6 +204,7 @@ export function useComponentController(circuitManager, canvasOperations) {
 
     // Component creation and management
     addComponentAtSmartPosition,
+    addComponentAtPosition,
     createComponent,
     generateComponentId,
     updateLastComponentPosition,

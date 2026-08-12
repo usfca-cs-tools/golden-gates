@@ -311,3 +311,46 @@ export function getDynamicComponentCommands(availableComponents) {
     groupLabelKey: 'commands.groups.insert'
   }))
 }
+
+// The command groups whose items are verbs/file actions (not insertable elements).
+// Everything else in commandGroups is an insertable-element category.
+const VERB_GROUP_KEYS = ['file', 'simulation']
+
+// Verb + file-action groups, for the slimmed command palette.
+export function getVerbGroups() {
+  return VERB_GROUP_KEYS.map(key => ({
+    key,
+    labelKey: commandGroups[key].labelKey,
+    items: commandGroups[key].items
+  }))
+}
+
+// Insertable-element category branches for the left sidebar. Static branches come
+// from commandGroups (excluding the verb groups) — this reuses the existing
+// commands.groups.* i18n labels and the {componentType, action, params} insert shape,
+// and automatically excludes the generic schematic-component. The project's own
+// circuits are appended as a final "custom" branch (single-click inserts them as a
+// subcircuit); the active circuit is filtered out so it can't be inserted into itself.
+export function getInsertableGroups(
+  availableComponents = [],
+  { projectName = null, activeCircuitId = null } = {}
+) {
+  const staticBranches = Object.entries(commandGroups)
+    .filter(([key]) => !VERB_GROUP_KEYS.includes(key))
+    .map(([key, group]) => ({
+      key,
+      labelKey: group.labelKey,
+      items: group.items.filter(item => !item.separator)
+    }))
+
+  const customBranch = {
+    key: 'customCircuits',
+    label: projectName || null,
+    isCustom: true,
+    items: getDynamicComponentCommands(availableComponents).filter(
+      c => c.params[0] !== activeCircuitId
+    )
+  }
+
+  return [...staticBranches, customBranch]
+}

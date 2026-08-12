@@ -9,6 +9,7 @@
     "step": "c"
   },
   "commands": {
+    "again": "Répéter",
     "simulation": {
       "run": "Exécuter",
       "runTests": "Exécuter les tests",
@@ -19,5 +20,13 @@
       "saveCircuit": "Sauvegarder Circuit",
       "openCircuit": "Ouvrir Circuit"
     }
+  },
+  "ui": {
+    "toggleSidebar": "Afficher/masquer la barre latérale"
+  },
+  "sidebar": {
+    "noCircuits": "Aucun circuit dans le projet",
+    "dragHint": "Glisser sur le canevas pour placer, ou cliquer pour insérer au centre",
+    "dragOrClickHint": "Glisser pour placer · cliquer pour insérer · double-cliquer pour ouvrir"
   }
 }

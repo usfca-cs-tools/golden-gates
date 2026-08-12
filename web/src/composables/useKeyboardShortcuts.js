@@ -1,8 +1,8 @@
 import { onMounted, onUnmounted } from 'vue'
 import { useI18n } from 'vue-i18n'
-import { getAllCommands, getDynamicComponentCommands } from '../config/commands'
+import { getAllCommands } from '../config/commands'
 
-export function useKeyboardShortcuts(commandActions, availableComponents = []) {
+export function useKeyboardShortcuts(commandActions) {
   const { t } = useI18n()
 
   // Store command actions reference that can be updated later
@@ -76,25 +76,18 @@ export function useKeyboardShortcuts(commandActions, availableComponents = []) {
       again: t('shortcuts.again').toLowerCase()
     }
 
-    // Handle "Again" - execute top recently used command
+    // Handle "Again" - replay the last insert recorded by App.handleCommand (gg.lastCommand).
     if (key === shortcuts.again) {
       event.preventDefault()
-      // Get recent commands from localStorage or a global store
-      const recentCommandIds = JSON.parse(localStorage.getItem('recentCommands') || '[]')
-      if (recentCommandIds.length > 0) {
-        // Include both static and dynamic commands in search
-        const staticCommands = getAllCommands()
-        // Ensure availableComponents is an array (handle reactive computed values)
-        const componentsArray = Array.isArray(availableComponents)
-          ? availableComponents
-          : availableComponents?.value || []
-        const dynamicCommands = getDynamicComponentCommands(componentsArray)
-        const allCommands = [...staticCommands, ...dynamicCommands]
-        const topRecentCommand = allCommands.find(cmd => cmd.id === recentCommandIds[0])
-        if (topRecentCommand && currentCommandActions?.[topRecentCommand.action]) {
-          const params = topRecentCommand.params || []
-          currentCommandActions[topRecentCommand.action](...params)
-        }
+      let last = null
+      try {
+        const raw = localStorage.getItem('gg.lastCommand')
+        last = raw ? JSON.parse(raw) : null
+      } catch (e) {
+        last = null
+      }
+      if (last && currentCommandActions?.[last.action]) {
+        currentCommandActions[last.action](...(last.params || []))
       }
       return
     }

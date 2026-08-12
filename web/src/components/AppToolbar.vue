@@ -9,7 +9,12 @@
         <GoldenGateLogo :width="48" :height="24" />
       </Button>
 
-      <AllCircuitsMenu :circuitManager="circuitManager" :activeTabId="activeTabId" />
+      <Button
+        icon="pi pi-sidebar"
+        class="p-button-text p-button-sm toolbar-toggle"
+        @click="$emit('toggleSidebar')"
+        v-tooltip.right="$t('ui.toggleSidebar')"
+      />
 
       <CircuitTabsBar
         :circuitTabs="circuitTabs"
@@ -23,7 +28,7 @@
     <template #end>
       <Button
         icon="pi pi-sliders-h"
-        class="p-button-text p-button-sm"
+        class="p-button-text p-button-sm toolbar-toggle"
         @click="$emit('toggleInspector')"
         v-tooltip.left="$t('ui.toggleInspector')"
       />
@@ -34,15 +39,13 @@
 <script>
 import CircuitTabsBar from './CircuitTabsBar.vue'
 import GoldenGateLogo from './GoldenGateLogo.vue'
-import AllCircuitsMenu from './AllCircuitsMenu.vue'
 import { useI18n } from 'vue-i18n'
 
 export default {
   name: 'AppToolbar',
   components: {
     CircuitTabsBar,
-    GoldenGateLogo,
-    AllCircuitsMenu
+    GoldenGateLogo
   },
   props: {
     circuitTabs: {
@@ -58,7 +61,14 @@ export default {
       required: true
     }
   },
-  emits: ['openCommandPalette', 'switchToTab', 'closeTab', 'showConfirmation', 'toggleInspector'],
+  emits: [
+    'openCommandPalette',
+    'switchToTab',
+    'closeTab',
+    'showConfirmation',
+    'toggleInspector',
+    'toggleSidebar'
+  ],
   setup() {
     const { t } = useI18n()
 
@@ -86,6 +96,14 @@ export default {
   color: var(--color-text-secondary) !important;
   background-color: transparent !important;
   border-color: transparent !important;
+}
+
+/* Enlarge the toolbar toggle icons (sidebar + inspector). At the theme's p-button-sm icon size
+   (0.875rem) they read small, and the pi-sidebar glyph especially under-fills its em box. The
+   theme rule (.p-button.p-button-sm .p-button-icon) ties this on specificity, so !important wins
+   it — consistent with the button overrides above. */
+.toolbar-toggle :deep(.p-button-icon) {
+  font-size: 1.25rem !important;
 }
 
 .p-button-text:hover {

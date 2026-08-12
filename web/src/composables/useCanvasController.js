@@ -27,7 +27,9 @@ export function useCanvasController(
   const {
     lastComponentPosition,
     addComponentAtSmartPosition,
+    addComponentAtPosition,
     getComponentConnections,
+    getComponentDimensions,
     updateLastComponentPosition
   } = componentController
 
@@ -1013,6 +1015,20 @@ export function useCanvasController(
     return newComponent
   }
 
+  /**
+   * Add a component at an explicit grid position with selection handling (drag-to-place).
+   */
+  function addComponentAtPositionWithSelection(type, position, customProps = {}) {
+    const newComponent = addComponentAtPosition(type, position, customProps)
+
+    if (newComponent) {
+      clearSelection()
+      selectComponent(newComponent.id)
+    }
+
+    return newComponent
+  }
+
   return {
     // State
     lastComponentPosition,
@@ -1036,6 +1052,8 @@ export function useCanvasController(
 
     // Component operations
     addComponentAtSmartPosition: addComponentAtSmartPositionWithSelection,
+    addComponentAtPosition: addComponentAtPositionWithSelection,
+    getComponentDimensions,
 
     // Clipboard operations
     copySelected,

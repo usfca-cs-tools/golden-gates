@@ -101,6 +101,13 @@ export function useUndoHistory(circuitManager) {
     restoreFrom(redoStack, history)
   }
 
+  /** Discard the most recently pushed snapshot without restoring it. Used to cancel a
+   * speculative edit (e.g. a drag-to-place that snapshotted on create but was then aborted)
+   * so it leaves no phantom entry on the undo stack. */
+  function dropLastSnapshot() {
+    history.value.pop()
+  }
+
   /** Drop all history — e.g. when loading a project replaces every circuit, so old snapshots
    * reference tabs that no longer exist. */
   function clear() {
@@ -112,5 +119,5 @@ export function useUndoHistory(circuitManager) {
   const canUndo = computed(() => history.value.length > 0)
   const canRedo = computed(() => redoStack.value.length > 0)
 
-  return { pushSnapshot, undo, redo, clear, canUndo, canRedo }
+  return { pushSnapshot, dropLastSnapshot, undo, redo, clear, canUndo, canRedo }
 }

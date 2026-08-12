@@ -197,6 +197,7 @@
       "compare": "Compare",
       "signExtend": "Sign Extender"
     },
+    "again": "Again",
     "commandPalette": {
       "placeholder": "Type a command or search...",
       "noResults": "No matching commands",
@@ -216,6 +217,7 @@
   },
   "ui": {
     "toggleInspector": "Toggle Inspector",
+    "toggleSidebar": "Toggle Sidebar",
     "dropFileHere": "Drop .ggc circuit files (or a project folder) here",
     "dropGgcAlert": "Please drop .ggc circuit file(s) or a project folder",
     "dropFolderDesktopOnly": "Dropping a folder is only supported in the desktop app. In the browser, drop the .ggc files directly (select them all to open a whole project).",
@@ -227,6 +229,11 @@
     "noFolderOpen": "No folder open",
     "noCircuitsMatch": "No circuits match",
     "unsavedChanges": "Unsaved changes"
+  },
+  "sidebar": {
+    "noCircuits": "No circuits in project",
+    "dragHint": "Drag onto the canvas to place, or click to insert at center",
+    "dragOrClickHint": "Drag to place · click to insert · double-click to open"
   },
   "simulation": {
     "initializing": "Initializing simulation engine...",
