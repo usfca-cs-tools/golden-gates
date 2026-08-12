@@ -1019,19 +1019,19 @@ export const componentRegistry = {
     },
     // Dynamic connections based on the circuit it represents
     getConnections: (props, circuitManager) => {
-      if (!props.circuitId || !circuitManager) {
-        // Default single input/output if no circuit specified
+      // Resolve the referenced subcircuit by circuitId (runtime) OR filename (the persisted
+      // cross-file reference). The project save strips the in-memory circuitId and keeps only
+      // filename, so without the filename fallback the port geometry would collapse to the
+      // default 1-in/1-out and every serialized subcircuit port would miss its wires.
+      const circuit =
+        circuitManager &&
+        ((props.circuitId && circuitManager.getCircuit(props.circuitId)) ||
+          (props.filename && circuitManager.getCircuitByFilename?.(props.filename)))
+      if (!circuit) {
+        // Default single input/output if the referenced circuit can't be resolved
         return {
           inputs: [{ x: 0, y: 0 }],
           outputs: [{ x: 6, y: 0 }] // Default width of 6 grid units
-        }
-      }
-
-      const circuit = circuitManager.getCircuit(props.circuitId)
-      if (!circuit) {
-        return {
-          inputs: [{ x: 0, y: 0 }],
-          outputs: [{ x: 6, y: 0 }] // 6 grid units wide
         }
       }
 

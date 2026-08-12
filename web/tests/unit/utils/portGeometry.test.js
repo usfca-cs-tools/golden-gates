@@ -53,6 +53,51 @@ describe('computeComponentPorts', () => {
   it('returns [] for an unknown type instead of throwing', () => {
     expect(computeComponentPorts({ type: 'nonexistent', x: 0, y: 0, props: {} })).toEqual([])
   })
+
+  // The project (multi-file) save strips the in-memory circuitId and persists a subcircuit
+  // reference by filename only. Port geometry must still resolve, or every serialized subcircuit
+  // port collapses to the 1-in/1-out default and misses its wires (a whole class of grading bugs).
+  describe('schematic-component resolves by filename when circuitId is absent', () => {
+    const sub = {
+      components: [
+        { id: 'a', type: 'input', x: 0, y: 0, props: { label: 'A', bits: 8 } },
+        { id: 'b', type: 'input', x: 0, y: 4, props: { label: 'B', bits: 8 } },
+        { id: 's', type: 'output', x: 10, y: 0, props: { label: 'S', bits: 8 } },
+        { id: 'c', type: 'output', x: 10, y: 4, props: { label: 'COUT', bits: 1 } }
+      ]
+    }
+    const cm = {
+      getCircuit: id => (id === 'cid_adder' ? sub : null),
+      getCircuitByFilename: fn => (fn === 'adder-8-bit.ggc' ? sub : null)
+    }
+
+    it('produces the full multi-port layout, identical to resolving by circuitId', () => {
+      const byFilename = computeComponentPorts(
+        { type: 'schematic-component', x: 0, y: 0, props: { filename: 'adder-8-bit.ggc' } },
+        cm
+      )
+      const byCircuitId = computeComponentPorts(
+        { type: 'schematic-component', x: 0, y: 0, props: { circuitId: 'cid_adder' } },
+        cm
+      )
+      // Not the collapsed default:
+      expect(byFilename.filter(p => p.direction === 'input')).toHaveLength(2)
+      expect(byFilename.filter(p => p.direction === 'output')).toHaveLength(2)
+      // Named by index (ggl.view maps positional port -> inner label by order):
+      expect(byFilename.filter(p => p.direction === 'input').map(p => p.name)).toEqual(['0', '1'])
+      // filename path == circuitId path:
+      expect(byFilename).toEqual(byCircuitId)
+    })
+
+    it('still falls back to the 1-in/1-out default when neither resolves', () => {
+      const ports = computeComponentPorts(
+        { type: 'schematic-component', x: 0, y: 0, props: { filename: 'missing.ggc' } },
+        cm
+      )
+      expect(ports.filter(p => p.direction === 'input')).toHaveLength(1)
+      expect(ports.filter(p => p.direction === 'output')).toHaveLength(1)
+    })
+  })
 })
 
 describe('buildCircuitData port serialization', () => {
