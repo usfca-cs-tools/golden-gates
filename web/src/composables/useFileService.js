@@ -73,7 +73,7 @@ function buildCircuitData(
   }
 
   return {
-    version: '1.4',
+    version: '1.5',
     timestamp: new Date().toISOString(),
     name: circuitMetadata.name || 'Untitled Circuit',
     // The circuit "label" is retired — the subcircuit shows its filename, not a separate label.
@@ -211,7 +211,10 @@ export function useFileService() {
 
   // Oldest file format this build will open. Pre-release: we fail fast and loud on anything
   // older rather than carrying migration shims for formats no real project uses yet.
-  const MIN_FILE_VERSION = [1, 4]
+  // 1.5: multi-file saves before this stamped collapsed subcircuit-instance ports (the save
+  // couldn't resolve a filename-only reference), so a 1.4 file may carry wrong port geometry —
+  // reject it and require re-saving (or the 1.4->1.5 migration script) rather than trust it.
+  const MIN_FILE_VERSION = [1, 5]
 
   const validateCircuitData = circuitData => {
     // Validate the circuit data structure

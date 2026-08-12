@@ -112,7 +112,7 @@ describe('buildCircuitData port serialization', () => {
       [],
       []
     )
-    expect(data.version).toBe('1.4')
+    expect(data.version).toBe('1.5')
     expect(Array.isArray(data.components[0].ports)).toBe(true)
     expect(data.components[0].ports).toContainEqual(
       expect.objectContaining({ name: '0', direction: 'output' })

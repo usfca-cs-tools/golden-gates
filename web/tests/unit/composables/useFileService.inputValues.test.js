@@ -50,7 +50,7 @@ describe('test component status (transient run result)', () => {
   })
 
   it('is cleared when loading (handles files saved before this fix)', () => {
-    const doc = JSON.stringify({ version: '1.4', components: [testComp()], wires: [] })
+    const doc = JSON.stringify({ version: '1.5', components: [testComp()], wires: [] })
     const parsed = parseAndValidateJSON(doc)
     expect(parsed.components.find(c => c.id === 't').props.status).toBeUndefined()
   })
