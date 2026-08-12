@@ -646,6 +646,15 @@ export function useCanvasController(
    * Handle key down events
    */
   function handleKeyDown(event) {
+    // This is wired to BOTH the canvas element's @keydown and a window-level keydown listener
+    // (a fallback for when the canvas doesn't have focus). When the canvas IS focused — which it
+    // is right after any click on it — a single keypress reaches both, so every shortcut would
+    // run twice: most visibly Cmd-Z undoing two steps at once (deleting a step you wanted to
+    // keep). Both invocations receive the same event object, so a flag on it collapses them to
+    // one handling.
+    if (event.__ggCanvasKeyHandled) return
+    event.__ggCanvasKeyHandled = true
+
     // Handle Alt key for junction mode
     if (event.altKey && !isJunctionMode.value) {
       isJunctionMode.value = true
