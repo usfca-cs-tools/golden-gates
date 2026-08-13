@@ -30,8 +30,8 @@ describe('Sidebar', () => {
   it('renders the static category branches plus a custom branch', () => {
     wrapper = createWrapper()
     const headers = wrapper.findAll('.sidebar-branch-header')
-    // 6 insertable categories + 1 custom branch
-    expect(headers.length).toBe(7)
+    // 7 insertable categories + 1 custom branch
+    expect(headers.length).toBe(8)
   })
 
   it('emits insert with the item action/params on a leaf click', async () => {

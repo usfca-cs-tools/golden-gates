@@ -25,6 +25,7 @@ import Shift from '../components/Shift.vue'
 import Compare from '../components/Compare.vue'
 import SignExtend from '../components/SignExtend.vue'
 import TestNode from '../components/TestNode.vue'
+import TextAnnotation from '../components/TextAnnotation.vue'
 
 // Registry of all available circuit components
 export const componentRegistry = {
@@ -1156,12 +1157,29 @@ export const componentRegistry = {
         outputs: outputConnections
       }
     }
-  }
+  },
 
-  // Future components can be added here:
-  // 'not-gate': { ... },
-  // 'xor-gate': { ... },
-  // 'wire': { ... }
+  // Text annotation: a draggable label with no simulation ports.
+  // Excluded from ggl.view model at run time; saved/loaded normally in .ggc files.
+  text: {
+    component: TextAnnotation,
+    label: 'Add Text',
+    icon: 'pi pi-pencil',
+    category: 'misc',
+    defaultProps: {
+      text: 'Text',
+      fontSize: 14
+    },
+    dimensions: {
+      width: GRID_SIZE * 3,
+      height: GRID_SIZE
+    },
+    // Annotation-only: no connection points.
+    connections: {
+      inputs: [],
+      outputs: []
+    }
+  }
 }
 
 // Helper function to get component categories

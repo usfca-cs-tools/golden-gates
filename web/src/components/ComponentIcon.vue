@@ -13,6 +13,20 @@
       />
     </template>
 
+    <!-- Text annotation icon: a bold "T" -->
+    <template v-else-if="componentType === 'text'">
+      <text
+        :x="iconTextX"
+        :y="iconTextY"
+        :font-size="iconTextFontSize"
+        font-weight="bold"
+        class="component-icon-text"
+        :fill="color"
+      >
+        T
+      </text>
+    </template>
+
     <!-- Special handling for constant with text -->
     <template v-else-if="componentType === 'constant'">
       <text

@@ -82,6 +82,16 @@
             @update:modelValue="updateProp(prop.name, $event)"
           />
 
+          <!-- Textarea (multi-line text, e.g. text annotations) -->
+          <Textarea
+            v-else-if="prop.type === 'textarea'"
+            :modelValue="getPropValue(prop.name, prop.default)"
+            @update:modelValue="updateProp(prop.name, $event)"
+            :placeholder="prop.placeholder"
+            :rows="3"
+            class="property-input"
+          />
+
           <!-- Number input -->
           <MultibaseNumberInput
             v-else-if="

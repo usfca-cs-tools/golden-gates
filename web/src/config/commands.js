@@ -253,6 +253,18 @@ export const commandGroups = {
       }
     ]
   },
+  misc: {
+    labelKey: 'commands.groups.misc',
+    items: [
+      {
+        id: 'insert-text',
+        labelKey: 'commands.insert.text',
+        componentType: 'text',
+        action: 'addComponent',
+        params: ['text']
+      }
+    ]
+  },
   memory: {
     labelKey: 'commands.groups.memory',
     items: [

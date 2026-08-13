@@ -254,7 +254,9 @@ export function useAppController(circuitManager) {
    * definitions inlined under schematicComponents. Mirrors the save path's assembly.
    */
   function buildRunModel(canvasRef) {
-    const components = canvasRef?.components || []
+    // Annotation-only components (e.g. text labels) have no simulation ports —
+    // exclude them so ggl.view doesn't encounter an unknown component type.
+    const components = (canvasRef?.components || []).filter(c => c.type !== 'text')
     const wires = canvasRef?.wires || []
     const wireJunctions = canvasRef?.wireJunctions || []
 

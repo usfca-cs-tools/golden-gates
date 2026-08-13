@@ -8,7 +8,7 @@ describe('getInsertableGroups', () => {
     expect(keys).not.toContain('simulation')
   })
 
-  it('includes the six insertable-element categories with insertable items', () => {
+  it('includes the seven insertable-element categories with insertable items', () => {
     const groups = getInsertableGroups()
     const staticGroups = groups.filter(g => !g.isCustom)
 
@@ -18,6 +18,7 @@ describe('getInsertableGroups', () => {
       'wires',
       'plexers',
       'arithmetic',
+      'misc',
       'memory'
     ])
 

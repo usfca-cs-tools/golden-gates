@@ -519,6 +519,28 @@ export const componentPropertySchema = {
     ]
   },
 
+  // Text annotation properties (no simulation role — pure canvas label)
+  text: {
+    title: 'Text Properties',
+    properties: [
+      {
+        name: 'text',
+        type: 'textarea',
+        label: 'Text',
+        default: 'Text'
+      },
+      {
+        name: 'fontSize',
+        type: 'number',
+        label: 'Font Size',
+        default: 14,
+        min: 8,
+        max: 72,
+        showButtons: true
+      }
+    ]
+  },
+
   // Circuit properties
   circuit: {
     title: 'Circuit Properties',

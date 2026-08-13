@@ -151,6 +151,7 @@
       "wires": "Wires",
       "plexers": "Plexers",
       "arithmetic": "Arithmetic",
+      "misc": "Misc",
       "memory": "Memory",
       "insert": "Components"
     },
@@ -195,7 +196,8 @@
       "divide": "Divide",
       "shift": "Shift",
       "compare": "Compare",
-      "signExtend": "Sign Extender"
+      "signExtend": "Sign Extender",
+      "text": "Text"
     },
     "again": "Again",
     "commandPalette": {
