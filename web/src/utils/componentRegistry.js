@@ -1,6 +1,46 @@
 import { GRID_SIZE, PORT_PITCH } from './constants'
-import { createGateRegistryEntry, rotateConnections, rotatableConnections } from './componentFactory'
+import {
+  createGateRegistryEntry,
+  rotateConnections,
+  rotatableConnections
+} from './componentFactory'
 import { gateDefinitions } from '../config/gateDefinitions'
+import { atLeast } from './version'
+import { computeSubcircuitLayout } from './subcircuitPorts'
+
+// A subcircuit's ports follow the geometric (top-to-bottom, then left-to-right) position of its
+// inner input/output components starting in format 1.6; before that they followed insertion order
+// (the order the components were added to the child circuit). The port NAME the engine sees is a
+// positional index into the child's input/output components in this order, so the front-end
+// ordering and the serialized child-component array MUST agree — see reorderInterfaceComponents,
+// applied at save time in useFileService.buildCircuitData.
+const GEOMETRIC_PORTS_VERSION = [1, 6]
+
+// True when this subcircuit definition numbers its ports by geometry (1.6+) rather than insertion.
+export function usesGeometricPorts(circuit) {
+  return atLeast(circuit?.formatVersion, GEOMETRIC_PORTS_VERSION)
+}
+
+// Top-to-bottom, then left-to-right. Undefined coords sort as 0 (a freshly dropped component).
+function byPosition(a, b) {
+  return (a.y || 0) - (b.y || 0) || (a.x || 0) - (b.x || 0)
+}
+
+// Reorder a child circuit's components so its input components appear in geometric order among
+// themselves and its output components likewise — without disturbing any other component's slot.
+// The engine reads inner input/output labels in array order to resolve a placement's positional
+// port name, so a 1.6 child must be serialized in the same order getConnections numbers its ports.
+// Returns a new array; only reorders when the circuit is 1.6+ (else returns components unchanged).
+export function reorderInterfaceComponents(components, circuit) {
+  if (!Array.isArray(components) || !usesGeometricPorts(circuit)) return components
+  const inputs = components.filter(c => c.type === 'input').sort(byPosition)
+  const outputs = components.filter(c => c.type === 'output').sort(byPosition)
+  let i = 0
+  let o = 0
+  return components.map(c =>
+    c.type === 'input' ? inputs[i++] : c.type === 'output' ? outputs[o++] : c
+  )
+}
 
 // Static imports for all components
 import InputNode from '../components/InputNode.vue'
@@ -1046,111 +1086,68 @@ export const componentRegistry = {
             id: component.id,
             label: component.props?.label || 'IN',
             bits: component.props?.bits || 1,
-            rotation: component.props?.rotation || 0
+            rotation: component.props?.rotation || 0,
+            x: component.x,
+            y: component.y
           })
         } else if (component.type === 'output') {
           outputs.push({
             id: component.id,
             label: component.props?.label || 'OUT',
             bits: component.props?.bits || 1,
-            rotation: component.props?.rotation || 0
+            rotation: component.props?.rotation || 0,
+            x: component.x,
+            y: component.y
           })
         }
       })
 
-      // Calculate grid-aligned dimensions
-      const maxPorts = Math.max(inputs.length, outputs.length, 1)
-      const minHeight = 4 // 2 above + 2 below (in grid units)
-      const heightForPorts = (maxPorts - 1) * PORT_PITCH + 2 // 1 margin + PORT_PITCH per gap + 1 margin
-      const height = Math.max(minHeight, heightForPorts)
-      const width = 6 // 6 grid units wide
+      // 1.6+: number ports by the inner components' geometric position (top-to-bottom) instead of
+      // insertion order. buildCircuitData reorders the serialized child array the same way, so the
+      // engine's positional port-name resolution stays in lockstep. Pre-1.6 keeps insertion order.
+      if (usesGeometricPorts(circuit)) {
+        inputs.sort(byPosition)
+        outputs.sort(byPosition)
+      }
 
-      // Calculate connection positions
+      // Manual width (a per-definition appearance override) moves the right edge, and with it the
+      // output ports; height is a render-only concern (see SchematicComponent) so ports never shift
+      // with it. Absent/auto → the layout's default 6 grid units.
+      const appearance = circuit.properties || {}
+      const forcedWidth =
+        appearance.sizeMode === 'manual' && appearance.width > 0 ? appearance.width : 0
+
+      // One shared layout (used verbatim by SchematicComponent) places each port on its edge and
+      // spreads multiple ports that share a horizontal edge left-to-right instead of stacking them.
+      const { width, height, inputPoints, outputPoints } = computeSubcircuitLayout(
+        inputs,
+        outputs,
+        {
+          forcedWidth
+        }
+      )
+
+      // Preserve the label/id/bits alongside each point (code generation reads them). Empty roles
+      // keep the historical single default port so an unresolved/degenerate circuit still wires.
       const inputConnections =
         inputs.length === 0
           ? [{ x: 0, y: Math.round(height / 2) }]
-          : inputs.map((input, index) => {
-              let y
-              if (inputs.length === 1) {
-                // Single input at center
-                y = height / 2
-              } else {
-                // Multiple inputs: PORT_PITCH grid units apart
-                const topMargin = 1 // 1 grid unit from top
-                const inputSpacing = PORT_PITCH
-                y = topMargin + index * inputSpacing
-              }
-
-              // Snap to nearest grid vertex
-              y = Math.round(y)
-
-              // Move connection points to different edges based on rotation
-              const rotation = input.rotation || 0
-              let connectionPoint = { x: 0, y }
-
-              if (rotation === 90) {
-                // Input rotated 90°: connection point moves to top edge
-                connectionPoint = { x: width / 2, y: 0 }
-              } else if (rotation === 180) {
-                // Input rotated 180°: connection point moves to right edge
-                connectionPoint = { x: width, y: y }
-              } else if (rotation === 270) {
-                // Input rotated 270°: connection point moves to bottom edge
-                connectionPoint = { x: width / 2, y: height }
-              }
-              // 0° rotation stays at left edge (default)
-
-              // Preserve the label information for code generation
-              return {
-                ...connectionPoint,
-                label: input.label,
-                id: input.id,
-                bits: input.bits
-              }
-            })
+          : inputs.map((input, index) => ({
+              ...inputPoints[index],
+              label: input.label,
+              id: input.id,
+              bits: input.bits
+            }))
 
       const outputConnections =
         outputs.length === 0
           ? [{ x: width, y: Math.round(height / 2) }]
-          : outputs.map((output, index) => {
-              let y
-              if (outputs.length === 1) {
-                // Single output at center
-                y = height / 2
-              } else {
-                // Multiple outputs: same pitch as inputs
-                const topMargin = 1 // 1 grid unit from top
-                const outputSpacing = PORT_PITCH
-                y = topMargin + index * outputSpacing
-              }
-
-              // Snap to nearest grid vertex
-              y = Math.round(y)
-
-              // Move connection points to different edges based on rotation
-              const rotation = output.rotation || 0
-              let connectionPoint = { x: width, y }
-
-              if (rotation === 90) {
-                // Output rotated 90°: connection point moves to bottom edge
-                connectionPoint = { x: width / 2, y: height }
-              } else if (rotation === 180) {
-                // Output rotated 180°: connection point moves to left edge
-                connectionPoint = { x: 0, y: y }
-              } else if (rotation === 270) {
-                // Output rotated 270°: connection point moves to top edge
-                connectionPoint = { x: width / 2, y: 0 }
-              }
-              // 0° rotation stays at right edge (default)
-
-              // Preserve the label information for code generation
-              return {
-                ...connectionPoint,
-                label: output.label,
-                id: output.id,
-                bits: output.bits
-              }
-            })
+          : outputs.map((output, index) => ({
+              ...outputPoints[index],
+              label: output.label,
+              id: output.id,
+              bits: output.bits
+            }))
 
       return {
         inputs: inputConnections,

@@ -5,3 +5,7 @@ coverage/
 .tsc-out/
 web/assets/icon.png
 cert.p12
+
+# Python bytecode from scripts/
+__pycache__/
+*.pyc

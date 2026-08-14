@@ -40,7 +40,9 @@ export function useComponentView(props, emit) {
     if (props.hasWarning) return COLORS.componentWarningFill
     if (props.stepActive) return COLORS.componentStepFill
     if (props.selected) return COLORS.componentSelectedFill
-    return COLORS.componentFill
+    // Per-definition body color (subcircuit appearance) overrides only the resting fill; the
+    // error/warning/step/selected states above still take precedence so status stays legible.
+    return props.baseFill || COLORS.componentFill
   })
 
   const strokeColor = computed(() => {
@@ -95,6 +97,11 @@ export const draggableProps = {
   selected: {
     type: Boolean,
     default: false
+  },
+  // Optional resting body fill (e.g. a subcircuit's per-definition color). Null → theme default.
+  baseFill: {
+    type: String,
+    default: null
   },
   // Step highlighting props
   stepActive: {

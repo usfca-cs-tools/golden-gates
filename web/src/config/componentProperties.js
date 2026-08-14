@@ -422,8 +422,24 @@ export const componentPropertySchema = {
     title: 'Sign Extender Properties',
     properties: [
       { ...commonProperties.label, default: 'SE' },
-      { name: 'inBits', type: 'number', label: 'Input Bits', default: 8, min: 1, max: 64, showButtons: true },
-      { name: 'outBits', type: 'number', label: 'Output Bits', default: 16, min: 1, max: 64, showButtons: true },
+      {
+        name: 'inBits',
+        type: 'number',
+        label: 'Input Bits',
+        default: 8,
+        min: 1,
+        max: 64,
+        showButtons: true
+      },
+      {
+        name: 'outBits',
+        type: 'number',
+        label: 'Output Bits',
+        default: 16,
+        min: 1,
+        max: 64,
+        showButtons: true
+      },
       commonProperties.rotation
     ]
   },
@@ -551,9 +567,50 @@ export const componentPropertySchema = {
         type: 'text',
         required: true,
         help: 'Rename here, not in Finder/Explorer. The app tracks circuits by filename.'
-      }
+      },
       // The circuit "label" is retired — no separate Display Label field; the subcircuit shows
       // its filename as a caption.
+      // Per-definition appearance: color + optional manual size. These ride on every placement of
+      // the circuit as a subcircuit component, so organization (color) and uniform sizing (e.g.
+      // pipeline registers) live in one place.
+      {
+        name: 'color',
+        label: 'Color',
+        // Display-only default: the picker shows white (close to the resting light-mode fill)
+        // instead of ColorPicker's built-in red. Nothing is stored until the user actually picks a
+        // color, so the real body keeps the theme default fill (see SchematicComponent.bodyColor).
+        type: 'color',
+        default: 'ffffff',
+        help: 'Body color wherever this circuit is placed as a component.'
+      },
+      {
+        name: 'sizeMode',
+        label: 'Size',
+        type: 'dropdown',
+        default: 'auto',
+        options: [
+          { label: 'Auto', value: 'auto' },
+          { label: 'Manual', value: 'manual' }
+        ],
+        help: 'Auto sizes the box to its ports; Manual sets a fixed width/height.'
+      },
+      {
+        name: 'width',
+        label: 'Width (grid units)',
+        type: 'number',
+        default: 6,
+        min: 4,
+        hiddenWhen: props => props.sizeMode !== 'manual'
+      },
+      {
+        name: 'height',
+        label: 'Height (grid units)',
+        type: 'number',
+        default: 4,
+        min: 4,
+        help: 'Grows the frame only; ports stay put. Use to give related blocks a uniform height.',
+        hiddenWhen: props => props.sizeMode !== 'manual'
+      }
     ],
     actions: [
       {

@@ -22,8 +22,8 @@ export function useCircuitModel() {
   const nextCircuitId = ref(1)
 
   // Open project directory state (Electron desktop app)
-  const currentProjectDir = ref(null)       // absolute path to open project directory
-  const projectCircuitFiles = ref([])       // list of .ggc filenames known in the project
+  const currentProjectDir = ref(null) // absolute path to open project directory
+  const projectCircuitFiles = ref([]) // list of .ggc filenames known in the project
 
   // Initialize with a default circuit
   const initializeDefaultCircuit = () => {
@@ -36,6 +36,9 @@ export function useCircuitModel() {
         wires: [],
         wireJunctions: [],
         hasUnsavedChanges: false,
+        // Born in a current build → newest format (geometric ports). Loaded circuits are stamped
+        // with their file's version instead, so an opened 1.5 file keeps insertion-order ports.
+        formatVersion: '1.6',
         properties: {
           name: 'Circuit1',
           label: 'Circuit 1'
@@ -93,8 +96,11 @@ export function useCircuitModel() {
       // Track if circuit has unsaved changes
       hasUnsavedChanges:
         options.hasUnsavedChanges !== undefined ? options.hasUnsavedChanges : false,
-      sourceFilename: options.sourceFilename || null,   // NEW: which .ggc file this came from
-        // Circuit properties that appear in inspector
+      sourceFilename: options.sourceFilename || null, // NEW: which .ggc file this came from
+      // Newest format by default; loaders pass the file's version so a 1.5 circuit keeps its
+      // insertion-order ports (see useAppController load paths).
+      formatVersion: options.formatVersion || '1.6',
+      // Circuit properties that appear in inspector
       properties: {
         name: name || `Circuit${nextCircuitId.value - 1}`,
         label:
@@ -112,8 +118,9 @@ export function useCircuitModel() {
     }
 
     allCircuits.value.set(id, circuit)
-    if (options.openTab !== false) { // NEW: allow suppressing auto-tab for batch loads
-      openTab(id) 
+    if (options.openTab !== false) {
+      // NEW: allow suppressing auto-tab for batch loads
+      openTab(id)
     }
     return circuit
   }
@@ -456,7 +463,7 @@ export function useCircuitModel() {
       y: props.y || 0,
       props: {
         circuitId,
-        filename: `${referencedCircuit.name}.ggc`,   // NEW: stable cross-file reference
+        filename: `${referencedCircuit.name}.ggc`, // NEW: stable cross-file reference
         label: props.label || referencedCircuit.label || referencedCircuit.name,
         ...props
       }
@@ -523,7 +530,6 @@ export function useCircuitModel() {
       code: componentCode
     }
   }
-  
 
   function getCircuitByFilename(filename) {
     for (const [, circuit] of allCircuits.value) {
@@ -531,7 +537,6 @@ export function useCircuitModel() {
     }
     return null
   }
-  
 
   return {
     // State (renamed for consistency)
@@ -600,7 +605,7 @@ export function useCircuitModel() {
     importState,
 
     // Legacy functions (from useCircuitData)
-    getCircuitData, 
+    getCircuitData,
     getCircuitByFilename
   }
 }

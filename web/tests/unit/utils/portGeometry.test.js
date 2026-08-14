@@ -103,7 +103,7 @@ describe('computeComponentPorts', () => {
 describe('buildCircuitData port serialization', () => {
   const { buildCircuitData } = useFileService()
 
-  it('attaches ports to each component and writes version 1.4', () => {
+  it('attaches ports to each component and writes the current version (1.6) by default', () => {
     const data = buildCircuitData(
       [
         { id: 'a', type: 'input', x: 2, y: 3, props: { bits: 1 } },
@@ -112,7 +112,7 @@ describe('buildCircuitData port serialization', () => {
       [],
       []
     )
-    expect(data.version).toBe('1.5')
+    expect(data.version).toBe('1.6')
     expect(Array.isArray(data.components[0].ports)).toBe(true)
     expect(data.components[0].ports).toContainEqual(
       expect.objectContaining({ name: '0', direction: 'output' })
@@ -153,5 +153,74 @@ describe('buildCircuitData port serialization', () => {
     const nested = data.schematicComponents.circuit_2.circuit.components[0]
     expect(Array.isArray(nested.ports)).toBe(true)
     expect(nested.ports.length).toBeGreaterThan(0)
+  })
+})
+
+// From 1.6, a subcircuit numbers its ports by the geometric (top-to-bottom) position of its inner
+// input/output components rather than the order they were inserted. Pre-1.6 keeps insertion order,
+// so an opened 1.5 circuit's ports never silently reshuffle.
+describe('schematic-component geometric port ordering', () => {
+  const getConnections = componentRegistry['schematic-component'].getConnections
+  // Inserted A first (lower on the canvas, y=4) then B (top, y=0): insertion order != geometry.
+  const child = formatVersion => ({
+    formatVersion,
+    properties: {},
+    components: [
+      { id: 'a', type: 'input', x: 0, y: 4, props: { label: 'A', bits: 8 } },
+      { id: 'b', type: 'input', x: 0, y: 0, props: { label: 'B', bits: 8 } },
+      { id: 's', type: 'output', x: 10, y: 0, props: { label: 'S', bits: 8 } }
+    ]
+  })
+  const cm = formatVersion => ({
+    getCircuit: () => child(formatVersion),
+    getCircuitByFilename: () => child(formatVersion)
+  })
+
+  it('orders 1.6 ports top-to-bottom (B above A), not by insertion', () => {
+    const conns = getConnections({ circuitId: 'x' }, cm('1.6'))
+    expect(conns.inputs.map(i => i.label)).toEqual(['B', 'A'])
+  })
+
+  it('keeps insertion order for pre-1.6 definitions (A then B)', () => {
+    const conns = getConnections({ circuitId: 'x' }, cm('1.5'))
+    expect(conns.inputs.map(i => i.label)).toEqual(['A', 'B'])
+    const missing = getConnections({ circuitId: 'x' }, cm(undefined))
+    expect(missing.inputs.map(i => i.label)).toEqual(['A', 'B'])
+  })
+
+  it('honors a manual width override on output-port x (1.6)', () => {
+    const wide = () => ({ ...child('1.6'), properties: { sizeMode: 'manual', width: 10 } })
+    const conns = getConnections({ circuitId: 'x' }, { getCircuit: wide, getCircuitByFilename: wide })
+    expect(conns.outputs[0].x).toBe(10)
+  })
+})
+
+// buildCircuitData must emit a 1.6 subcircuit's interface components in the same geometric order
+// getConnections numbers them — the engine resolves a placement's positional port name by the inner
+// component array order, so the two must agree.
+describe('buildCircuitData interface reordering', () => {
+  const { buildCircuitData } = useFileService()
+  const comps = () => [
+    { id: 'a', type: 'input', x: 0, y: 4, props: { label: 'A' } },
+    { id: 'b', type: 'input', x: 0, y: 0, props: { label: 'B' } }
+  ]
+
+  it('reorders 1.6 interface components top-to-bottom', () => {
+    const data = buildCircuitData(comps(), [], [], { formatVersion: '1.6' })
+    expect(data.components.map(c => c.id)).toEqual(['b', 'a'])
+  })
+
+  it('leaves pre-1.6 interface components in insertion order', () => {
+    const data = buildCircuitData(comps(), [], [], { formatVersion: '1.5' })
+    expect(data.components.map(c => c.id)).toEqual(['a', 'b'])
+    expect(data.version).toBe('1.5')
+  })
+
+  it('serializes an appearance block only when set', () => {
+    expect(buildCircuitData([], [], [], {}).appearance).toBeUndefined()
+    const painted = buildCircuitData([], [], [], {
+      appearance: { color: '6466f1', sizeMode: 'manual', width: 8, height: 6 }
+    })
+    expect(painted.appearance).toEqual({ color: '6466f1', sizeMode: 'manual', width: 8, height: 6 })
   })
 })

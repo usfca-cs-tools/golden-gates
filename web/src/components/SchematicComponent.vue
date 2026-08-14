@@ -6,6 +6,7 @@
     :selected="selected"
     :label="''"
     :body-bounds="componentBounds"
+    :base-fill="bodyColor"
     :label-position="labelPosition"
     :input-connections="inputConnections"
     :output-connections="outputConnections"
@@ -22,35 +23,49 @@
 
     <!-- Custom labels for inputs and outputs, plus the filename caption -->
     <template #content>
-      <!-- Input labels -->
+      <!-- Input labels ("_" renders the tail as a subscript, e.g. IW_0) -->
       <text
         v-for="(input, index) in circuitInterface?.inputs || []"
         :key="`input-${index}`"
         :x="inputLabelPositions[index]?.x"
         :y="inputLabelPositions[index]?.y"
+        :transform="inputLabelPositions[index]?.transform"
+        :dominant-baseline="inputLabelPositions[index]?.baseline"
         font-size="10"
         font-family="Arial, sans-serif"
         :fill="COLORS.componentText"
         :text-anchor="inputLabelPositions[index]?.anchor"
         class="component-label"
+        ><tspan
+          v-for="(part, i) in subscriptParts(input.label)"
+          :key="i"
+          :font-size="part.subscript ? '0.72em' : null"
+          :dy="part.drop ? '0.22em' : null"
+          >{{ part.text }}</tspan
+        ></text
       >
-        {{ input.label }}
-      </text>
 
-      <!-- Output labels -->
+      <!-- Output labels ("_" renders the tail as a subscript, e.g. IW_0) -->
       <text
         v-for="(output, index) in circuitInterface?.outputs || []"
         :key="`output-${index}`"
         :x="outputLabelPositions[index]?.x"
         :y="outputLabelPositions[index]?.y"
+        :transform="outputLabelPositions[index]?.transform"
+        :dominant-baseline="outputLabelPositions[index]?.baseline"
         font-size="10"
         font-family="Arial, sans-serif"
         :fill="COLORS.componentText"
         :text-anchor="outputLabelPositions[index]?.anchor"
         class="component-label"
+        ><tspan
+          v-for="(part, i) in subscriptParts(output.label)"
+          :key="i"
+          :font-size="part.subscript ? '0.72em' : null"
+          :dy="part.drop ? '0.22em' : null"
+          >{{ part.text }}</tspan
+        ></text
       >
-        {{ output.label }}
-      </text>
 
       <!-- Filename caption, centered below the frame -->
       <text
@@ -72,7 +87,10 @@
 import { computed } from 'vue'
 import BaseCircuitComponent from './BaseCircuitComponent.vue'
 import { draggableProps } from '../composables/useComponentView'
-import { GRID_SIZE, COLORS, PORT_PITCH } from '../utils/constants'
+import { GRID_SIZE, COLORS } from '../utils/constants'
+import { atLeast } from '../utils/version'
+import { subscriptParts } from '../utils/labelFormat'
+import { computeSubcircuitLayout, portEdge } from '../utils/subcircuitPorts'
 
 export default {
   name: 'SchematicComponent',
@@ -98,60 +116,43 @@ export default {
   setup(props, { emit }) {
     // Constants for label positioning based on GRID_SIZE
     const LABEL_HORIZONTAL_MARGIN = Math.round(GRID_SIZE / 2) // ~8px when GRID_SIZE=15
-    const LABEL_VERTICAL_SPACING = GRID_SIZE // 15px when GRID_SIZE=15
     const LABEL_VERTICAL_MARGIN = Math.round(GRID_SIZE / 3) // ~5px when GRID_SIZE=15
 
     const handleDoubleClick = event => {
       emit('editSubcircuit', props.circuitId)
     }
 
-    // Helper function to get connection point position based on rotation
-    const getRotatedConnectionPoint = (rotation, bounds, defaultY) => {
-      const rotationMap = {
-        90: { x: bounds.width / 2, y: 0 },
-        180: { x: bounds.width, y: defaultY },
-        270: { x: bounds.width / 2, y: bounds.height },
-        0: { x: 0, y: defaultY }
-      }
-      return rotationMap[rotation] || rotationMap[0]
-    }
-
-    // Helper function to get rotated connection point for outputs
-    const getRotatedOutputConnectionPoint = (rotation, bounds, defaultY) => {
-      const rotationMap = {
-        90: { x: bounds.width / 2, y: bounds.height },
-        180: { x: 0, y: defaultY },
-        270: { x: bounds.width / 2, y: 0 },
-        0: { x: bounds.width, y: defaultY }
-      }
-      return rotationMap[rotation] || rotationMap[0]
-    }
-
-    // Helper function to get label position based on rotation
+    // Where each port's name is drawn inside the box, keyed on the edge the port sits on (which
+    // depends on its role AND rotation). Left/right labels are horizontal, reading inward. Top and
+    // bottom ports pack tightly side-by-side, so a horizontal label would overprint its neighbor —
+    // rotate those to read vertically INTO the box (down from the top, up from the bottom), matching
+    // the orientation of the rotated child input/output.
     const getLabelPosition = (connection, rotation, isInput = true) => {
-      const positionMap = {
-        90: {
-          x: connection.x,
-          y: connection.y + (isInput ? LABEL_VERTICAL_SPACING : -LABEL_VERTICAL_MARGIN),
-          anchor: 'middle'
-        },
-        180: {
-          x: connection.x + (isInput ? -LABEL_HORIZONTAL_MARGIN : LABEL_HORIZONTAL_MARGIN),
-          y: connection.y + 4,
-          anchor: isInput ? 'end' : 'start'
-        },
-        270: {
-          x: connection.x,
-          y: connection.y + (isInput ? -LABEL_VERTICAL_MARGIN : LABEL_VERTICAL_SPACING),
-          anchor: 'middle'
-        },
-        0: {
-          x: connection.x + (isInput ? LABEL_HORIZONTAL_MARGIN : -LABEL_HORIZONTAL_MARGIN),
-          y: connection.y + 4,
-          anchor: isInput ? 'start' : 'end'
+      const { x, y } = connection
+      const edge = portEdge(isInput, rotation)
+      if (edge === 'top') {
+        return {
+          x: x + LABEL_VERTICAL_MARGIN,
+          y,
+          anchor: 'start',
+          baseline: 'central',
+          transform: `rotate(90, ${x}, ${y})`
         }
       }
-      return positionMap[rotation] || positionMap[0]
+      if (edge === 'bottom') {
+        return {
+          x: x + LABEL_VERTICAL_MARGIN,
+          y,
+          anchor: 'start',
+          baseline: 'central',
+          transform: `rotate(-90, ${x}, ${y})`
+        }
+      }
+      if (edge === 'right') {
+        return { x: x - LABEL_HORIZONTAL_MARGIN, y: y + 4, anchor: 'end' }
+      }
+      // left edge
+      return { x: x + LABEL_HORIZONTAL_MARGIN, y: y + 4, anchor: 'start' }
     }
 
     // The caption shown below the component: the subcircuit's filename (its name). The old
@@ -178,38 +179,72 @@ export default {
             id: component.id,
             label: component.props?.label || 'IN',
             bits: component.props?.bits || 1,
-            rotation: component.props?.rotation || 0
+            rotation: component.props?.rotation || 0,
+            x: component.x,
+            y: component.y
           })
         } else if (component.type === 'output') {
           outputs.push({
             id: component.id,
             label: component.props?.label || 'OUT',
             bits: component.props?.bits || 1,
-            rotation: component.props?.rotation || 0
+            rotation: component.props?.rotation || 0,
+            x: component.x,
+            y: component.y
           })
         }
       })
 
+      // Match the port numbering in componentRegistry.getConnections: geometric (top-to-bottom)
+      // order for 1.6+ definitions, insertion order before that.
+      if (atLeast(circuit.formatVersion, [1, 6])) {
+        const byPosition = (a, b) => (a.y || 0) - (b.y || 0) || (a.x || 0) - (b.x || 0)
+        inputs.sort(byPosition)
+        outputs.sort(byPosition)
+      }
+
       return { inputs, outputs }
     })
 
-    // Computed properties for dynamic sizing based on interface
+    // The referenced subcircuit's per-definition appearance (color + manual size).
+    const appearance = computed(() => {
+      const circuit = props.circuitManager.getCircuit(props.circuitId)
+      return circuit?.properties || {}
+    })
+
+    // Optional per-definition body color; null falls back to the theme default in useComponentView.
+    // PrimeVue's ColorPicker stores a bare hex ("6466f1"); normalize to a CSS "#6466f1" for fill.
+    const bodyColor = computed(() => {
+      const c = appearance.value.color
+      return c ? '#' + String(c).replace(/^#/, '') : null
+    })
+
+    // Shared geometry: box size + every port's connection point in grid units, IDENTICAL to what
+    // componentRegistry.getConnections serializes — so the rendered dots sit exactly on the
+    // coordinates wires are matched against. Manual width feeds the layout (it carries the output
+    // ports on the right edge); manual height only stretches the frame below (see componentBounds).
+    const portLayout = computed(() => {
+      const a = appearance.value
+      const forcedWidth = a.sizeMode === 'manual' && a.width > 0 ? a.width : 0
+      return computeSubcircuitLayout(
+        circuitInterface.value?.inputs || [],
+        circuitInterface.value?.outputs || [],
+        { forcedWidth }
+      )
+    })
+
+    // The visible frame. Width comes from the layout (default 6, manual width, or wide enough for
+    // top/bottom ports); manual height only grows the frame downward, clamped to the port span so
+    // ports never spill.
     const componentBounds = computed(() => {
-      const inputs = circuitInterface.value?.inputs || []
-      const outputs = circuitInterface.value?.outputs || []
-      const maxPorts = Math.max(inputs.length, outputs.length, 1)
-
-      // Calculate grid-aligned dimensions
-      // Width: 6 grid units (90px) - should be divisible by GRID_SIZE
-      const width = 6 * GRID_SIZE
-
-      // Height: Ensure connection points align with grid.
-      // 1 grid unit margin above the first port + PORT_PITCH per gap + 1 below the last.
-      const minHeight = 4 * GRID_SIZE // 2 above + 2 below
-      const heightForPorts = ((maxPorts - 1) * PORT_PITCH + 2) * GRID_SIZE
-      const height = Math.max(minHeight, heightForPorts)
-
-      return { x: 0, y: 0, width, height }
+      const a = appearance.value
+      const { width, height } = portLayout.value
+      const portSpan = height * GRID_SIZE
+      const frameHeight =
+        a.sizeMode === 'manual' && a.height > 0
+          ? Math.max(a.height * GRID_SIZE, portSpan)
+          : portSpan
+      return { x: 0, y: 0, width: width * GRID_SIZE, height: frameHeight }
     })
 
     const labelPosition = computed(() => {
@@ -219,64 +254,22 @@ export default {
 
     const inputConnections = computed(() => {
       const inputs = circuitInterface.value?.inputs || []
-      const bounds = componentBounds.value
-
+      const { inputPoints, height } = portLayout.value
       if (inputs.length === 0) {
-        // Default single input at center, snapped to grid
-        const centerY = Math.round(bounds.height / 2 / GRID_SIZE) * GRID_SIZE
-        return [{ x: 0, y: centerY }]
+        // Historical default single input, centered on the port span.
+        return [{ x: 0, y: Math.round(height / 2) * GRID_SIZE }]
       }
-
-      return inputs.map((input, index) => {
-        let y
-        if (inputs.length === 1) {
-          // Single input at center
-          y = bounds.height / 2
-        } else {
-          // Multiple inputs: PORT_PITCH grid units apart
-          const topMargin = GRID_SIZE // 1 grid unit from top
-          const inputSpacing = PORT_PITCH * GRID_SIZE
-          y = topMargin + index * inputSpacing
-        }
-
-        // Snap to nearest grid vertex
-        y = Math.round(y / GRID_SIZE) * GRID_SIZE
-
-        // Apply rotation based on the original component's rotation
-        const rotation = input.rotation || 0
-        return getRotatedConnectionPoint(rotation, bounds, y)
-      })
+      return inputPoints.map(p => ({ x: p.x * GRID_SIZE, y: p.y * GRID_SIZE }))
     })
 
     const outputConnections = computed(() => {
       const outputs = circuitInterface.value?.outputs || []
-      const bounds = componentBounds.value
-
+      const { outputPoints, width, height } = portLayout.value
       if (outputs.length === 0) {
-        // Default single output at center, snapped to grid
-        const centerY = Math.round(bounds.height / 2 / GRID_SIZE) * GRID_SIZE
-        return [{ x: bounds.width, y: centerY }]
+        // Historical default single output, centered on the right edge.
+        return [{ x: width * GRID_SIZE, y: Math.round(height / 2) * GRID_SIZE }]
       }
-
-      return outputs.map((output, index) => {
-        let y
-        if (outputs.length === 1) {
-          // Single output at center
-          y = bounds.height / 2
-        } else {
-          // Multiple outputs: same pitch as inputs
-          const topMargin = GRID_SIZE // 1 grid unit from top
-          const outputSpacing = PORT_PITCH * GRID_SIZE
-          y = topMargin + index * outputSpacing
-        }
-
-        // Snap to nearest grid vertex
-        y = Math.round(y / GRID_SIZE) * GRID_SIZE
-
-        // Apply rotation based on the original component's rotation
-        const rotation = output.rotation || 0
-        return getRotatedOutputConnectionPoint(rotation, bounds, y)
-      })
+      return outputPoints.map(p => ({ x: p.x * GRID_SIZE, y: p.y * GRID_SIZE }))
     })
 
     // Computed input label positions
@@ -308,11 +301,13 @@ export default {
       componentLabel,
       circuitInterface,
       componentBounds,
+      bodyColor,
       labelPosition,
       inputConnections,
       outputConnections,
       inputLabelPositions,
       outputLabelPositions,
+      subscriptParts,
       COLORS
     }
   }

@@ -9,11 +9,7 @@
     <div v-else-if="circuit && !component" class="inspector-content">
       <div class="property-section" v-if="circuitSchema">
         <h4>{{ circuitSchema.title }}</h4>
-        <div
-          v-for="prop in circuitSchema.properties.filter(p => !p.hidden)"
-          :key="prop.name"
-          class="property-group"
-        >
+        <div v-for="prop in visibleCircuitProperties" :key="prop.name" class="property-group">
           <label>{{ prop.label }}</label>
 
           <!-- Python identifier input for circuit name -->
@@ -43,6 +39,35 @@
             :placeholder="prop.placeholder"
             :rows="3"
             class="property-input"
+          />
+
+          <!-- Body color (per-definition appearance) -->
+          <ColorPicker
+            v-else-if="prop.type === 'color'"
+            :modelValue="getCircuitValue(prop.name, prop.default)"
+            @update:modelValue="updateCircuitValue(prop.name, $event)"
+            format="hex"
+          />
+
+          <!-- Dropdown (e.g. Auto/Manual size mode) -->
+          <Dropdown
+            v-else-if="prop.type === 'dropdown'"
+            :modelValue="getCircuitValue(prop.name, prop.default)"
+            :options="prop.options"
+            @update:modelValue="updateCircuitValue(prop.name, $event)"
+            optionLabel="label"
+            optionValue="value"
+            class="property-input"
+          />
+
+          <!-- Number (manual width/height in grid units) -->
+          <InputNumber
+            v-else-if="prop.type === 'number'"
+            :modelValue="getCircuitValue(prop.name, prop.default)"
+            @update:modelValue="updateCircuitValue(prop.name, $event)"
+            :min="prop.min || 0"
+            :max="prop.max"
+            :showButtons="prop.showButtons !== false"
           />
 
           <small v-if="prop.help" class="property-help">{{ prop.help }}</small>
@@ -212,6 +237,7 @@ import MemoryDataTable from './MemoryDataTable.vue'
 import Textarea from 'primevue/textarea'
 import Dropdown from 'primevue/dropdown'
 import Checkbox from 'primevue/checkbox'
+import ColorPicker from 'primevue/colorpicker'
 
 export default {
   name: 'ComponentInspector',
@@ -226,7 +252,8 @@ export default {
     MemoryDataTable,
     Textarea,
     Dropdown,
-    Checkbox
+    Checkbox,
+    ColorPicker
   },
   props: {
     component: {
@@ -261,6 +288,14 @@ export default {
     },
     circuitSchema() {
       return this.circuit ? getCircuitProperties() : null
+    },
+    // Circuit fields to render: drop statically-hidden ones and any whose `hiddenWhen(properties)`
+    // predicate is true right now (e.g. width/height only show under Manual size mode).
+    visibleCircuitProperties() {
+      const props = this.circuit?.properties || {}
+      return (this.circuitSchema?.properties || []).filter(
+        p => !p.hidden && !(typeof p.hiddenWhen === 'function' && p.hiddenWhen(props))
+      )
     }
   },
   methods: {
@@ -325,10 +360,13 @@ export default {
     },
 
     // Circuit value methods
-    getCircuitValue(propName) {
+    getCircuitValue(propName, defaultValue = '') {
       if (propName === 'name') return this.circuit?.name || ''
       if (propName === 'label') return this.circuit?.label || ''
-      return this.circuit?.properties?.[propName] || ''
+      // Return the stored value as-is (numbers, null color) — don't `|| ''`-coerce, which would
+      // string-break a numeric width/height and hide a legitimately-falsy value.
+      const value = this.circuit?.properties?.[propName]
+      return value !== null && value !== undefined ? value : defaultValue
     },
 
     updateCircuitValue(propName, value) {

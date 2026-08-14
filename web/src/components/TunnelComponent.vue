@@ -8,9 +8,14 @@
       :text-anchor="labelAttrs.anchor"
       :dominant-baseline="labelAttrs.baseline"
       class="component-label"
+      ><tspan
+        v-for="(part, i) in subscriptParts(label)"
+        :key="i"
+        :font-size="part.subscript ? '0.72em' : null"
+        :dy="part.drop ? '0.22em' : null"
+        >{{ part.text }}</tspan
+      ></text
     >
-      {{ label }}
-    </text>
 
     <!-- Rotation group centered roughly in the middle -->
     <g :transform="`rotate(${rotation}, ${GRID_SIZE}, ${GRID_SIZE})`">
@@ -44,6 +49,7 @@
 import { defineComponent } from 'vue'
 import { useComponentView, draggableProps } from '../composables/useComponentView'
 import { COLORS, CONNECTION_DOT_RADIUS, GRID_SIZE } from '../utils/constants'
+import { subscriptParts } from '../utils/labelFormat'
 
 export default defineComponent({
   name: 'TunnelNode',
@@ -101,6 +107,7 @@ export default defineComponent({
       strokeColor,
       strokeWidth,
       componentClasses,
+      subscriptParts,
       COLORS,
       CONNECTION_DOT_RADIUS,
       GRID_SIZE

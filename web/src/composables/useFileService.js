@@ -1,18 +1,17 @@
 import { computeComponentPorts } from '../utils/portGeometry'
+import { reorderInterfaceComponents } from '../utils/componentRegistry'
 
 // Golden Gates circuits are JSON saved with a `.ggc` extension — the file type
 // registered with the OS for double-click open. Older circuits were saved as
 // `.json`, so opening still accepts both.
 const CIRCUIT_EXT = 'ggc'
 
-
-// Getting the top level filename from the directory path 
+// Getting the top level filename from the directory path
 function deriveTopLevelFilename(dirPath) {
-  const dirName = dirPath.split('/').pop()       
-  const baseName = dirName.split('-')[0]        
+  const dirName = dirPath.split('/').pop()
+  const baseName = dirName.split('-')[0]
   return `${baseName}.ggc`
 }
-
 
 function buildCircuitData(
   components,
@@ -52,13 +51,23 @@ function buildCircuitData(
     return { ...componentWithoutJsId, ports }
   }
 
-  const sanitizedComponents = (components || []).map(stripTransient)
+  // From 1.6 on, a subcircuit numbers its ports by the geometric order of its input/output
+  // components, so the serialized component array must be in that same order for the engine's
+  // positional port-name resolution to line up (see componentRegistry.reorderInterfaceComponents).
+  // For a 1.5 circuit this is a no-op — insertion order is preserved untouched.
+  const version = circuitMetadata.formatVersion || '1.6'
+  const sanitizedComponents = reorderInterfaceComponents(components || [], {
+    formatVersion: version
+  }).map(stripTransient)
 
   const sanitizedSchematicComponents = {}
   for (const [circuitId, schematicData] of Object.entries(schematicComponents || {})) {
     let sanitizedCircuit = schematicData.circuit
     if (sanitizedCircuit && sanitizedCircuit.components) {
-      const sanitizedSubComponents = sanitizedCircuit.components.map(stripTransient)
+      const sanitizedSubComponents = reorderInterfaceComponents(
+        sanitizedCircuit.components,
+        sanitizedCircuit
+      ).map(stripTransient)
 
       sanitizedCircuit = {
         ...sanitizedCircuit,
@@ -72,12 +81,17 @@ function buildCircuitData(
     }
   }
 
+  const appearance = circuitMetadata.appearance
+
   return {
-    version: '1.5',
+    version,
     timestamp: new Date().toISOString(),
     name: circuitMetadata.name || 'Untitled Circuit',
     // The circuit "label" is retired — the subcircuit shows its filename, not a separate label.
     interface: circuitMetadata.interface,
+    // Per-definition appearance (color + manual size). Omitted unless set, so default files stay
+    // clean; consumed by useAppController.applyAppearance on load and ignored by the engine.
+    ...(appearance ? { appearance } : {}),
     nextCircuitId,
     components: sanitizedComponents,
     wires: wires || [],
@@ -110,8 +124,8 @@ export function useFileService() {
       const jsonString = JSON.stringify(circuitData, null, 2)
 
       // Check if File System Access API is supported
-      // if ('showSaveFilePicker' in window) { 
-      
+      // if ('showSaveFilePicker' in window) {
+
       // Check if running in Electron
       if (window.electronAPI) {
         const circuitName = circuitMetadata.name || 'circuit'
@@ -194,7 +208,7 @@ export function useFileService() {
     return {
       dirPath: resolvedDirPath,
       topLevelFilename,
-      topLevelContent,  // null if new/empty project
+      topLevelContent, // null if new/empty project
       allFiles: files
     }
   }
@@ -223,7 +237,9 @@ export function useFileService() {
     }
 
     // Strict version gate — reject old formats loudly instead of silently migrating them.
-    const parts = String(circuitData.version || '').split('.').map(n => parseInt(n, 10) || 0)
+    const parts = String(circuitData.version || '')
+      .split('.')
+      .map(n => parseInt(n, 10) || 0)
     const [major, minor] = [parts[0] || 0, parts[1] || 0]
     const [minMajor, minMinor] = MIN_FILE_VERSION
     if (!circuitData.version || major < minMajor || (major === minMajor && minor < minMinor)) {

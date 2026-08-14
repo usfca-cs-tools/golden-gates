@@ -261,13 +261,7 @@ export function useAppController(circuitManager) {
     const wireJunctions = canvasRef?.wireJunctions || []
 
     const activeCircuit = circuitManager.activeCircuit.value
-    const circuitMetadata = activeCircuit
-      ? {
-          name: activeCircuit.name,
-          label: activeCircuit.label,
-          interface: activeCircuit.properties?.interface
-        }
-      : {}
+    const circuitMetadata = activeCircuit ? metadataFor(activeCircuit) : {}
 
     const allSchematicComponents = {}
     for (const [circuitId, componentDef] of circuitManager.availableComponents.value) {
@@ -748,7 +742,6 @@ export function useAppController(circuitManager) {
     return await runCircuitSimulationWithHierarchy(canvasRef, 'test')
   }
 
-
   /**
    * Save As: pick a new directory, update currentProjectDir, then save all circuits
    */
@@ -777,14 +770,7 @@ export function useAppController(circuitManager) {
 
       // Get circuit metadata from the current active circuit
       const activeCircuit = circuitManager.activeCircuit.value
-      const circuitMetadata = activeCircuit
-        ? {
-            name: activeCircuit.name,
-            label: activeCircuit.label,
-            // Only include interface from properties, not duplicate name/label
-            interface: activeCircuit.properties?.interface
-          }
-        : {}
+      const circuitMetadata = activeCircuit ? metadataFor(activeCircuit) : {}
 
       // Collect ALL available schematic component definitions (not just used ones)
       // This ensures that components saved with "Save as Component" are preserved
@@ -815,11 +801,7 @@ export function useAppController(circuitManager) {
           // always written. (Save As passes changedOnly:false to copy the whole project.)
           if (changedOnly && !circuit.hasUnsavedChanges && circuit.sourceFilename) continue
           const filename = circuit.sourceFilename || `${circuit.name}.ggc`
-          const circuitMetadata = {
-            name: circuit.name,
-            label: circuit.label,
-            interface: circuit.properties?.interface
-          }
+          const circuitMetadata = metadataFor(circuit)
           // Subcircuit refs are persisted by filename ONLY. circuitId is an in-memory,
           // filename-derived handle (re-derived on load), so we strip it from the file. The
           // filename comes from the referenced circuit's current sourceFilename, so a rename
@@ -837,14 +819,14 @@ export function useAppController(circuitManager) {
             circuit.wires,
             circuit.wireJunctions,
             circuitMetadata,
-            {},   // no embedded sub-circuits — each has its own file
+            {}, // no embedded sub-circuits — each has its own file
             circuitManager.exportState().nextCircuitId,
-            circuitManager,        // needed for computeComponentPorts (port serialization)
-            { standalone: true }   // ← omit schematicComponents block
+            circuitManager, // needed for computeComponentPorts (port serialization)
+            { standalone: true } // ← omit schematicComponents block
           )
           const jsonString = JSON.stringify(circuitData, null, 2)
           await window.electronAPI.writeCircuitFile(projectDir, filename, jsonString)
-      
+
           // Track new filenames
           if (!circuitManager.projectCircuitFiles.value.includes(filename)) {
             circuitManager.projectCircuitFiles.value = [
@@ -898,19 +880,18 @@ export function useAppController(circuitManager) {
     }
   }
 
-
   async function openProject(canvasRef, dirPath = null, activeFile = null) {
     try {
       const project = await openProjectDir(dirPath)
       if (!project) return
-  
+
       const { dirPath: resolvedDirPath, topLevelFilename, allFiles } = project
-  
+
       circuitManager.currentProjectDir.value = resolvedDirPath
       circuitManager.projectCircuitFiles.value = allFiles
-  
+
       const hasExistingWork = canvasRef?.components?.length > 0 || canvasRef?.wires?.length > 0
-  
+
       const doLoad = async () => {
         restoringTabs = true
         // Clear canvas and reset circuits
@@ -918,7 +899,7 @@ export function useAppController(circuitManager) {
         circuitManager.allCircuits.value.clear()
         circuitManager.availableComponents.value.clear()
         circuitManager.openTabs.value = []
-  
+
         // Load every .ggc file into memory
         const usedCircuitIds = new Set()
         for (const filename of allFiles) {
@@ -933,9 +914,11 @@ export function useAppController(circuitManager) {
               id: deriveCircuitId(filename, usedCircuitIds),
               sourceFilename: filename,
               hasUnsavedChanges: false,
-              openTab: false             // don't auto-open every sub-circuit as a tab
+              // Keep the file's generation so a 1.5 circuit keeps insertion-order ports.
+              formatVersion: circuitData.version,
+              openTab: false // don't auto-open every sub-circuit as a tab
             })
-  
+
             // Populate directly — canvas reads reactively from allCircuits
             circuit.components = circuitData.components || []
             circuit.wires = circuitData.wires || []
@@ -945,7 +928,8 @@ export function useAppController(circuitManager) {
               circuit.properties = circuit.properties || {}
               circuit.properties.interface = circuitData.interface
             }
-  
+            applyAppearance(circuit, circuitData)
+
             // Make available as a draggable component in the sidebar (for all files)
             circuitManager.saveCircuitAsComponent(circuit.id)
           } catch (err) {
@@ -986,7 +970,7 @@ export function useAppController(circuitManager) {
         restoringTabs = false
         saveOpenTabState() // persist the initial/restored set for this project
       }
-  
+
       if (hasExistingWork) {
         showConfirmation({
           title: 'Open Project?',
@@ -1003,44 +987,78 @@ export function useAppController(circuitManager) {
     }
   }
 
-/**
- * Walk every circuit in memory and resolve schematic-component filename props
- * to their current in-memory circuitId. Call this after all .ggc files are loaded.
- */
-function resolveFilenameReferences() {
-  // Build name→circuit map for old-format files that have circuitId but no filename prop
-  const circuitsByName = new Map()
-  for (const [, circuit] of circuitManager.allCircuits.value) {
-    circuitsByName.set(circuit.name, circuit)
-  }
+  /**
+   * Walk every circuit in memory and resolve schematic-component filename props
+   * to their current in-memory circuitId. Call this after all .ggc files are loaded.
+   */
+  function resolveFilenameReferences() {
+    // Build name→circuit map for old-format files that have circuitId but no filename prop
+    const circuitsByName = new Map()
+    for (const [, circuit] of circuitManager.allCircuits.value) {
+      circuitsByName.set(circuit.name, circuit)
+    }
 
-  for (const [, circuit] of circuitManager.allCircuits.value) {
-    for (const comp of circuit.components || []) {
-      if (comp.type !== 'schematic-component') continue
+    for (const [, circuit] of circuitManager.allCircuits.value) {
+      for (const comp of circuit.components || []) {
+        if (comp.type !== 'schematic-component') continue
 
-      if (comp.props?.filename) {
-        // New format: resolve filename → current circuitId
-        const referenced = circuitManager.getCircuitByFilename(comp.props.filename)
-        if (referenced) {
-          comp.props.circuitId = referenced.id
-        } else {
-          console.warn(`Cannot resolve schematic ref: "${comp.props.filename}" not found in project`)
-        }
-      } else if (comp.props?.label) {
-        // Old format (no filename): fall back to matching by circuit name == label
-        const referenced = circuitsByName.get(comp.props.label)
-        if (referenced) {
-          comp.props.circuitId = referenced.id
-          comp.props.filename = referenced.sourceFilename || `${referenced.name}.ggc`
-        } else {
-          console.warn(`Cannot resolve schematic ref by name: "${comp.props.label}" not found in project`)
+        if (comp.props?.filename) {
+          // New format: resolve filename → current circuitId
+          const referenced = circuitManager.getCircuitByFilename(comp.props.filename)
+          if (referenced) {
+            comp.props.circuitId = referenced.id
+          } else {
+            console.warn(
+              `Cannot resolve schematic ref: "${comp.props.filename}" not found in project`
+            )
+          }
+        } else if (comp.props?.label) {
+          // Old format (no filename): fall back to matching by circuit name == label
+          const referenced = circuitsByName.get(comp.props.label)
+          if (referenced) {
+            comp.props.circuitId = referenced.id
+            comp.props.filename = referenced.sourceFilename || `${referenced.name}.ggc`
+          } else {
+            console.warn(
+              `Cannot resolve schematic ref by name: "${comp.props.label}" not found in project`
+            )
+          }
         }
       }
     }
   }
-}
 
+  // Restore a circuit's per-definition appearance (color + manual size) from its .ggc into the
+  // in-memory circuit.properties, where the inspector reads/writes it and SchematicComponent renders
+  // it. A file that predates the feature simply has no `appearance` block → nothing to copy.
+  function applyAppearance(circuit, circuitData) {
+    if (!circuitData.appearance) return
+    circuit.properties = circuit.properties || {}
+    Object.assign(circuit.properties, circuitData.appearance)
+  }
 
+  // The appearance block to serialize — omitted entirely unless it carries real intent (a color, or
+  // an explicit manual size), so default circuits keep a clean file and diff.
+  function extractAppearance(properties = {}) {
+    const a = {}
+    for (const k of ['color', 'sizeMode', 'width', 'height']) {
+      if (properties[k] !== undefined && properties[k] !== null) a[k] = properties[k]
+    }
+    return a.color || a.sizeMode === 'manual' ? a : undefined
+  }
+
+  // Assemble the circuitMetadata buildCircuitData needs: display fields plus the format generation
+  // (which version to stamp + whether to reorder ports) and the appearance block.
+  function metadataFor(circuit) {
+    const p = circuit?.properties || {}
+    return {
+      name: circuit?.name,
+      label: circuit?.label,
+      interface: p.interface,
+      formatVersion: circuit?.formatVersion,
+      appearance: extractAppearance(p)
+    }
+  }
 
   /**
    * Load circuit file data into a specific subcircuit tab (preserves circuit ID)
@@ -1064,6 +1082,9 @@ function resolveFilenameReferences() {
             circuitManager.allCircuits.value.set(nestedId, {
               ...data.circuit,
               id: nestedId,
+              // An embedded subdef carries its own generation; default to the enclosing file's so
+              // its ports resolve with the same ordering it was saved under.
+              formatVersion: data.circuit.formatVersion || circuitData.version,
               hasUnsavedChanges: false
             })
           }
@@ -1096,10 +1117,14 @@ function resolveFilenameReferences() {
     if (circuitData.label) {
       targetCircuit.label = circuitData.label
     }
+    if (circuitData.version) {
+      targetCircuit.formatVersion = circuitData.version
+    }
     if (circuitData.interface) {
       targetCircuit.properties = targetCircuit.properties || {}
       targetCircuit.properties.interface = circuitData.interface
     }
+    applyAppearance(targetCircuit, circuitData)
 
     canvasRef.clearCircuit()
 
@@ -1198,6 +1223,7 @@ function resolveFilenameReferences() {
           id: deriveCircuitId(filename, usedCircuitIds),
           sourceFilename: filename,
           hasUnsavedChanges: false,
+          formatVersion: circuitData.version,
           openTab: false
         })
         circuit.components = circuitData.components || []
@@ -1207,6 +1233,7 @@ function resolveFilenameReferences() {
           circuit.properties = circuit.properties || {}
           circuit.properties.interface = circuitData.interface
         }
+        applyAppearance(circuit, circuitData)
         circuitManager.saveCircuitAsComponent(circuit.id)
       } catch (err) {
         // An old-format file fails the whole open, loudly.

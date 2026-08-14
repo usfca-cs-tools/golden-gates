@@ -7,10 +7,16 @@
         {{ formattedValue }}
       </text>
 
-      <!-- Label -->
-      <text x="-10" y="5" text-anchor="end" font-size="14" class="component-label">
-        {{ label }}
-      </text>
+      <!-- Label ("_" renders the tail as a subscript, e.g. IW_0) -->
+      <text x="-10" y="5" text-anchor="end" font-size="14" class="component-label"
+        ><tspan
+          v-for="(part, i) in subscriptParts(label)"
+          :key="i"
+          :font-size="part.subscript ? '0.72em' : null"
+          :dy="part.drop ? '0.22em' : null"
+          >{{ part.text }}</tspan
+        ></text
+      >
 
       <!-- Input square (larger by 5px, offset left so output point is on right edge) -->
       <rect
@@ -44,6 +50,7 @@
 import { defineComponent } from 'vue'
 import { useComponentView, draggableProps } from '../composables/useComponentView'
 import { COLORS, CONNECTION_DOT_RADIUS, GRID_SIZE } from '../utils/constants'
+import { subscriptParts } from '../utils/labelFormat'
 
 export default defineComponent({
   name: 'InputNode',
@@ -70,7 +77,13 @@ export default defineComponent({
 
       // Format value based on base
       if (this.base === 16) {
-        return '0x' + val.toString(16).padStart(Math.ceil(this.bits / 4), '0').toUpperCase()
+        return (
+          '0x' +
+          val
+            .toString(16)
+            .padStart(Math.ceil(this.bits / 4), '0')
+            .toUpperCase()
+        )
       } else if (this.base === 2) {
         return '0b' + val.toString(2).padStart(this.bits, '0')
       } else {
@@ -88,6 +101,7 @@ export default defineComponent({
       strokeColor,
       strokeWidth,
       componentClasses,
+      subscriptParts,
       COLORS,
       CONNECTION_DOT_RADIUS,
       GRID_SIZE
