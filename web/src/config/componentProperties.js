@@ -88,6 +88,12 @@ export const componentPropertySchema = {
         label: 'Base',
         default: 10
       },
+      {
+        name: 'color',
+        type: 'color',
+        label: 'Color',
+        default: null
+      },
       commonProperties.rotation
     ]
   },

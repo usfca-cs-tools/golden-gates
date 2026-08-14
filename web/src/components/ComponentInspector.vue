@@ -117,6 +117,14 @@
             class="property-input"
           />
 
+          <!-- Color picker (e.g. LED color) -->
+          <ColorPicker
+            v-else-if="prop.type === 'color'"
+            :modelValue="getPropValue(prop.name, prop.default)"
+            @update:modelValue="updateProp(prop.name, $event)"
+            format="hex"
+          />
+
           <!-- Number input -->
           <MultibaseNumberInput
             v-else-if="

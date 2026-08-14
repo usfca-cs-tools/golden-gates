@@ -125,6 +125,7 @@ export const componentRegistry = {
       value: 0,
       bits: 1,
       base: 10,
+      color: null,
       rotation: 0
     },
     dimensions: {

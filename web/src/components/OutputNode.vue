@@ -17,7 +17,7 @@
         :cx="(GRID_SIZE + 5) / 2"
         cy="0"
         :r="(GRID_SIZE + 5) / 2"
-        :fill="fillColor"
+        :fill="outputFill"
         :stroke="strokeColor"
         :stroke-width="strokeWidth"
         :class="componentClasses"
@@ -66,11 +66,23 @@ export default defineComponent({
     value: { type: [Number, String], default: 0 },
     base: { type: Number, default: 10 },
     bits: { type: Number, default: 1 },
+    // ColorPicker stores bare hex without '#' (e.g. "ef4444"). null = theme default.
+    color: { type: String, default: null },
     rotation: { type: Number, default: 0 },
     lastUpdate: { type: Number, default: 0 }
   },
   emits: ['startDrag'],
   computed: {
+    // Resting fill with user-defined color support. Error/warning/step/selected states still
+    // take priority so status indicators remain legible regardless of the chosen color.
+    outputFill() {
+      if (this.hasError)   return COLORS.componentErrorFill
+      if (this.hasWarning) return COLORS.componentWarningFill
+      if (this.stepActive) return COLORS.componentStepFill
+      if (this.selected)   return COLORS.componentSelectedFill
+      if (this.color)      return '#' + String(this.color).replace(/^#/, '')
+      return COLORS.componentFill
+    },
     formattedValue() {
       // Values arrive from the engine as strings (exact 64-bit); parse with BigInt so a value
       // above 2**53 formats correctly. Guard against a bad value rather than throwing.
