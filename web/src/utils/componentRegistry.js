@@ -1111,12 +1111,13 @@ export const componentRegistry = {
         outputs.sort(byPosition)
       }
 
-      // Manual width (a per-definition appearance override) moves the right edge, and with it the
-      // output ports; height is a render-only concern (see SchematicComponent) so ports never shift
-      // with it. Absent/auto → the layout's default 6 grid units.
+      // Manual width/height (per-definition appearance overrides): width carries the right-edge
+      // outputs, height carries the bottom edge (and its ports). Both must match what
+      // SchematicComponent passes so the serialized coordinates equal the rendered ones.
       const appearance = circuit.properties || {}
-      const forcedWidth =
-        appearance.sizeMode === 'manual' && appearance.width > 0 ? appearance.width : 0
+      const manual = appearance.sizeMode === 'manual'
+      const forcedWidth = manual && appearance.width > 0 ? appearance.width : 0
+      const forcedHeight = manual && appearance.height > 0 ? appearance.height : 0
 
       // One shared layout (used verbatim by SchematicComponent) places each port on its edge and
       // spreads multiple ports that share a horizontal edge left-to-right instead of stacking them.
@@ -1124,7 +1125,8 @@ export const componentRegistry = {
         inputs,
         outputs,
         {
-          forcedWidth
+          forcedWidth,
+          forcedHeight
         }
       )
 

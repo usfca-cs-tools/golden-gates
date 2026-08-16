@@ -221,30 +221,26 @@ export default {
 
     // Shared geometry: box size + every port's connection point in grid units, IDENTICAL to what
     // componentRegistry.getConnections serializes — so the rendered dots sit exactly on the
-    // coordinates wires are matched against. Manual width feeds the layout (it carries the output
-    // ports on the right edge); manual height only stretches the frame below (see componentBounds).
+    // coordinates wires are matched against. Manual width/height feed the layout: width carries the
+    // right-edge outputs, height carries the bottom edge and grows the frame.
     const portLayout = computed(() => {
       const a = appearance.value
-      const forcedWidth = a.sizeMode === 'manual' && a.width > 0 ? a.width : 0
+      const manual = a.sizeMode === 'manual'
       return computeSubcircuitLayout(
         circuitInterface.value?.inputs || [],
         circuitInterface.value?.outputs || [],
-        { forcedWidth }
+        {
+          forcedWidth: manual && a.width > 0 ? a.width : 0,
+          forcedHeight: manual && a.height > 0 ? a.height : 0
+        }
       )
     })
 
-    // The visible frame. Width comes from the layout (default 6, manual width, or wide enough for
-    // top/bottom ports); manual height only grows the frame downward, clamped to the port span so
-    // ports never spill.
+    // The visible frame is exactly the layout's box (the layout folds in manual width/height and
+    // clamps height to the port span so ports never spill).
     const componentBounds = computed(() => {
-      const a = appearance.value
       const { width, height } = portLayout.value
-      const portSpan = height * GRID_SIZE
-      const frameHeight =
-        a.sizeMode === 'manual' && a.height > 0
-          ? Math.max(a.height * GRID_SIZE, portSpan)
-          : portSpan
-      return { x: 0, y: 0, width: width * GRID_SIZE, height: frameHeight }
+      return { x: 0, y: 0, width: width * GRID_SIZE, height: height * GRID_SIZE }
     })
 
     const labelPosition = computed(() => {

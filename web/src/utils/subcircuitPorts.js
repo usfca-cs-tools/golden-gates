@@ -18,16 +18,26 @@ import { PORT_PITCH } from './constants'
  *
  * @param {Array<{rotation?: number}>} inputs  input ports, in display order
  * @param {Array<{rotation?: number}>} outputs output ports, in display order
- * @param {{forcedWidth?: number}} [opts] forcedWidth overrides the default 6-grid-unit width
+ * @param {{forcedWidth?: number, forcedHeight?: number}} [opts] manual width/height overrides
+ *   (grid units); forcedWidth carries the right-edge outputs, forcedHeight carries the bottom edge.
  * @returns {{ width: number, height: number,
  *             inputPoints: Array<{x:number,y:number}>, outputPoints: Array<{x:number,y:number}> }}
  */
-export function computeSubcircuitLayout(inputs, outputs, { forcedWidth = 0 } = {}) {
+export function computeSubcircuitLayout(
+  inputs,
+  outputs,
+  { forcedWidth = 0, forcedHeight = 0 } = {}
+) {
   const inCount = inputs.length
   const outCount = outputs.length
-  // Height is driven by the port count (unchanged formula), so the box and its centered ports keep
-  // their exact positions for every circuit that predates edge-aware layout.
-  const height = Math.max(4, (Math.max(inCount, outCount, 1) - 1) * PORT_PITCH + 2)
+  // The span the LEFT/RIGHT ports lay out against — driven by port count, never the manual height,
+  // so side ports keep their positions when the frame is resized (a uniform-height register stays
+  // wired). The FRAME (and the bottom edge) can grow past it via a manual height.
+  const portSpan = Math.max(4, (Math.max(inCount, outCount, 1) - 1) * PORT_PITCH + 2)
+  // Box height = the port span, grown to the manual height when that's larger. Bottom-edge ports
+  // track this (they sit ON the bottom edge), so raising the height moves them down with the frame
+  // — the top/bottom labels then have room and stop overprinting.
+  const height = Math.max(portSpan, forcedHeight || 0)
 
   // Number the ports that share a horizontal edge (across both roles) so they spread left-to-right.
   const tagged = [
@@ -54,8 +64,10 @@ export function computeSubcircuitLayout(inputs, outputs, { forcedWidth = 0 } = {
 
   const point = (isInput, i, rotation) => {
     const edge = portEdge(isInput, rotation)
-    if (edge === 'left') return { x: 0, y: along(isInput ? inCount : outCount, i, height) }
-    if (edge === 'right') return { x: width, y: along(isInput ? inCount : outCount, i, height) }
+    // Side ports spread over the port span (stay put on resize); top is the top edge, bottom is the
+    // frame's bottom edge (tracks a manual height).
+    if (edge === 'left') return { x: 0, y: along(isInput ? inCount : outCount, i, portSpan) }
+    if (edge === 'right') return { x: width, y: along(isInput ? inCount : outCount, i, portSpan) }
     const h = horiz.get(`${isInput}:${i}`)
     return { x: along(h.count, h.idx, width), y: edge === 'top' ? 0 : height }
   }

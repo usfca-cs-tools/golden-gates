@@ -614,7 +614,7 @@ export const componentPropertySchema = {
         type: 'number',
         default: 4,
         min: 4,
-        help: 'Grows the frame only; ports stay put. Use to give related blocks a uniform height.',
+        help: 'Grows the frame; bottom-edge ports track it, side ports stay put. Gives top/bottom labels room and lets related blocks share a height.',
         hiddenWhen: props => props.sizeMode !== 'manual'
       }
     ],

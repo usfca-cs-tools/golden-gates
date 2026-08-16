@@ -70,4 +70,26 @@ describe('computeSubcircuitLayout', () => {
     expect(width).toBe(10)
     expect(outputPoints[0].x).toBe(10)
   })
+
+  it('manual height: the bottom-edge port tracks the new height, side ports stay put', () => {
+    // adder-1-bit shape: A,B left; SUM right; CIN top; COUT bottom. Raise the height to 6.
+    const { height, inputPoints, outputPoints } = computeSubcircuitLayout(
+      [inp(0), inp(0), inp(90)], // A, B (left), CIN (top)
+      [inp(0), inp(90)], // SUM (right), COUT (bottom)
+      { forcedHeight: 6 }
+    )
+    expect(height).toBe(6) // frame grew
+    expect(inputPoints[0]).toEqual({ x: 0, y: 1 }) // A: unchanged
+    expect(inputPoints[1]).toEqual({ x: 0, y: 2 }) // B: unchanged
+    expect(inputPoints[2]).toEqual({ x: 3, y: 0 }) // CIN: top edge, unchanged
+    expect(outputPoints[0]).toEqual({ x: 6, y: 1 }) // SUM: right edge, role-index anchored — stays put
+    expect(outputPoints[1]).toEqual({ x: 3, y: 6 }) // COUT: bottom edge — tracks the new height
+  })
+
+  it('manual height smaller than the port span is clamped up (ports never spill)', () => {
+    const { height } = computeSubcircuitLayout([inp(0), inp(0), inp(0), inp(0)], [], {
+      forcedHeight: 3
+    })
+    expect(height).toBe(5) // 4 ports need (4-1)+2 = 5; 3 is ignored
+  })
 })
