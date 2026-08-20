@@ -1,25 +1,40 @@
 import { PORT_PITCH } from './constants'
 
+// Grid units kept clear at each corner so ports never sit right on the frame edge.
+const EDGE_MARGIN = 1
+
+// Minimum spacing for top/bottom ports. Their labels read rotated (down into the box), so adjacent
+// labels compete for horizontal room by their ~constant font thickness rather than the (compact)
+// PORT_PITCH used for the left/right edges' horizontal labels. Two grid units keeps rotated labels
+// like CLK / CLR / EN from over-printing each other.
+const LABEL_PITCH = 2
+
+// Grid units reserved at a horizontal edge that has more than one port, so the corner ports'
+// rotated labels (which read into the box) don't cross the horizontal labels of the first/last
+// left/right ports. Sized to clear a short control-signal name (CLK, EN, CLR); tune up if longer
+// top/bottom labels are common.
+const LABEL_BAND = 2
+
 /**
  * Geometry for a subcircuit rendered as a component box: the grid-unit size of the box and the
  * connection point of every input/output port. Shared by componentRegistry.getConnections (which
  * serializes these coordinates) and SchematicComponent (which renders them), so the two can never
  * drift — a wire endpoint always lands exactly on the port it targets.
  *
- * Ports sit on the box edge their rotation points them at. Ports on a VERTICAL edge (left/right)
- * spread top-to-bottom; ports on a HORIZONTAL edge (top/bottom) spread left-to-right. Previously
- * every rotated (top/bottom) port was pinned to the edge's center, so two of them collapsed onto a
- * single vertex — this lays them out on their own grid vertices instead.
+ * Ports sit on the box edge their rotation points them at, and each edge's ports are spread EVENLY
+ * and CENTERED over the box's span in that direction: left/right edges over the box HEIGHT,
+ * top/bottom edges over the box WIDTH. A lone port sits at the center of its edge; several fill the
+ * span with equal integer gaps and symmetric margins. This replaces the old top/left-anchored
+ * packing, which left the ports clustered at the top of a manually-tall frame (e.g. a pipeline
+ * register drawn tall to show stages) with the rest of the edge empty.
  *
- * To stay byte-compatible with existing circuits (whose rotated ports are always alone on an edge),
- * the vertical spread is unchanged: it uses the port's ROLE index and centers a port when its role
- * has exactly one — so a lone output stays centered on the right edge, never shifting a saved wire.
- * Only a HORIZONTAL edge with more than one port changes behavior.
+ * Every point is snapped to an integer grid vertex — a fractional port is unreachable by the
+ * integer-only wire snap.
  *
  * @param {Array<{rotation?: number}>} inputs  input ports, in display order
  * @param {Array<{rotation?: number}>} outputs output ports, in display order
  * @param {{forcedWidth?: number, forcedHeight?: number}} [opts] manual width/height overrides
- *   (grid units); forcedWidth carries the right-edge outputs, forcedHeight carries the bottom edge.
+ *   (grid units); the ports on each edge spread to fill the resulting box.
  * @returns {{ width: number, height: number,
  *             inputPoints: Array<{x:number,y:number}>, outputPoints: Array<{x:number,y:number}> }}
  */
@@ -28,56 +43,81 @@ export function computeSubcircuitLayout(
   outputs,
   { forcedWidth = 0, forcedHeight = 0 } = {}
 ) {
-  const inCount = inputs.length
-  const outCount = outputs.length
-  // The span the LEFT/RIGHT ports lay out against — driven by port count, never the manual height,
-  // so side ports keep their positions when the frame is resized (a uniform-height register stays
-  // wired). The FRAME (and the bottom edge) can grow past it via a manual height.
-  const portSpan = Math.max(4, (Math.max(inCount, outCount, 1) - 1) * PORT_PITCH + 2)
-  // Box height = the port span, grown to the manual height when that's larger. Bottom-edge ports
-  // track this (they sit ON the bottom edge), so raising the height moves them down with the frame
-  // — the top/bottom labels then have room and stop overprinting.
-  const height = Math.max(portSpan, forcedHeight || 0)
-
-  // Number the ports that share a horizontal edge (across both roles) so they spread left-to-right.
+  // Tag every port with the edge its rotation lands it on, preserving per-role declaration order.
   const tagged = [
     ...inputs.map((p, i) => ({ isInput: true, i, edge: portEdge(true, p.rotation) })),
     ...outputs.map((p, i) => ({ isInput: false, i, edge: portEdge(false, p.rotation) }))
   ]
-  const horiz = new Map() // `${isInput}:${i}` -> { idx, count } within its top/bottom edge
-  for (const e of ['top', 'bottom']) {
-    const members = tagged.filter(t => t.edge === e)
-    members.forEach((t, idx) => horiz.set(`${t.isInput}:${t.i}`, { idx, count: members.length }))
-  }
-  const hMax = Math.max(
-    tagged.filter(t => t.edge === 'top').length,
-    tagged.filter(t => t.edge === 'bottom').length
+  const onEdge = e => tagged.filter(t => t.edge === e)
+  const left = onEdge('left')
+  const right = onEdge('right')
+  const top = onEdge('top')
+  const bottom = onEdge('bottom')
+
+  // With more than one port on a horizontal edge, the outermost ones land in the corners, where
+  // their rotated labels read down (top) or up (bottom) across the corner side-port's horizontal
+  // label. Reserve a band at that edge and keep the left/right ports out of it, so the first/last
+  // side port clears the corner label. A lone top/bottom port stays centered, far from the corners,
+  // and needs no band — so small boxes (e.g. a 1-bit adder's centered CIN/COUT) are untouched.
+  const topBand = top.length > 1 ? LABEL_BAND : 0
+  const bottomBand = bottom.length > 1 ? LABEL_BAND : 0
+
+  // The box must be tall enough for the busiest vertical edge (plus any reserved bands) and wide
+  // enough for the busiest horizontal edge; a manual width or height grows it further, and the
+  // ports then spread to fill the larger frame.
+  const vCount = Math.max(left.length, right.length, 1)
+  const hCount = Math.max(top.length, bottom.length, 1)
+  const autoHeight = Math.max(
+    4,
+    (vCount - 1) * PORT_PITCH + 2 * EDGE_MARGIN + topBand + bottomBand
   )
-  const base = forcedWidth > 0 ? forcedWidth : 6
-  // Only widen past the default when a horizontal edge genuinely needs the room (>1 port); a single
-  // top/bottom port (every existing circuit) leaves the width — and thus the right-edge outputs —
-  // untouched.
-  const width = Math.max(base, hMax > 1 ? (hMax - 1) * PORT_PITCH + 2 : 0)
+  const autoWidth = Math.max(6, hCount > 1 ? (hCount - 1) * LABEL_PITCH + 2 * EDGE_MARGIN : 0)
+  const height = Math.max(autoHeight, forcedHeight || 0)
+  const width = Math.max(autoWidth, forcedWidth || 0)
 
-  // One port on an edge → centered on it; several → 1-unit margin then PORT_PITCH apart.
-  const along = (count, i, span) => Math.round(count === 1 ? span / 2 : 1 + i * PORT_PITCH)
-
-  const point = (isInput, i, rotation) => {
-    const edge = portEdge(isInput, rotation)
-    // Side ports spread over the port span (stay put on resize); top is the top edge, bottom is the
-    // frame's bottom edge (tracks a manual height).
-    if (edge === 'left') return { x: 0, y: along(isInput ? inCount : outCount, i, portSpan) }
-    if (edge === 'right') return { x: width, y: along(isInput ? inCount : outCount, i, portSpan) }
-    const h = horiz.get(`${isInput}:${i}`)
-    return { x: along(h.count, h.idx, width), y: edge === 'top' ? 0 : height }
+  const coordFor = new Map() // `${isInput}:${i}` -> {x, y}
+  const assign = (members, edge) => {
+    const vertical = edge === 'left' || edge === 'right'
+    if (vertical) {
+      // Side ports fill the height between the reserved top/bottom label bands, at PORT_PITCH.
+      const lo = topBand
+      const pos = placeEvenly(members.length, height - topBand - bottomBand, PORT_PITCH)
+      members.forEach((t, k) => {
+        const y = pos[k] + lo
+        coordFor.set(`${t.isInput}:${t.i}`, edge === 'left' ? { x: 0, y } : { x: width, y })
+      })
+      return
+    }
+    // Top/bottom labels read rotated and need the wider LABEL_PITCH so they don't over-print.
+    const pos = placeEvenly(members.length, width, LABEL_PITCH)
+    members.forEach((t, k) => {
+      const x = pos[k]
+      coordFor.set(`${t.isInput}:${t.i}`, edge === 'top' ? { x, y: 0 } : { x, y: height })
+    })
   }
+  assign(left, 'left')
+  assign(right, 'right')
+  assign(top, 'top')
+  assign(bottom, 'bottom')
 
   return {
     width,
     height,
-    inputPoints: inputs.map((p, i) => point(true, i, p.rotation)),
-    outputPoints: outputs.map((p, i) => point(false, i, p.rotation))
+    inputPoints: inputs.map((_, i) => coordFor.get(`true:${i}`)),
+    outputPoints: outputs.map((_, i) => coordFor.get(`false:${i}`))
   }
+}
+
+// Place `count` ports evenly and centered along an edge of `len` grid units, snapped to integer
+// vertices. One port sits at the center; several share equal integer gaps (at least `minPitch`)
+// with symmetric margins, filling as much of the edge as integer spacing allows.
+function placeEvenly(count, len, minPitch = PORT_PITCH) {
+  if (count <= 0) return []
+  if (count === 1) return [Math.round(len / 2)]
+  const pitch = Math.max(minPitch, Math.floor((len - 2 * EDGE_MARGIN) / (count - 1)))
+  const span = pitch * (count - 1)
+  const start = Math.round((len - span) / 2)
+  return Array.from({ length: count }, (_, i) => start + i * pitch)
 }
 
 // Which box edge a port lands on, given its role and rotation. Matches the rotation remapping that

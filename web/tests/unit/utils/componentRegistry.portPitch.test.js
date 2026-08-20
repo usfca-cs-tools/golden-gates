@@ -26,10 +26,12 @@ describe('subcircuit port pitch', () => {
   const circuitManager = { getCircuit: () => childCircuit }
   const sub = componentRegistry['schematic-component']
 
-  it('spaces ports PORT_PITCH grid units apart, starting 1 from the top', () => {
+  it('spreads each edge evenly and centered over the box height', () => {
     const { inputs, outputs } = sub.getConnections({ circuitId: 'child' }, circuitManager)
-    expect(inputs.map(p => p.y)).toEqual([1, 2, 3, 4]) // 1 + index * PORT_PITCH
-    expect(outputs.map(p => p.y)).toEqual([1, 2])
+    // 4 inputs pack the left edge at PORT_PITCH (height is sized to them: (4-1)+2 = 5)
+    expect(inputs.map(p => p.y)).toEqual([1, 2, 3, 4])
+    // 2 outputs spread to fill that same height rather than clustering at the top
+    expect(outputs.map(p => p.y)).toEqual([1, 4])
     // inputs on the left edge, outputs on the right (6-wide body)
     expect(inputs.every(p => p.x === 0)).toBe(true)
     expect(outputs.every(p => p.x === 6)).toBe(true)
