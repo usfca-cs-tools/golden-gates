@@ -194,7 +194,7 @@
 </template>
 
 <script>
-import { ref, computed, onMounted, onUnmounted, watch, getCurrentInstance } from 'vue'
+import { ref, computed, onMounted, onUnmounted, watch, nextTick, getCurrentInstance } from 'vue'
 
 // Simple debounce utility
 function debounce(func, wait) {
@@ -846,6 +846,64 @@ export default {
         })
       }
     })
+
+    // Per-circuit viewport memory. The scroll position, zoom, and pan are otherwise shared across
+    // every tab, so jumping from a large circuit (register file, decoder) to a small one strands the
+    // small circuit off-screen — it looks empty when it's just scrolled out of view. Each circuit
+    // now remembers its own viewport; a circuit visited for the first time is framed on its content.
+    const viewportByCircuit = new Map()
+
+    function captureViewport() {
+      if (!scrollContainer.value) return null
+      return {
+        scrollLeft: scrollContainer.value.scrollLeft,
+        scrollTop: scrollContainer.value.scrollTop,
+        zoom: zoom.value,
+        panX: panX.value,
+        panY: panY.value
+      }
+    }
+
+    function applyViewport(vp) {
+      zoom.value = vp.zoom
+      panX.value = vp.panX
+      panY.value = vp.panY
+      // Restore scroll after the DOM reflows to the incoming circuit's (possibly different) size.
+      nextTick(() => {
+        if (!scrollContainer.value) return
+        scrollContainer.value.scrollLeft = vp.scrollLeft
+        scrollContainer.value.scrollTop = vp.scrollTop
+      })
+    }
+
+    function frameContent() {
+      // First visit to a circuit: scroll so its content's top-left sits just inside the viewport,
+      // rather than inheriting the previous circuit's scroll and appearing blank.
+      nextTick(() => {
+        if (!scrollContainer.value) return
+        const comps = components.value
+        const minX = comps.length ? Math.min(...comps.map(c => c.x)) : 0
+        const minY = comps.length ? Math.min(...comps.map(c => c.y)) : 0
+        const margin = 40
+        scrollContainer.value.scrollLeft = Math.max(0, minX * gridSize.value * zoom.value - margin)
+        scrollContainer.value.scrollTop = Math.max(0, minY * gridSize.value * zoom.value - margin)
+      })
+    }
+
+    watch(
+      () => activeCircuit.value?.id,
+      (newId, oldId) => {
+        // The initial circuit is left to onMounted's restore (reopen-where-you-left-off); only
+        // remember/restore across an actual tab switch.
+        if (!oldId) return
+        const snapshot = captureViewport()
+        if (snapshot) viewportByCircuit.set(oldId, snapshot)
+        if (!newId) return
+        const saved = viewportByCircuit.get(newId)
+        if (saved) applyViewport(saved)
+        else frameContent()
+      }
+    )
 
     // Add wire directly (for loading from file)
     function addWire(wireData) {
