@@ -42,11 +42,10 @@
           />
 
           <!-- Body color (per-definition appearance) -->
-          <ColorPicker
+          <ColorField
             v-else-if="prop.type === 'color'"
             :modelValue="getCircuitValue(prop.name, prop.default)"
             @update:modelValue="updateCircuitValue(prop.name, $event)"
-            format="hex"
           />
 
           <!-- Dropdown (e.g. Auto/Manual size mode) -->
@@ -118,11 +117,10 @@
           />
 
           <!-- Color picker (e.g. LED color) -->
-          <ColorPicker
+          <ColorField
             v-else-if="prop.type === 'color'"
             :modelValue="getPropValue(prop.name, prop.default)"
             @update:modelValue="updateProp(prop.name, $event)"
-            format="hex"
           />
 
           <!-- Number input -->
@@ -245,7 +243,7 @@ import MemoryDataTable from './MemoryDataTable.vue'
 import Textarea from 'primevue/textarea'
 import Dropdown from 'primevue/dropdown'
 import Checkbox from 'primevue/checkbox'
-import ColorPicker from 'primevue/colorpicker'
+import ColorField from './ColorField.vue'
 
 export default {
   name: 'ComponentInspector',
@@ -261,7 +259,7 @@ export default {
     Textarea,
     Dropdown,
     Checkbox,
-    ColorPicker
+    ColorField
   },
   props: {
     component: {
