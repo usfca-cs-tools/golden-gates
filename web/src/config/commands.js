@@ -125,6 +125,13 @@ export const commandGroups = {
         params: ['output']
       },
       {
+        id: 'insert-probe',
+        labelKey: 'commands.insert.probe',
+        componentType: 'probe',
+        action: 'addComponent',
+        params: ['probe']
+      },
+      {
         id: 'insert-constant',
         labelKey: 'commands.insert.constant',
         componentType: 'constant',

@@ -98,6 +98,23 @@ export const componentPropertySchema = {
     ]
   },
 
+  // Probe node properties -- a diagnostic tap, so no color override (unlike Output,
+  // it isn't a circuit interface with a user-branded appearance)
+  probe: {
+    title: 'Probe Properties',
+    properties: [
+      { ...commonProperties.label, default: 'PROBE' },
+      commonProperties.bits,
+      {
+        name: 'base',
+        type: 'base-selector',
+        label: 'Base',
+        default: 10
+      },
+      commonProperties.rotation
+    ]
+  },
+
   // Constant node properties
   constant: {
     title: 'Constant Properties',

@@ -45,6 +45,7 @@ export function reorderInterfaceComponents(components, circuit) {
 // Static imports for all components
 import InputNode from '../components/InputNode.vue'
 import OutputNode from '../components/OutputNode.vue'
+import ProbeNode from '../components/ProbeNode.vue'
 import ConstantNode from '../components/ConstantNode.vue'
 import ClockNode from '../components/ClockNode.vue'
 import SplitterComponent from '../components/SplitterComponent.vue'
@@ -121,6 +122,10 @@ export const componentRegistry = {
     label: 'Add Output',
     icon: 'pi pi-circle-fill',
     category: 'io',
+    // Tags the types whose live simulation value the canvas should apply on a 'value'
+    // engine callback (see useAppController.handleValueUpdate) -- avoids a hardcoded
+    // per-type string check there.
+    showsSimulationValue: true,
     defaultProps: {
       value: 0,
       bits: 1,
@@ -152,6 +157,51 @@ export const componentRegistry = {
     // Special handling for output nodes
     onCreate: (instance, index) => {
       instance.props.label = String.fromCharCode(82 + index) // R, S, T, etc.
+    }
+  },
+
+  probe: {
+    component: ProbeNode,
+    label: 'Add Probe',
+    icon: 'pi pi-question-circle',
+    category: 'io',
+    // See the 'output' entry above -- same live-value wiring, but a Probe is purely a
+    // diagnostic tap: it is never registered as a circuit interface port (see
+    // ggl.io.Probe / ggl.view._component_expr on the engine side).
+    showsSimulationValue: true,
+    defaultProps: {
+      label: 'PROBE',
+      value: null,
+      bits: 1,
+      base: 10,
+      rotation: 0
+    },
+    dimensions: {
+      width: GRID_SIZE,
+      height: GRID_SIZE
+    },
+    // Visual bounds relative to the component's x,y position (mirrors 'output': room
+    // above for the value text, and to the right for the label).
+    bounds: {
+      x: -10,
+      y: -30,
+      width: GRID_SIZE + 20,
+      height: 45
+    },
+    // Visual center relative to the component's x,y position
+    center: {
+      x: GRID_SIZE / 2,
+      y: 0
+    },
+    connections: {
+      inputs: [
+        { name: '0', x: 0, y: 0 } // At component origin (already in grid units)
+      ]
+    },
+    // Give each new probe a unique label: PROBE0, PROBE1, ... (parity with the other
+    // io.* entries' onCreate; see useComponentController for which types actually call it).
+    onCreate: (instance, index) => {
+      instance.props.label = `PROBE${index}`
     }
   },
 

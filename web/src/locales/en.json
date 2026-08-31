@@ -178,6 +178,7 @@
       "xnorGate": "Xnor Gate",
       "input": "Input",
       "output": "Output",
+      "probe": "Probe",
       "constant": "Constant",
       "clock": "Clock",
       "test": "Test",

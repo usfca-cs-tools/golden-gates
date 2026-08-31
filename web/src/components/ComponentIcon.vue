@@ -131,6 +131,31 @@
       </text>
     </template>
 
+    <!-- Probe: a circle with a question mark, matching the on-canvas ProbeNode glyph
+         before it has a live value. Uses a square (30x30) viewBox like Test's badge. -->
+    <template v-else-if="componentType === 'probe'">
+      <circle
+        cx="15"
+        cy="15"
+        r="13"
+        fill="none"
+        :stroke="color"
+        :stroke-width="strokeWidth"
+      />
+      <text
+        x="15"
+        y="15"
+        text-anchor="middle"
+        dominant-baseline="central"
+        font-size="18"
+        font-weight="bold"
+        class="component-icon-text"
+        :fill="color"
+      >
+        ?
+      </text>
+    </template>
+
     <!-- Test: a circle with a checkmark, matching the on-canvas status badge.
          Uses a square (30x30) viewBox so it fills the icon like the others. -->
     <template v-else-if="componentType === 'test'">
@@ -429,6 +454,8 @@ export default {
         return '0 0 75 30' // Standard XOR width
       } else if (this.componentType === 'test') {
         return '0 0 30 30' // Square so the circle+check fills the icon
+      } else if (this.componentType === 'probe') {
+        return '0 0 30 30' // Square so the circle+? fills the icon
       } else if (this.componentType === 'tunnel') {
         return '0 0 30 30' // Square so the triangle fills the icon
       }

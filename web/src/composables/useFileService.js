@@ -32,7 +32,7 @@ function buildCircuitData(
   const stripTransient = component => {
     const { js_id, ...componentWithoutJsId } = component || {}
     const ports = computeComponentPorts(component, circuitManager)
-    const isIO = component.type === 'input' || component.type === 'output'
+    const isIO = ['input', 'output', 'probe'].includes(component.type)
     if (isIO && !keepInputValues) {
       const { value, lastUpdate, ...propsWithoutTransient } = component.props || {}
       return { ...componentWithoutJsId, props: propsWithoutTransient, ports }

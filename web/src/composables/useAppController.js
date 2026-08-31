@@ -2,6 +2,7 @@ import { ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useFileService } from './useFileService'
 import { usePythonEngine } from './usePythonEngine'
+import { componentRegistry } from '../utils/componentRegistry'
 
 // Errors whose message is already a full, self-contained sentence (naming the circuit, the
 // port, and the fix). The notification shows these verbatim rather than wrapping them in the
@@ -370,18 +371,20 @@ export function useAppController(circuitManager) {
    * Handle value update events
    */
   function handleValueUpdate(canvasRef, component, value) {
-    if (component.type === 'output') {
-      // Create a new component object with updated timestamp to force animation
-      const updatedComponent = {
-        ...component,
-        props: {
-          ...component.props,
-          value: value,
-          lastUpdate: Date.now()
-        }
+    // Any component that opts in via the registry (currently Output and Probe) gets the
+    // live value + a fresh timestamp to trigger its update animation. Driven by the
+    // registry rather than a hardcoded type check here (see componentRegistry.js).
+    if (!componentRegistry[component.type]?.showsSimulationValue) return
+
+    const updatedComponent = {
+      ...component,
+      props: {
+        ...component.props,
+        value: value,
+        lastUpdate: Date.now()
       }
-      canvasRef.updateComponent(updatedComponent, { transient: true })
     }
+    canvasRef.updateComponent(updatedComponent, { transient: true })
   }
 
   /**
