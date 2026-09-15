@@ -45,40 +45,85 @@ export function useDragController(
   }
 
   // Classify each wire against the moving-port set. Records only the wires that move.
+  //
+  // A wire endpoint sitting on a component port is an obvious anchor. But a branch wire tapped
+  // off a T-junction (see useWireController's startWireFromJunction / completeWireAtJunction) has
+  // one endpoint that sits on a JUNCTION instead -- a point on another wire's middle, not a port.
+  // That junction is a real, permanent connection: wireJunctions already records exactly which
+  // wire it taps and where. So once we know the host wire is itself moving rigidly, its junction
+  // point is just as much a moving anchor as a port is. We grow the anchor set with junction
+  // points that land on a currently-rigid wire and re-classify, repeating until nothing new is
+  // found -- so a branch tapped off another branch resolves too, not just one level deep.
   function classifyWires(movingPortSet) {
-    const records = []
-    wires.value.forEach((wire, index) => {
+    const movingAnchors = new Map(movingPortSet)
+    const records = new Map()
+
+    const evaluate = (wire, index) => {
       const pts = wire.points
-      if (!pts || pts.length === 0) return
-      const anchorStart = movingPortSet.get(keyOf(pts[0].x, pts[0].y)) || null
+      if (!pts || pts.length === 0) return null
+      const anchorStart = movingAnchors.get(keyOf(pts[0].x, pts[0].y)) || null
       const anchorEnd =
-        movingPortSet.get(keyOf(pts[pts.length - 1].x, pts[pts.length - 1].y)) || null
+        movingAnchors.get(keyOf(pts[pts.length - 1].x, pts[pts.length - 1].y)) || null
       const selected = selectedWires.value.has(index)
 
       let moveType
       if (anchorStart && anchorEnd)
-        moveType = 'rigid' // both ends on moving ports -> translate
+        moveType = 'rigid' // both ends on moving anchors -> translate
       else if (anchorStart) moveType = 'stretchStart'
       else if (anchorEnd) moveType = 'stretchEnd'
       else if (selected)
         moveType = 'rigid' // explicitly selected but unanchored -> translate (as before)
-      else return // untouched
+      else return null // untouched
 
-      records.push({
+      return {
         index,
         initialPoints: pts.map(p => ({ x: p.x, y: p.y })),
         moveType,
         anchorStart,
         anchorEnd
-      })
+      }
+    }
+
+    wires.value.forEach((wire, index) => {
+      const rec = evaluate(wire, index)
+      if (rec) records.set(index, rec)
     })
-    return records
+
+    if (wireJunctions && wireJunctions.value) {
+      let grew = true
+      while (grew) {
+        grew = false
+        const rigidPolylines = Array.from(records.values())
+          .filter(r => r.moveType === 'rigid')
+          .map(r => r.initialPoints)
+
+        for (const junction of wireJunctions.value) {
+          const key = keyOf(junction.pos.x, junction.pos.y)
+          if (movingAnchors.has(key)) continue
+          if (rigidPolylines.some(poly => pointOnPolyline(poly, junction.pos))) {
+            movingAnchors.set(key, { junction: true })
+            grew = true
+          }
+        }
+        if (!grew) break
+
+        wires.value.forEach((wire, index) => {
+          const rec = evaluate(wire, index)
+          if (rec) records.set(index, rec)
+        })
+      }
+    }
+
+    return Array.from(records.values())
   }
 
   // Which junctions ride along with a set of rigidly-translated wires. Resolve by geometry (the
   // junction sits on the wire it taps) plus the stable connectedWireId — NOT the serialized
-  // sourceWireIndex, a positional index that goes stale. (Junctions on STRETCHED wires are
-  // best-effort and not carried — a documented limitation.)
+  // sourceWireIndex, a positional index that goes stale. (classifyWires above now folds a riding
+  // junction's tap point into the moving-anchor set, so the branch wire started from it is
+  // reclassified as rigid too, instead of being left stretched from a stale point. Junctions on a
+  // wire that itself only STRETCHES -- e.g. a partial-selection drag that re-routes the host wire
+  // instead of translating it -- are still best-effort and not carried.)
   function collectRidingJunctions(rigidRecords) {
     const result = []
     if (!wireJunctions || !wireJunctions.value) return result

@@ -404,4 +404,83 @@ describe('useDragController - connected drag (wires follow ports)', () => {
 
     expect(wires.value[1].points).toEqual([{ x: 20, y: 20 }, { x: 24, y: 20 }])
   })
+
+  it('a branch wire tapped from a T-junction moves rigidly with the whole circuit', () => {
+    // C taps off wire w's midpoint (6,2) and runs down to its own port at (6,6) -- the
+    // fan-out shape from the bug report (rs1/rs2/iw, etc.): a branch wire whose one endpoint
+    // is a junction on another wire, not a component port.
+    components.value.push({
+      id: 'C',
+      x: 6,
+      y: 6,
+      testPorts: [{ name: '0', x: 0, y: 0, direction: 'input' }]
+    })
+    wires.value.push({
+      id: 'branch',
+      points: [{ x: 6, y: 2 }, { x: 6, y: 6 }],
+      startConnection: { pos: { x: 6, y: 2 } },
+      endConnection: { pos: { x: 6, y: 6 } }
+    })
+    wireJunctions.value.push({ pos: { x: 6, y: 2 }, connectedWireId: 'branch', sourceWireIndex: 0 })
+
+    // Select the whole circuit (A, B, and the tapped-off C) and drag it, same delta (0,3) the
+    // other tests in this file use.
+    selectedComponents.value.add('A')
+    selectedComponents.value.add('B')
+    selectedComponents.value.add('C')
+    dragController.startDrag({ id: 'A', offsetX: 0, offsetY: 0, event: {} })
+    dragController.updateDrag({ x: 40, y: 100 })
+    dragController.endDrag()
+
+    // Host wire translates...
+    expect(wires.value[0].points).toEqual([{ x: 3, y: 5 }, { x: 10, y: 5 }])
+    // ...the junction dot rides with it...
+    expect(wireJunctions.value[0].pos).toEqual({ x: 6, y: 5 })
+    // ...and the branch wire follows the junction instead of being left behind at (6,2).
+    expect(wires.value[1].points).toEqual([{ x: 6, y: 5 }, { x: 6, y: 9 }])
+    expect(components.value[2]).toMatchObject({ x: 6, y: 9 })
+  })
+
+  it('a branch tapped off ANOTHER branch also rides, resolving nested junctions', () => {
+    // branch1 taps w at (6,2) and runs to C's port at (6,6). branch2 then taps branch1 itself
+    // at (6,4) -- a junction on a wire that is not a direct port-to-port wire -- and runs to
+    // D's port at (9,4). This only resolves if junction-anchoring is applied repeatedly, not
+    // just once: branch1 doesn't become rigid until w is known rigid, and branch2 doesn't
+    // become rigid until branch1 is known rigid.
+    components.value.push(
+      { id: 'C', x: 6, y: 6, testPorts: [{ name: '0', x: 0, y: 0, direction: 'input' }] },
+      { id: 'D', x: 9, y: 4, testPorts: [{ name: '0', x: 0, y: 0, direction: 'input' }] }
+    )
+    wires.value.push(
+      {
+        id: 'branch1',
+        points: [{ x: 6, y: 2 }, { x: 6, y: 6 }],
+        startConnection: { pos: { x: 6, y: 2 } },
+        endConnection: { pos: { x: 6, y: 6 } }
+      },
+      {
+        id: 'branch2',
+        points: [{ x: 6, y: 4 }, { x: 9, y: 4 }],
+        startConnection: { pos: { x: 6, y: 4 } },
+        endConnection: { pos: { x: 9, y: 4 } }
+      }
+    )
+    wireJunctions.value.push(
+      { pos: { x: 6, y: 2 }, connectedWireId: 'branch1', sourceWireIndex: 0 }, // taps w (a port-to-port wire)
+      { pos: { x: 6, y: 4 }, connectedWireId: 'branch2', sourceWireIndex: 1 } // taps branch1 (not a port-to-port wire)
+    )
+
+    selectedComponents.value.add('A')
+    selectedComponents.value.add('B')
+    selectedComponents.value.add('C')
+    selectedComponents.value.add('D')
+    dragController.startDrag({ id: 'A', offsetX: 0, offsetY: 0, event: {} })
+    dragController.updateDrag({ x: 40, y: 100 })
+    dragController.endDrag()
+
+    expect(wires.value[1].points).toEqual([{ x: 6, y: 5 }, { x: 6, y: 9 }]) // branch1 rides
+    expect(wires.value[2].points).toEqual([{ x: 6, y: 7 }, { x: 9, y: 7 }]) // branch2 rides too
+    expect(wireJunctions.value[0].pos).toEqual({ x: 6, y: 5 })
+    expect(wireJunctions.value[1].pos).toEqual({ x: 6, y: 7 })
+  })
 })
