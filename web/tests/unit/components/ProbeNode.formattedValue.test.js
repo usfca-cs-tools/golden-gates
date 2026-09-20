@@ -26,4 +26,11 @@ describe('ProbeNode value display', () => {
       '0xFFFFFFFFFFFFFFFF'
     )
   })
+
+  it('reads a value as ASCII, Digital-style: the low byte as a quoted character', () => {
+    expect(formatted({ value: 65, base: 'ascii', bits: 8 })).toBe("'A'")
+    expect(formatted({ value: 97, base: 'ascii', bits: 8 })).toBe("'a'")
+    // Only the low byte -- matches Digital's minimal cast-to-char, no multi-byte decoding.
+    expect(formatted({ value: 321, base: 'ascii', bits: 16 })).toBe("'A'") // 321 & 0xFF === 65
+  })
 })

@@ -108,8 +108,9 @@ export const componentPropertySchema = {
       {
         name: 'base',
         type: 'base-selector',
-        label: 'Base',
-        default: 10
+        label: 'Number Format',
+        default: 10,
+        includeAscii: true
       },
       commonProperties.rotation
     ]

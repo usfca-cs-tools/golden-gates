@@ -145,10 +145,11 @@
             :showButtons="prop.showButtons !== false"
           />
 
-          <!-- Base selector -->
+          <!-- Base selector (Probe's schema entry sets includeAscii to also offer ASCII) -->
           <BaseSelector
             v-else-if="prop.type === 'base-selector'"
             :modelValue="getPropValue(prop.name, prop.default)"
+            :include-ascii="!!prop.includeAscii"
             @update:modelValue="updateProp(prop.name, $event)"
           />
 

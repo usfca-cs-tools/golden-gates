@@ -70,7 +70,8 @@ export default defineComponent({
     // circuit hasn't run yet). A string when it comes from the engine (exact 64-bit);
     // formattedValue parses with BigInt so a value above 2**53 still renders correctly.
     value: { type: [Number, String], default: null },
-    base: { type: Number, default: 10 },
+    // Number | 'ascii'. ASCII is Digital-style: the value's low byte as a quoted character.
+    base: { type: [Number, String], default: 10 },
     bits: { type: Number, default: 1 },
     rotation: { type: Number, default: 0 },
     lastUpdate: { type: Number, default: 0 }
@@ -87,9 +88,16 @@ export default defineComponent({
         return String(this.value)
       }
 
-      // A single-bit probe reads like Digital's: H(igh)/L(ow), not 1/0.
+      // A single-bit probe reads like Digital's: H(igh)/L(ow), not 1/0, regardless of the
+      // chosen number format.
       if (this.bits === 1) {
         return val === 0n ? 'L' : 'H'
+      }
+
+      // ASCII, Digital-style: the value's low byte as a single quoted character (no escaping
+      // of unprintable bytes -- matches Digital's own minimal ValueFormatterAscii).
+      if (this.base === 'ascii') {
+        return "'" + String.fromCharCode(Number(val & 0xffn)) + "'"
       }
 
       if (this.base === 16) {
