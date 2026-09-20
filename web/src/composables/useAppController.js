@@ -554,7 +554,12 @@ export function useAppController(circuitManager) {
         const circuitContext = errorData.circuit_name
           ? ` in circuit "${errorData.circuit_name}"`
           : ''
-        const componentDescription = `${errorData.component_type}${circuitContext}`
+        // A subcircuit instance (CircuitNode) has no canvas js_id, so it lands here rather than
+        // in the found-component path — still name it by its label (the subcircuit's definition,
+        // e.g. "branch-unit") so the message says which subcircuit's port is open, not a bare type.
+        const componentDescription = errorData.component_label
+          ? `${errorData.component_type} "${errorData.component_label}"${circuitContext}`
+          : `${errorData.component_type}${circuitContext}`
 
         // Build template variables from error data for i18n
         const templateVars = {
