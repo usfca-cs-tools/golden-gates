@@ -87,6 +87,13 @@
   fill: var(--color-component-hover-fill, #f0f0f0);
 }
 
+/* Probe's invisible click/drag target (see ProbeNode.vue) -- deliberately has no hover fill,
+   unlike .component-body, since a Probe has no visible body to shade. */
+.probe-hit-area {
+  cursor: move;
+  pointer-events: all;
+}
+
 /* Connection point styles - override inherited move cursor */
 .connection-point {
   cursor:
