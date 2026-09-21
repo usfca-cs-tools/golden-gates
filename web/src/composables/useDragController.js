@@ -6,6 +6,41 @@ import { pointOnPolyline, stretchWireEndpoint, normalizePolyline } from '../util
 // Grid coordinates are integers at rest; key a moving port / wire endpoint by rounded grid pos.
 const keyOf = (x, y) => `${Math.round(x)},${Math.round(y)}`
 
+// Nearest point on a polyline to p, snapped to the grid. Used as a last resort to keep a junction
+// on its host wire when a stretch reshaped the host out from under the tap — the tap must never
+// silently detach (that's the "connected on screen, open in the engine" bug we're fixing).
+function projectOntoPolyline(points, p) {
+  let best = points[0]
+  let bestD = Infinity
+  for (let i = 0; i < points.length - 1; i++) {
+    const a = points[i]
+    const b = points[i + 1]
+    const dx = b.x - a.x
+    const dy = b.y - a.y
+    const len2 = dx * dx + dy * dy
+    let t = len2 === 0 ? 0 : ((p.x - a.x) * dx + (p.y - a.y) * dy) / len2
+    t = Math.max(0, Math.min(1, t))
+    const q = { x: a.x + t * dx, y: a.y + t * dy }
+    const d = (q.x - p.x) ** 2 + (q.y - p.y) ** 2
+    if (d < bestD) {
+      bestD = d
+      best = q
+    }
+  }
+  return { x: Math.round(best.x), y: Math.round(best.y) }
+}
+
+// Where a junction that taps a STRETCHING host wire should sit after the stretch. stretchWireEndpoint
+// keeps the far portion of the host fixed and only reshapes the dragged end, so a tap on the fixed
+// portion stays put, while a tap on the moving portion slides with the drag. Fall back to projecting
+// onto the reshaped host so the junction is guaranteed to remain on the wire it taps.
+function relocateJunctionOnStretch(oldPts, newPts, initialPos, delta) {
+  if (pointOnPolyline(newPts, initialPos)) return { x: initialPos.x, y: initialPos.y }
+  const shifted = { x: initialPos.x + delta.x, y: initialPos.y + delta.y }
+  if (pointOnPolyline(newPts, shifted)) return shifted
+  return projectOntoPolyline(newPts, initialPos)
+}
+
 export function useDragController(
   components,
   wires,
@@ -121,9 +156,8 @@ export function useDragController(
   // junction sits on the wire it taps) plus the stable connectedWireId — NOT the serialized
   // sourceWireIndex, a positional index that goes stale. (classifyWires above now folds a riding
   // junction's tap point into the moving-anchor set, so the branch wire started from it is
-  // reclassified as rigid too, instead of being left stretched from a stale point. Junctions on a
-  // wire that itself only STRETCHES -- e.g. a partial-selection drag that re-routes the host wire
-  // instead of translating it -- are still best-effort and not carried.)
+  // reclassified as rigid too, instead of being left stretched from a stale point.) Junctions whose
+  // host wire only STRETCHES are handled separately by collectStretchJunctions below.
   function collectRidingJunctions(rigidRecords) {
     const result = []
     if (!wireJunctions || !wireJunctions.value) return result
@@ -142,6 +176,57 @@ export function useDragController(
     return result
   }
 
+  // The wire tapping `junction` from the branch side: a wire (other than the host) with an ENDPOINT
+  // on the junction. Returns { index, end: 'start'|'end', initialPoints } or null. Only UNCLASSIFIED
+  // branches are returned — a branch already in the move set (e.g. its far end is on a moving port)
+  // is reshaped by the main wire loop and must not be moved twice.
+  function findTapBranch(junction, hostWireIndex, movingIndices) {
+    const jkey = keyOf(junction.pos.x, junction.pos.y)
+    for (let wi = 0; wi < wires.value.length; wi++) {
+      if (wi === hostWireIndex || movingIndices.has(wi)) continue
+      const pts = wires.value[wi].points
+      if (!pts || pts.length === 0) continue
+      const initialPoints = pts.map(p => ({ x: p.x, y: p.y }))
+      if (keyOf(pts[0].x, pts[0].y) === jkey) return { index: wi, end: 'start', initialPoints }
+      const last = pts.length - 1
+      if (keyOf(pts[last].x, pts[last].y) === jkey) return { index: wi, end: 'end', initialPoints }
+    }
+    return null
+  }
+
+  // Junctions whose HOST wire only STRETCHES (is not translated rigidly). classifyWires' anchor
+  // folding above rescues junctions on RIGID hosts (and reclassifies their branches rigid); a
+  // stretch reshapes the host in place, which can slide the tap off it, leaving the junction — and
+  // the branch wire that taps it — behind. Carry each such junction with its host record and its
+  // (unclassified) branch, so applyConnectedMove can keep both on the reshaped host. This is the
+  // limitation the rigid fix explicitly left open.
+  function collectStretchJunctions(records) {
+    const result = []
+    if (!wireJunctions || !wireJunctions.value) return result
+    const movingIndices = new Set(records.map(r => r.index))
+    const rigid = records.filter(r => r.moveType === 'rigid')
+    const stretch = records.filter(r => r.moveType !== 'rigid')
+    const hostsFor = junction => rec => {
+      const wire = wires.value[rec.index]
+      return (
+        wire &&
+        (wire.id === junction.connectedWireId || pointOnPolyline(rec.initialPoints, junction.pos))
+      )
+    }
+    wireJunctions.value.forEach((junction, jIndex) => {
+      if (rigid.some(hostsFor(junction))) return // already carried by the rigid path
+      const host = stretch.find(hostsFor(junction))
+      if (!host) return
+      result.push({
+        index: jIndex,
+        initialPos: { x: junction.pos.x, y: junction.pos.y },
+        hostWireIndex: host.index,
+        branch: findTapBranch(junction, host.index, movingIndices)
+      })
+    })
+    return result
+  }
+
   // Snapshot the current selection into a move context (used by both drag and nudge).
   function buildMoveContext() {
     const comps = []
@@ -152,10 +237,12 @@ export function useDragController(
     const movingPortSet = buildMovingPortSet(comps)
     const wireRecords = classifyWires(movingPortSet)
     const junctions = collectRidingJunctions(wireRecords.filter(w => w.moveType === 'rigid'))
+    const stretchJunctions = collectStretchJunctions(wireRecords)
     return {
       components: comps,
       wires: wireRecords,
       junctions,
+      stretchJunctions,
       refId: comps[0]?.id ?? null,
       lockedAxis: null, // set once Shift-drag commits to an axis; held until Shift is released
       lastDelta: { x: 0, y: 0 }
@@ -212,6 +299,38 @@ export function useDragController(
         if (junction) {
           junction.pos.x = j.initialPos.x + dx
           junction.pos.y = j.initialPos.y + dy
+        }
+      }
+      // Junctions on a stretching host: keep the dot on the reshaped host, and slide its branch's
+      // tapping end to follow, so the tap stays attached instead of detaching mid-frame.
+      for (const sj of context.stretchJunctions || []) {
+        const junction = wireJunctions.value[sj.index]
+        const host = wires.value[sj.hostWireIndex]
+        const hostRec = context.wires.find(r => r.index === sj.hostWireIndex)
+        if (!junction || !host || !hostRec) continue
+        const newPos = relocateJunctionOnStretch(
+          hostRec.initialPoints,
+          host.points,
+          sj.initialPos,
+          {
+            x: dx,
+            y: dy
+          }
+        )
+        junction.pos.x = newPos.x
+        junction.pos.y = newPos.y
+        if (sj.branch) {
+          const bw = wires.value[sj.branch.index]
+          if (bw) {
+            const endIdx = sj.branch.end === 'start' ? 0 : sj.branch.initialPoints.length - 1
+            const pts = stretchWireEndpoint(sj.branch.initialPoints, endIdx, {
+              x: newPos.x - sj.initialPos.x,
+              y: newPos.y - sj.initialPos.y
+            })
+            bw.points = pts
+            bw.startConnection.pos = { x: pts[0].x, y: pts[0].y }
+            bw.endConnection.pos = { x: pts[pts.length - 1].x, y: pts[pts.length - 1].y }
+          }
         }
       }
     }
@@ -308,6 +427,22 @@ export function useDragController(
           junction.pos.x = junctionInfo.initialPos.x + deltaX
           junction.pos.y = junctionInfo.initialPos.y + deltaY
         }
+        // The branch tapping this junction rides too: its tapping end follows the trunk by the same
+        // delta while its far end (an unselected port) stays, so the branch stretches to keep up.
+        if (junctionInfo.branch) {
+          const bw = wires.value[junctionInfo.branch.index]
+          if (bw) {
+            const endIdx =
+              junctionInfo.branch.end === 'start' ? 0 : junctionInfo.branch.initialPoints.length - 1
+            const pts = stretchWireEndpoint(junctionInfo.branch.initialPoints, endIdx, {
+              x: deltaX,
+              y: deltaY
+            })
+            bw.points = pts
+            bw.startConnection.pos = { x: pts[0].x, y: pts[0].y }
+            bw.endConnection.pos = { x: pts[pts.length - 1].x, y: pts[pts.length - 1].y }
+          }
+        }
       }
     }
   }
@@ -372,21 +507,25 @@ export function useDragController(
         draggedWires.push({ index, initialPoints: wire.points.map(p => ({ x: p.x, y: p.y })) })
     }
 
-    // Junctions ride the selected wires (geometry / stable id).
+    // Junctions ride the selected wires (geometry / stable id). Each junction's branch wire — the
+    // one that taps the trunk here — must ride too, or dragging the trunk leaves the branch's
+    // endpoint behind and the tap detaches. Carry the (unselected) branch so it follows the delta.
     const draggedJunctions = []
     if (wireJunctions && wireJunctions.value) {
+      const movingIndices = new Set(draggedWires.map(w => w.index))
       wireJunctions.value.forEach((junction, junctionIndex) => {
-        const rides = draggedWires.some(w => {
+        const host = draggedWires.find(w => {
           const wire = wires.value[w.index]
           return (
             wire &&
             (wire.id === junction.connectedWireId || pointOnPolyline(w.initialPoints, junction.pos))
           )
         })
-        if (rides) {
+        if (host) {
           draggedJunctions.push({
             index: junctionIndex,
-            initialPos: { x: junction.pos.x, y: junction.pos.y }
+            initialPos: { x: junction.pos.x, y: junction.pos.y },
+            branch: findTapBranch(junction, host.index, movingIndices)
           })
         }
       })

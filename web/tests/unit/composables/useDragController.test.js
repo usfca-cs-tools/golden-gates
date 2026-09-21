@@ -283,7 +283,13 @@ describe('useDragController - Mixed Selection Drag Fix', () => {
 })
 
 describe('useDragController - connected drag (wires follow ports)', () => {
-  let components, wires, selectedComponents, selectedWires, wireJunctions, dragController, mockSnapToGrid
+  let components,
+    wires,
+    selectedComponents,
+    selectedWires,
+    wireJunctions,
+    dragController,
+    mockSnapToGrid
 
   const isOrthogonal = pts =>
     pts.slice(0, -1).every((p, i) => p.x === pts[i + 1].x || p.y === pts[i + 1].y)
@@ -298,7 +304,10 @@ describe('useDragController - connected drag (wires follow ports)', () => {
     wires = ref([
       {
         id: 'w',
-        points: [{ x: 3, y: 2 }, { x: 10, y: 2 }],
+        points: [
+          { x: 3, y: 2 },
+          { x: 10, y: 2 }
+        ],
         startConnection: { pos: { x: 3, y: 2 } },
         endConnection: { pos: { x: 10, y: 2 } }
       }
@@ -326,7 +335,11 @@ describe('useDragController - connected drag (wires follow ports)', () => {
     dragController.endDrag()
 
     const w = wires.value[0]
-    expect(w.points).toEqual([{ x: 3, y: 5 }, { x: 10, y: 5 }, { x: 10, y: 2 }])
+    expect(w.points).toEqual([
+      { x: 3, y: 5 },
+      { x: 10, y: 5 },
+      { x: 10, y: 2 }
+    ])
     expect(w.points[0]).toEqual({ x: 3, y: 5 }) // start follows A's moved port
     expect(w.points[w.points.length - 1]).toEqual({ x: 10, y: 2 }) // B's port unchanged
     expect(isOrthogonal(w.points)).toBe(true)
@@ -341,7 +354,10 @@ describe('useDragController - connected drag (wires follow ports)', () => {
     dragController.updateDrag({ x: 40, y: 100 }) // delta (0,3) applied to both A and B
     dragController.endDrag()
 
-    expect(wires.value[0].points).toEqual([{ x: 3, y: 5 }, { x: 10, y: 5 }])
+    expect(wires.value[0].points).toEqual([
+      { x: 3, y: 5 },
+      { x: 10, y: 5 }
+    ])
   })
 
   it('Shift axis-lock zeros the minor axis of the drag', () => {
@@ -374,7 +390,10 @@ describe('useDragController - connected drag (wires follow ports)', () => {
     expect(moved).toBe(true)
     expect(components.value[0].x).toBe(3)
     expect(wires.value[0].points[0]).toEqual({ x: 4, y: 2 }) // A's port at (2+1)+1 = 4
-    expect(wires.value[0].points).toEqual([{ x: 4, y: 2 }, { x: 10, y: 2 }])
+    expect(wires.value[0].points).toEqual([
+      { x: 4, y: 2 },
+      { x: 10, y: 2 }
+    ])
   })
 
   it('cancelDrag restores pre-drag positions and ends the drag', () => {
@@ -386,14 +405,20 @@ describe('useDragController - connected drag (wires follow ports)', () => {
     const cancelled = dragController.cancelDrag()
     expect(cancelled).toBe(true)
     expect(components.value[0]).toMatchObject({ x: 2, y: 2 })
-    expect(wires.value[0].points).toEqual([{ x: 3, y: 2 }, { x: 10, y: 2 }])
+    expect(wires.value[0].points).toEqual([
+      { x: 3, y: 2 },
+      { x: 10, y: 2 }
+    ])
     expect(dragController.isDragging()).toBe(false)
   })
 
   it('an unrelated, unselected wire is untouched', () => {
     wires.value.push({
       id: 'other',
-      points: [{ x: 20, y: 20 }, { x: 24, y: 20 }],
+      points: [
+        { x: 20, y: 20 },
+        { x: 24, y: 20 }
+      ],
       startConnection: { pos: { x: 20, y: 20 } },
       endConnection: { pos: { x: 24, y: 20 } }
     })
@@ -402,7 +427,10 @@ describe('useDragController - connected drag (wires follow ports)', () => {
     dragController.updateDrag({ x: 40, y: 100 })
     dragController.endDrag()
 
-    expect(wires.value[1].points).toEqual([{ x: 20, y: 20 }, { x: 24, y: 20 }])
+    expect(wires.value[1].points).toEqual([
+      { x: 20, y: 20 },
+      { x: 24, y: 20 }
+    ])
   })
 
   it('a branch wire tapped from a T-junction moves rigidly with the whole circuit', () => {
@@ -417,7 +445,10 @@ describe('useDragController - connected drag (wires follow ports)', () => {
     })
     wires.value.push({
       id: 'branch',
-      points: [{ x: 6, y: 2 }, { x: 6, y: 6 }],
+      points: [
+        { x: 6, y: 2 },
+        { x: 6, y: 6 }
+      ],
       startConnection: { pos: { x: 6, y: 2 } },
       endConnection: { pos: { x: 6, y: 6 } }
     })
@@ -433,11 +464,17 @@ describe('useDragController - connected drag (wires follow ports)', () => {
     dragController.endDrag()
 
     // Host wire translates...
-    expect(wires.value[0].points).toEqual([{ x: 3, y: 5 }, { x: 10, y: 5 }])
+    expect(wires.value[0].points).toEqual([
+      { x: 3, y: 5 },
+      { x: 10, y: 5 }
+    ])
     // ...the junction dot rides with it...
     expect(wireJunctions.value[0].pos).toEqual({ x: 6, y: 5 })
     // ...and the branch wire follows the junction instead of being left behind at (6,2).
-    expect(wires.value[1].points).toEqual([{ x: 6, y: 5 }, { x: 6, y: 9 }])
+    expect(wires.value[1].points).toEqual([
+      { x: 6, y: 5 },
+      { x: 6, y: 9 }
+    ])
     expect(components.value[2]).toMatchObject({ x: 6, y: 9 })
   })
 
@@ -454,13 +491,19 @@ describe('useDragController - connected drag (wires follow ports)', () => {
     wires.value.push(
       {
         id: 'branch1',
-        points: [{ x: 6, y: 2 }, { x: 6, y: 6 }],
+        points: [
+          { x: 6, y: 2 },
+          { x: 6, y: 6 }
+        ],
         startConnection: { pos: { x: 6, y: 2 } },
         endConnection: { pos: { x: 6, y: 6 } }
       },
       {
         id: 'branch2',
-        points: [{ x: 6, y: 4 }, { x: 9, y: 4 }],
+        points: [
+          { x: 6, y: 4 },
+          { x: 9, y: 4 }
+        ],
         startConnection: { pos: { x: 6, y: 4 } },
         endConnection: { pos: { x: 9, y: 4 } }
       }
@@ -478,9 +521,137 @@ describe('useDragController - connected drag (wires follow ports)', () => {
     dragController.updateDrag({ x: 40, y: 100 })
     dragController.endDrag()
 
-    expect(wires.value[1].points).toEqual([{ x: 6, y: 5 }, { x: 6, y: 9 }]) // branch1 rides
-    expect(wires.value[2].points).toEqual([{ x: 6, y: 7 }, { x: 9, y: 7 }]) // branch2 rides too
+    expect(wires.value[1].points).toEqual([
+      { x: 6, y: 5 },
+      { x: 6, y: 9 }
+    ]) // branch1 rides
+    expect(wires.value[2].points).toEqual([
+      { x: 6, y: 7 },
+      { x: 9, y: 7 }
+    ]) // branch2 rides too
     expect(wireJunctions.value[0].pos).toEqual({ x: 6, y: 5 })
     expect(wireJunctions.value[1].pos).toEqual({ x: 6, y: 7 })
+  })
+
+  it('a junction on the MOVING part of a stretched host follows, and its branch stays attached', () => {
+    // The rigid fix left this open: only A is dragged, so host wire w STRETCHES (start follows A's
+    // port, far end pinned at B). A junction taps w at (5,2) — on the moving left part — and a
+    // branch runs down from it to C's port at (5,6). Dragging A by (0,3) must slide the junction
+    // onto the reshaped host and carry the branch with it, not leave both behind at y=2.
+    components.value.push({
+      id: 'C',
+      x: 5,
+      y: 6,
+      testPorts: [{ name: '0', x: 0, y: 0, direction: 'input' }]
+    })
+    wires.value.push({
+      id: 'branch',
+      points: [
+        { x: 5, y: 2 },
+        { x: 5, y: 6 }
+      ],
+      startConnection: { pos: { x: 5, y: 2 } },
+      endConnection: { pos: { x: 5, y: 6 } }
+    })
+    wireJunctions.value.push({ pos: { x: 5, y: 2 }, connectedWireId: 'w', sourceWireIndex: 0 })
+
+    selectedComponents.value.add('A')
+    dragController.startDrag({ id: 'A', offsetX: 0, offsetY: 0, event: {} })
+    dragController.updateDrag({ x: 40, y: 100 }) // A -> (2,5): delta (0,3)
+    dragController.endDrag()
+
+    // Host stretches (same shape as the boundary-wire test)...
+    expect(wires.value[0].points).toEqual([
+      { x: 3, y: 5 },
+      { x: 10, y: 5 },
+      { x: 10, y: 2 }
+    ])
+    // ...the tap slides onto the moved segment...
+    expect(wireJunctions.value[0].pos).toEqual({ x: 5, y: 5 })
+    // ...and the branch follows it instead of detaching at (5,2).
+    expect(wires.value[1].points).toEqual([
+      { x: 5, y: 5 },
+      { x: 5, y: 6 }
+    ])
+  })
+
+  it('a junction on the FIXED part of a stretched host stays put (no needless move)', () => {
+    // Host is an L: A's port (3,2) -> elbow (3,5) -> far end (9,5). A junction taps the last
+    // (fixed) segment at (6,5) with a branch down to (6,8). Dragging A sideways reshapes only the
+    // moving part; the tap and its branch must NOT move.
+    wires.value[0].points = [
+      { x: 3, y: 2 },
+      { x: 3, y: 5 },
+      { x: 9, y: 5 }
+    ]
+    wires.value[0].endConnection = { pos: { x: 9, y: 5 } }
+    components.value.push({
+      id: 'C',
+      x: 6,
+      y: 8,
+      testPorts: [{ name: '0', x: 0, y: 0, direction: 'input' }]
+    })
+    wires.value.push({
+      id: 'branch',
+      points: [
+        { x: 6, y: 5 },
+        { x: 6, y: 8 }
+      ],
+      startConnection: { pos: { x: 6, y: 5 } },
+      endConnection: { pos: { x: 6, y: 8 } }
+    })
+    wireJunctions.value.push({ pos: { x: 6, y: 5 }, connectedWireId: 'w', sourceWireIndex: 0 })
+
+    selectedComponents.value.add('A')
+    dragController.startDrag({ id: 'A', offsetX: 0, offsetY: 0, event: {} })
+    dragController.updateDrag({ x: 80, y: 40 }) // A -> (4,2): delta (2,0)
+    dragController.endDrag()
+
+    expect(wires.value[0].points).toEqual([
+      { x: 5, y: 2 },
+      { x: 5, y: 5 },
+      { x: 9, y: 5 }
+    ])
+    expect(wireJunctions.value[0].pos).toEqual({ x: 6, y: 5 }) // unchanged
+    expect(wires.value[1].points).toEqual([
+      { x: 6, y: 5 },
+      { x: 6, y: 8 }
+    ]) // unchanged
+  })
+
+  it('bare-wire drag of a trunk carries the junction AND its unselected branch', () => {
+    // Gap 2: only the trunk w is selected and dragged. Its junction rides (already handled), but the
+    // branch that taps it — not selected — must ride too, or its endpoint is orphaned off the trunk.
+    components.value.push({
+      id: 'C',
+      x: 6,
+      y: 6,
+      testPorts: [{ name: '0', x: 0, y: 0, direction: 'input' }]
+    })
+    wires.value.push({
+      id: 'branch',
+      points: [
+        { x: 6, y: 2 },
+        { x: 6, y: 6 }
+      ],
+      startConnection: { pos: { x: 6, y: 2 } },
+      endConnection: { pos: { x: 6, y: 6 } }
+    })
+    wireJunctions.value.push({ pos: { x: 6, y: 2 }, connectedWireId: 'w', sourceWireIndex: 0 })
+
+    selectedWires.value.add(0) // only the trunk
+    dragController.startWireDrag(0, { id: 'w', offsetX: 0, offsetY: 0 })
+    dragController.updateDrag({ x: 60, y: 100 }) // first point (3,2) -> (3,5): delta (0,3)
+    dragController.endDrag()
+
+    expect(wires.value[0].points).toEqual([
+      { x: 3, y: 5 },
+      { x: 10, y: 5 }
+    ]) // trunk translates
+    expect(wireJunctions.value[0].pos).toEqual({ x: 6, y: 5 }) // junction rides
+    expect(wires.value[1].points).toEqual([
+      { x: 6, y: 5 },
+      { x: 6, y: 6 }
+    ]) // branch follows the tap
   })
 })
