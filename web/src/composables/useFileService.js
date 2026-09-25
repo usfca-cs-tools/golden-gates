@@ -13,6 +13,16 @@ function deriveTopLevelFilename(dirPath) {
   return `${baseName}.ggc`
 }
 
+// Transient run state carried on a wire object: `value` (the live sim value) and
+// `stepActive`/`stepStyle` (the wire-highlight animation). These are not circuit structure, so
+// save strips them and load clears them — the single field list both sides share, so they can't
+// drift. Files saved before this carry a snapshot of a past run; clearing on load makes them open
+// unpowered too.
+export function stripWireRuntime(wire) {
+  const { value, stepActive, stepStyle, ...structural } = wire || {}
+  return structural
+}
+
 function buildCircuitData(
   components,
   wires,
@@ -51,6 +61,11 @@ function buildCircuitData(
     return { ...componentWithoutJsId, ports }
   }
 
+  // Strip wire run state on save (see stripWireRuntime), the same way stripTransient cleans
+  // components — a saved file shouldn't carry a snapshot of a previous run. The run model
+  // (keepInputValues) leaves wires untouched; the engine recomputes these regardless.
+  const cleanWires = ws => (keepInputValues ? ws || [] : (ws || []).map(stripWireRuntime))
+
   // From 1.6 on, a subcircuit numbers its ports by the geometric order of its input/output
   // components, so the serialized component array must be in that same order for the engine's
   // positional port-name resolution to line up (see componentRegistry.reorderInterfaceComponents).
@@ -71,7 +86,8 @@ function buildCircuitData(
 
       sanitizedCircuit = {
         ...sanitizedCircuit,
-        components: sanitizedSubComponents
+        components: sanitizedSubComponents,
+        wires: cleanWires(sanitizedCircuit.wires)
       }
     }
 
@@ -94,7 +110,7 @@ function buildCircuitData(
     ...(appearance ? { appearance } : {}),
     nextCircuitId,
     components: sanitizedComponents,
-    wires: wires || [],
+    wires: cleanWires(wires),
     wireJunctions: wireJunctions || [],
     schematicComponents: standalone ? {} : sanitizedSchematicComponents
   }

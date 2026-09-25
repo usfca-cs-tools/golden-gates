@@ -1,6 +1,6 @@
 import { ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
-import { useFileService } from './useFileService'
+import { useFileService, stripWireRuntime } from './useFileService'
 import { usePythonEngine } from './usePythonEngine'
 import { componentRegistry } from '../utils/componentRegistry'
 
@@ -929,7 +929,8 @@ export function useAppController(circuitManager) {
 
             // Populate directly — canvas reads reactively from allCircuits
             circuit.components = circuitData.components || []
-            circuit.wires = circuitData.wires || []
+            // Clear any run state a pre-strip file baked into its wires, so it opens unpowered.
+            circuit.wires = (circuitData.wires || []).map(stripWireRuntime)
             circuit.wireJunctions = circuitData.wireJunctions || []
             if (circuitData.label) circuit.label = circuitData.label
             if (circuitData.interface) {
@@ -1144,7 +1145,8 @@ export function useAppController(circuitManager) {
 
     if (circuitData.wires) {
       circuitData.wires.forEach(wire => {
-        canvasRef.addWire(wire)
+        // Drop any run state a pre-strip file baked in, so wires open unpowered.
+        canvasRef.addWire(stripWireRuntime(wire))
       })
     }
 
@@ -1235,7 +1237,7 @@ export function useAppController(circuitManager) {
           openTab: false
         })
         circuit.components = circuitData.components || []
-        circuit.wires = circuitData.wires || []
+        circuit.wires = (circuitData.wires || []).map(stripWireRuntime)
         circuit.wireJunctions = circuitData.wireJunctions || []
         if (circuitData.interface) {
           circuit.properties = circuit.properties || {}

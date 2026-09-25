@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { useFileService } from '@/composables/useFileService'
+import { useFileService, stripWireRuntime } from '@/composables/useFileService'
 
 const { buildCircuitData, parseAndValidateJSON } = useFileService()
 
@@ -53,5 +53,47 @@ describe('test component status (transient run result)', () => {
     const doc = JSON.stringify({ version: '1.5', components: [testComp()], wires: [] })
     const parsed = parseAndValidateJSON(doc)
     expect(parsed.components.find(c => c.id === 't').props.status).toBeUndefined()
+  })
+})
+
+// A wire carries live run state (value + the highlight animation) that isn't circuit structure;
+// persisting it made a reopened circuit show a previous run's edge values.
+const wire = () => ({
+  id: 'w1',
+  points: [
+    { x: 0, y: 0 },
+    { x: 4, y: 0 }
+  ],
+  startConnection: { pos: { x: 0, y: 0 } },
+  endConnection: { pos: { x: 4, y: 0 } },
+  bits: 8,
+  value: '42',
+  stepActive: true,
+  stepStyle: 'processing'
+})
+
+describe('wire run state (value / highlight)', () => {
+  it('is stripped when saving; structure is preserved', () => {
+    const w = buildCircuitData([], [wire()], []).wires[0]
+    expect(w.value).toBeUndefined()
+    expect(w.stepActive).toBeUndefined()
+    expect(w.stepStyle).toBeUndefined()
+    expect(w.id).toBe('w1') // structure kept
+    expect(w.points).toHaveLength(2)
+    expect(w.bits).toBe(8) // derived width is not run state — left intact
+  })
+
+  it('is kept for the run model (keepInputValues), left for the engine to recompute', () => {
+    const w = buildCircuitData([], [wire()], [], {}, {}, 1, null, { keepInputValues: true })
+      .wires[0]
+    expect(w.value).toBe('42')
+  })
+
+  it('stripWireRuntime drops exactly value/stepActive/stepStyle (used on load too)', () => {
+    const s = stripWireRuntime(wire())
+    expect(s).not.toHaveProperty('value')
+    expect(s).not.toHaveProperty('stepActive')
+    expect(s).not.toHaveProperty('stepStyle')
+    expect(s).toMatchObject({ id: 'w1', bits: 8 })
   })
 })

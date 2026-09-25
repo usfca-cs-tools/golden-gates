@@ -16,7 +16,9 @@ vi.mock('@/composables/useFileService', () => ({
     openProject: vi.fn(),
     readCircuitFile: mockReadCircuitFile,
     parseAndValidateJSON: mockParseAndValidateJSON
-  })
+  }),
+  // Load clears transient wire run state; the real impl drops value/stepActive/stepStyle.
+  stripWireRuntime: wire => wire
 }))
 
 vi.mock('@/composables/usePythonEngine', () => ({
