@@ -253,6 +253,14 @@ export default {
       type: Function,
       required: false,
       default: null
+    },
+    // Whether the simulation is running. While running, a manual clock / 1-bit input is a
+    // click-to-operate control (not selectable or draggable) so operating it doesn't swap the
+    // inspector away from whatever the user is watching (e.g. a RAM's contents).
+    isRunning: {
+      type: Boolean,
+      required: false,
+      default: false
     }
   },
   emits: ['selectionChanged', 'editSubcircuit'],
@@ -476,9 +484,7 @@ export default {
       {
         pushSnapshot: () => undoHistory.pushSnapshot(),
         undo: () => undoHistory.undo(),
-        redo: () => undoHistory.redo(),
-        stepClock: () => props.stepClock?.(),
-        toggleInput: component => props.toggleInput?.(component)
+        redo: () => undoHistory.redo()
       }
     )
 
@@ -741,9 +747,25 @@ export default {
     }
 
     function handleStartDrag(dragInfo) {
-      // No snapshot here: mousedown on a component also fires for a plain click (select, toggle
-      // a 1-bit input, step a clock) that changes nothing. The undo snapshot is taken on the
-      // first actual move instead (see handleMouseMove in useCanvasController).
+      // While the sim runs, a manual clock and a 1-bit input are click-to-operate controls: operate
+      // them here and leave the current selection intact, rather than selecting them and swapping
+      // the inspector. This lets a student watching a RAM's contents keep manually clocking without
+      // losing the inspector. They aren't draggable while running — stop the sim to move them.
+      if (props.isRunning) {
+        const comp = components.value.find(c => c.id === dragInfo.id)
+        if (comp?.type === 'clock' && comp.props?.mode === 'manual') {
+          props.stepClock?.()
+          return
+        }
+        if (comp?.type === 'input' && (comp.props?.bits ?? 1) === 1) {
+          props.toggleInput?.(comp)
+          return
+        }
+      }
+
+      // No snapshot here: mousedown on a component also fires for a plain click (select) that
+      // changes nothing. The undo snapshot is taken on the first actual move instead (see
+      // handleMouseMove in useCanvasController).
       startDrag(dragInfo)
     }
 

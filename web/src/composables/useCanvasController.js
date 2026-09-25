@@ -612,20 +612,10 @@ export function useCanvasController(
         // A drag that actually moved something is an edit; mark dirty so the save-on-quit
         // prompt is reliable (drag-move otherwise bypasses the circuitManager mutators).
         circuitManager.markCircuitAsModified(circuitManager.activeTabId.value)
-      } else if (wasComponentDrag) {
-        // A no-move click on certain components acts on them while the sim runs (both callbacks
-        // self-gate on isRunning, so a click when stopped just leaves the component selected):
-        // a Manual clock advances one edge; a 1-bit Input toggles its value between 0 and 1.
-        const sel = selection.selectedComponents.value
-        if (sel.size === 1) {
-          const clicked = activeCircuit.value?.components.find(c => c.id === [...sel][0])
-          if (clicked?.type === 'clock' && clicked.props?.mode === 'manual') {
-            undoCallbacks.stepClock?.()
-          } else if (clicked?.type === 'input' && (clicked.props?.bits ?? 1) === 1) {
-            undoCallbacks.toggleInput?.(clicked)
-          }
-        }
       }
+      // A no-move click that operates a running control (manual clock step / 1-bit input toggle)
+      // is handled at mousedown in CircuitCanvas.handleStartDrag, which skips the drag entirely so
+      // the click doesn't steal the selection/inspector.
 
       // Update last component position if we were dragging components
       if (wasComponentDrag && selection.selectedComponents.value.size > 0) {

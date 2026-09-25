@@ -52,6 +52,7 @@
             :autosave="autosave"
             :step-clock="stepClock"
             :toggle-input="toggleInput"
+            :is-running="isRunning"
             @selectionChanged="handleSelectionChanged"
             @editSubcircuit="handleEditSubcircuit"
           />
