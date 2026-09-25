@@ -56,6 +56,49 @@ describe('test component status (transient run result)', () => {
   })
 })
 
+// RAM contents are written during simulation (editable: false, unlike ROM's authored data), so
+// persisting them made a reopened circuit show a previous run's memory.
+const ram = () => ({
+  id: 'ram',
+  type: 'ram',
+  x: 0,
+  y: 0,
+  props: {
+    label: 'RAM',
+    addressBits: 4,
+    dataBits: 8,
+    data: [1, 2, 3, 4],
+    lastMemoryUpdate: 456
+  }
+})
+
+describe('RAM contents (transient run state)', () => {
+  it('are stripped when saving; config is preserved', () => {
+    const out = buildCircuitData([ram()], [], []).components.find(c => c.id === 'ram')
+    expect(out.props.data).toBeUndefined()
+    expect(out.props.lastMemoryUpdate).toBeUndefined()
+    expect(out.props.addressBits).toBe(4) // real config kept
+    expect(out.props.dataBits).toBe(8)
+  })
+
+  it('are kept for the run model (keepInputValues), minus the UI timestamp', () => {
+    const out = buildCircuitData([ram()], [], [], {}, {}, 1, null, {
+      keepInputValues: true
+    }).components.find(c => c.id === 'ram')
+    expect(out.props.data).toEqual([1, 2, 3, 4])
+    expect(out.props.lastMemoryUpdate).toBeUndefined()
+  })
+
+  it('are cleared when loading (handles files saved before this fix)', () => {
+    const doc = JSON.stringify({ version: '1.5', components: [ram()], wires: [] })
+    const parsed = parseAndValidateJSON(doc)
+    const out = parsed.components.find(c => c.id === 'ram')
+    expect(out.props.data).toBeUndefined()
+    expect(out.props.lastMemoryUpdate).toBeUndefined()
+    expect(out.props.addressBits).toBe(4) // config survives
+  })
+})
+
 // A wire carries live run state (value + the highlight animation) that isn't circuit structure;
 // persisting it made a reopened circuit show a previous run's edge values.
 const wire = () => ({

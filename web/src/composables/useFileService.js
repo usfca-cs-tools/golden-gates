@@ -52,6 +52,18 @@ function buildCircuitData(
       const { lastUpdate, ...props } = component.props || {}
       return { ...componentWithoutJsId, props, ports }
     }
+    if (component.type === 'ram') {
+      // RAM contents are written during simulation, not authored (editable: false, unlike ROM's
+      // data), so a saved circuit shouldn't carry a previous run's memory — same rationale as an
+      // input's live value. lastMemoryUpdate is pure UI bookkeeping (animation trigger).
+      if (!keepInputValues) {
+        const { data, lastMemoryUpdate, ...props } = component.props || {}
+        return { ...componentWithoutJsId, props, ports }
+      }
+      // Run model: keep data (carry current memory into the run) but drop the UI timestamp.
+      const { lastMemoryUpdate, ...props } = component.props || {}
+      return { ...componentWithoutJsId, props, ports }
+    }
     if (component.type === 'test') {
       // A Test's pass/fail is a run RESULT, not saved state — drop it so a reopened circuit
       // shows 'pending' until the tests are actually run.
@@ -420,6 +432,12 @@ export function useFileService() {
       // 'pending' until you run it. (Handles files saved before we stopped persisting status.)
       for (const comp of migratedData.components || []) {
         if (comp.type === 'test' && comp.props) delete comp.props.status
+        // RAM contents are written at run time, never restored — a reopened circuit starts with
+        // empty memory. (Handles files saved before we stopped persisting RAM data.)
+        if (comp.type === 'ram' && comp.props) {
+          delete comp.props.data
+          delete comp.props.lastMemoryUpdate
+        }
       }
 
       return migratedData
