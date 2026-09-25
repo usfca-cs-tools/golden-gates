@@ -16,6 +16,20 @@
         @mousedown="handleMouseDown"
       />
 
+      <!-- Drag target over the value text. The text itself is pointer-events: none and the dot
+           is a tiny wire-connection target, so without this the only way to grab a Probe is its
+           narrow hit circle. Sits entirely above the dot (y < -4) so the dot still wins the
+           hit-test for starting a wire. Width tracks the rendered value (monospace ~7.2px/char). -->
+      <rect
+        :x="-valueBoxWidth / 2"
+        y="-20"
+        :width="valueBoxWidth"
+        height="16"
+        fill="transparent"
+        class="probe-hit-area"
+        @mousedown="handleMouseDown"
+      />
+
       <!-- Value display, just above the connection dot (Digital-style) — '?' until the circuit
            has run and a real value has arrived over the wire (see formattedValue). -->
       <text
@@ -112,6 +126,11 @@ export default defineComponent({
         return '0b' + val.toString(2).padStart(this.bits, '0')
       }
       return val.toString()
+    },
+    // Approximate rendered width of the value text (monospace 12px ≈ 7.2px/char) plus a little
+    // padding, so the drag rect covers the whole value; never narrower than one grid cell.
+    valueBoxWidth() {
+      return Math.max(GRID_SIZE, this.formattedValue.length * 7.2 + 6)
     },
     // With no body circle to carry fill/stroke state (see useComponentView's fillColor), the
     // connection dot itself reflects selection/error/warning/step, in the same priority order
