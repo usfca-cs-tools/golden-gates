@@ -49,15 +49,16 @@
           />
 
           <!-- Dropdown (e.g. Auto/Manual size mode) -->
-          <Dropdown
-            v-else-if="prop.type === 'dropdown'"
-            :modelValue="getCircuitValue(prop.name, prop.default)"
-            :options="prop.options"
-            @update:modelValue="updateCircuitValue(prop.name, $event)"
-            optionLabel="label"
-            optionValue="value"
-            class="property-input"
-          />
+          <div v-else-if="prop.type === 'dropdown'" class="inspector-dropdown">
+            <Dropdown
+              :modelValue="getCircuitValue(prop.name, prop.default)"
+              :options="prop.options"
+              @update:modelValue="updateCircuitValue(prop.name, $event)"
+              optionLabel="label"
+              optionValue="value"
+              class="property-input"
+            />
+          </div>
 
           <!-- Number (manual width/height in grid units) -->
           <InputNumber
@@ -178,15 +179,16 @@
           />
 
           <!-- Generic dropdown -->
-          <Dropdown
-            v-else-if="prop.type === 'dropdown'"
-            :modelValue="getPropValue(prop.name, prop.default)"
-            :options="prop.options"
-            @update:modelValue="updateProp(prop.name, $event)"
-            optionLabel="label"
-            optionValue="value"
-            class="property-input"
-          />
+          <div v-else-if="prop.type === 'dropdown'" class="inspector-dropdown">
+            <Dropdown
+              :modelValue="getPropValue(prop.name, prop.default)"
+              :options="prop.options"
+              @update:modelValue="updateProp(prop.name, $event)"
+              optionLabel="label"
+              optionValue="value"
+              class="property-input"
+            />
+          </div>
 
           <!-- Boolean checkbox (binary mode) -->
           <Checkbox
@@ -404,6 +406,8 @@ export default {
 </script>
 
 <style scoped>
+@import '../styles/inspector-dropdown.css';
+
 .component-inspector {
   flex: 1;
   min-height: 0;
