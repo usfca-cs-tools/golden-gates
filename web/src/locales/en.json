@@ -8,7 +8,8 @@
   },
   "componentInspector": {
     "emptyState": "Select a component or circuit to view properties",
-    "title": "Component Properties"
+    "title": "Component Properties",
+    "runTest": "Run this test"
   },
   "languageSwitcher": {
     "label": "Language",

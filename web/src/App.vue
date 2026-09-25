@@ -79,6 +79,7 @@
           <ComponentInspector
             :component="selectedComponent"
             :circuit="selectedCircuit"
+            :is-running="isRunning"
             @update:component="updateComponent"
             @update:circuit="updateCircuit"
             @action="e => handleInspectorAction(e, $refs.canvas)"

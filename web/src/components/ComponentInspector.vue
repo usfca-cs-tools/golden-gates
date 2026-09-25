@@ -93,6 +93,18 @@
       <!-- Component properties based on configuration -->
       <div class="property-section" v-if="componentSchema">
         <h4>{{ componentSchema.title }}</h4>
+
+        <!-- Run just this Test, right under the masthead — students run a test far more often than
+             they tweak its stop/reset parameters. Disabled while a simulation is already running. -->
+        <Button
+          v-if="component.type === 'test'"
+          :label="$t('componentInspector.runTest')"
+          icon="pi pi-play"
+          class="p-button-sm run-test-button"
+          :disabled="isRunning"
+          @click="handleAction('runTest')"
+        />
+
         <div
           v-for="prop in componentSchema.properties.filter(p => !p.hidden)"
           :key="prop.name"
@@ -276,6 +288,12 @@ export default {
     gridSize: {
       type: Number,
       default: 30
+    },
+    // Whether a simulation is currently running — disables the per-test Run button so a student
+    // can't kick off a second run over one already in progress.
+    isRunning: {
+      type: Boolean,
+      default: false
     }
   },
   emits: ['update:component', 'update:circuit', 'action'],
@@ -519,6 +537,12 @@ export default {
 .action-button {
   width: 100%;
   margin-bottom: 0.25rem;
+}
+
+/* Per-test Run button, sitting just below the Test masthead. */
+.run-test-button {
+  width: 100%;
+  margin-bottom: 1rem;
 }
 
 .property-group label {

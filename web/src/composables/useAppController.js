@@ -129,7 +129,11 @@ export function useAppController(circuitManager) {
   /**
    * Run simulation on the current circuit with support for hierarchical circuits
    */
-  async function runCircuitSimulationWithHierarchy(canvasRef, mode = 'run') {
+  async function runCircuitSimulationWithHierarchy(
+    canvasRef,
+    mode = 'run',
+    { onlyTestId = null } = {}
+  ) {
     // Run Tests on a circuit with no Test components is a no-op; tell the user
     // rather than silently doing nothing (a plain Run would run_async instead).
     if (mode === 'test') {
@@ -161,6 +165,8 @@ export function useAppController(circuitManager) {
         const staleTestBadge =
           resetTestBadges &&
           component.type === 'test' &&
+          // A single-test run only clears the chosen test's badge; other tests keep their results.
+          (!onlyTestId || component.id === onlyTestId) &&
           component.props?.status &&
           component.props.status !== 'pending'
         if (!hasErrorState && !staleTestBadge) return
@@ -198,7 +204,7 @@ export function useAppController(circuitManager) {
       // (pass 1); then exec that program (pass 2). Two passes so the generated program is a
       // plain, inspectable artifact in between. The front-end 'run' maps to run_async (the
       // browser's free-running clock + live inputs); 'test' evaluates each Test.
-      const model = buildRunModel(canvasRef)
+      const model = buildRunModel(canvasRef, { onlyTestId })
       // 'test_async' awaits the cooperative evaluate_async so a long clocked Test yields to the
       // event loop (responsive UI, live updates, working Stop) instead of freezing the tab.
       const gglMode = mode === 'test' ? 'test_async' : 'run_async'
@@ -254,10 +260,16 @@ export function useAppController(circuitManager) {
    * (each with its serialized port coordinates), wires, junctions, and ALL saved subcircuit
    * definitions inlined under schematicComponents. Mirrors the save path's assembly.
    */
-  function buildRunModel(canvasRef) {
-    // Annotation-only components (e.g. text labels) have no simulation ports —
-    // exclude them so ggl.view doesn't encounter an unknown component type.
-    const components = (canvasRef?.components || []).filter(c => c.type !== 'text')
+  function buildRunModel(canvasRef, { onlyTestId = null } = {}) {
+    // Annotation-only components (e.g. text labels) have no simulation ports — exclude them so
+    // ggl.view doesn't encounter an unknown component type. For a single-test run, also drop every
+    // OTHER Test directive so the engine evaluates just the chosen one; the circuit under test and
+    // all its non-test components stay.
+    const components = (canvasRef?.components || []).filter(c => {
+      if (c.type === 'text') return false
+      if (onlyTestId && c.type === 'test' && c.id !== onlyTestId) return false
+      return true
+    })
     const wires = canvasRef?.wires || []
     const wireJunctions = canvasRef?.wireJunctions || []
 
@@ -748,6 +760,12 @@ export function useAppController(circuitManager) {
    */
   async function runTests(canvasRef) {
     return await runCircuitSimulationWithHierarchy(canvasRef, 'test')
+  }
+
+  // Run a single Test directive (from its inspector), leaving other tests' results untouched —
+  // useful when one test is long-running and you don't want to wait through the whole suite.
+  async function runSingleTest(canvasRef, testId) {
+    return await runCircuitSimulationWithHierarchy(canvasRef, 'test', { onlyTestId: testId })
   }
 
   /**
@@ -1388,6 +1406,13 @@ export function useAppController(circuitManager) {
         }
         break
 
+      case 'runTest':
+        // Run just this Test directive (from its inspector), not the whole suite.
+        if (event.component?.type === 'test' && canvasRef) {
+          runSingleTest(canvasRef, event.component.id)
+        }
+        break
+
       default:
         console.warn('Unknown inspector action:', action)
     }
@@ -1410,6 +1435,7 @@ export function useAppController(circuitManager) {
     createNewCircuit,
     runSimulation,
     runTests,
+    runSingleTest,
     runCircuitSimulationWithHierarchy,
     stopSimulation,
     stepClock,
