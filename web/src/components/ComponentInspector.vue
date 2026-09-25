@@ -99,7 +99,6 @@
         <Button
           v-if="component.type === 'test'"
           :label="$t('componentInspector.runTest')"
-          icon="pi pi-play"
           class="p-button-sm run-test-button"
           :disabled="isRunning"
           @click="handleAction('runTest')"
