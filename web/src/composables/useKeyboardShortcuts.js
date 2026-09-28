@@ -8,6 +8,10 @@ export function useKeyboardShortcuts(commandActions) {
   let currentCommandActions = commandActions
   // Detect platform
   const isMac = navigator.platform.toUpperCase().indexOf('MAC') >= 0
+  // In the Electron desktop build the native Simulation menu owns Run/Step/Stop/Run Tests via
+  // Cmd/Ctrl accelerators (see main.cjs). The bare-key fallbacks below are for the browser build
+  // only, where there's no native menu — a developer convenience that predates it.
+  const isElectron = typeof window !== 'undefined' && !!window.electronAPI
 
   // Handle global keyboard shortcuts
   function handleGlobalKeyDown(event) {
@@ -25,9 +29,8 @@ export function useKeyboardShortcuts(commandActions) {
       return
     }
 
-    // "Again" is the one remaining unmodified single-key shortcut. Ignore Cmd/Ctrl/Alt combos so
-    // it doesn't hijack system shortcuts (the simulation verbs now live in the native menu with
-    // Cmd/Ctrl accelerators — see main.cjs).
+    // These are unmodified single-key shortcuts. Ignore Cmd/Ctrl/Alt combos so they don't hijack
+    // system shortcuts (e.g. Cmd+R must stay browser reload, not Run).
     if (event.metaKey || event.ctrlKey || event.altKey) {
       return
     }
@@ -46,6 +49,23 @@ export function useKeyboardShortcuts(commandActions) {
       }
       if (last && currentCommandActions?.[last.action]) {
         currentCommandActions[last.action](...(last.params || []))
+      }
+      return
+    }
+
+    // Browser-only bare-key simulation shortcuts (the desktop build uses the native Simulation
+    // menu instead). Kept for developers working in the web build.
+    if (!isElectron) {
+      const simActions = {
+        [t('shortcuts.run').toLowerCase()]: 'runSimulation',
+        [t('shortcuts.runTests').toLowerCase()]: 'runTests',
+        [t('shortcuts.stop').toLowerCase()]: 'stopSimulation',
+        [t('shortcuts.step').toLowerCase()]: 'stepClock'
+      }
+      const action = simActions[key]
+      if (action && currentCommandActions?.[action]) {
+        event.preventDefault()
+        currentCommandActions[action]()
       }
     }
   }
