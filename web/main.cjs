@@ -283,16 +283,6 @@ if (!gotTheLock) {
         ]
       },
       {
-        label: 'Simulation',
-        submenu: [
-          { label: 'Run', accelerator: 'CmdOrCtrl+R', click: sendMenu('menu-run') },
-          { label: 'Step Clock', accelerator: 'CmdOrCtrl+K', click: sendMenu('menu-step-clock') },
-          { label: 'Stop', accelerator: 'CmdOrCtrl+.', click: sendMenu('menu-stop') },
-          { type: 'separator' },
-          { label: 'Run Tests', accelerator: 'CmdOrCtrl+T', click: sendMenu('menu-run-tests') }
-        ]
-      },
-      {
         label: 'View',
         submenu: [
           {
@@ -314,6 +304,16 @@ if (!gotTheLock) {
               else wc.openDevTools()
             }
           }
+        ]
+      },
+      {
+        label: 'Simulation',
+        submenu: [
+          { label: 'Run', accelerator: 'CmdOrCtrl+R', click: sendMenu('menu-run') },
+          { label: 'Step Clock', accelerator: 'CmdOrCtrl+K', click: sendMenu('menu-step-clock') },
+          { label: 'Stop', accelerator: 'CmdOrCtrl+.', click: sendMenu('menu-stop') },
+          { type: 'separator' },
+          { label: 'Run Tests', accelerator: 'CmdOrCtrl+T', click: sendMenu('menu-run-tests') }
         ]
       },
       // macOS already has About in the app menu; elsewhere it lives under Help.
