@@ -1,58 +1,7 @@
-// Command palette configuration with i18n support
+// Insertable-component catalog for the sidebar (grouped by category, with i18n labels).
+// Simulation verbs (Run/Step/Stop/Run Tests) and file actions (New/Clear Circuit) now live in the
+// native Electron menu bar (see main.cjs), not here.
 export const commandGroups = {
-  file: {
-    labelKey: 'commands.groups.file',
-    items: [
-      {
-        id: 'new-circuit',
-        labelKey: 'commands.file.newCircuit',
-        icon: 'pi pi-plus',
-        action: 'createNewCircuit'
-      },
-      {
-        id: 'clear-circuit',
-        labelKey: 'commands.file.clearCircuit',
-        icon: 'pi pi-trash',
-        action: 'clearCircuit'
-      },
-      {
-        separator: true
-      },
-    ]
-  },
-  simulation: {
-    labelKey: 'commands.groups.simulation',
-    items: [
-      {
-        id: 'run-simulation',
-        labelKey: 'commands.simulation.run',
-        icon: 'pi pi-play',
-        action: 'runSimulation',
-        shortcutKey: 'run'
-      },
-      {
-        id: 'run-tests',
-        labelKey: 'commands.simulation.runTests',
-        icon: 'pi pi-check-circle',
-        action: 'runTests',
-        shortcutKey: 'runTests'
-      },
-      {
-        id: 'stop-simulation',
-        labelKey: 'commands.simulation.stop',
-        icon: 'pi pi-stop',
-        action: 'stopSimulation',
-        shortcutKey: 'stop'
-      },
-      {
-        id: 'step-clock',
-        labelKey: 'commands.simulation.stepClock',
-        icon: 'pi pi-step-forward',
-        action: 'stepClock',
-        shortcutKey: 'step'
-      }
-    ]
-  },
   logicGates: {
     labelKey: 'commands.groups.logicGates',
     items: [
@@ -331,36 +280,21 @@ export function getDynamicComponentCommands(availableComponents) {
   }))
 }
 
-// The command groups whose items are verbs/file actions (not insertable elements).
-// Everything else in commandGroups is an insertable-element category.
-const VERB_GROUP_KEYS = ['file', 'simulation']
-
-// Verb + file-action groups, for the slimmed command palette.
-export function getVerbGroups() {
-  return VERB_GROUP_KEYS.map(key => ({
-    key,
-    labelKey: commandGroups[key].labelKey,
-    items: commandGroups[key].items
-  }))
-}
-
-// Insertable-element category branches for the left sidebar. Static branches come
-// from commandGroups (excluding the verb groups) — this reuses the existing
-// commands.groups.* i18n labels and the {componentType, action, params} insert shape,
-// and automatically excludes the generic schematic-component. The project's own
-// circuits are appended as a final "custom" branch (single-click inserts them as a
-// subcircuit); the active circuit is filtered out so it can't be inserted into itself.
+// Insertable-element category branches for the left sidebar. Static branches come from
+// commandGroups (every group is an insertable-element category now) — this reuses the existing
+// commands.groups.* i18n labels and the {componentType, action, params} insert shape, and
+// automatically excludes the generic schematic-component. The project's own circuits are appended
+// as a final "custom" branch (single-click inserts them as a subcircuit); the active circuit is
+// filtered out so it can't be inserted into itself.
 export function getInsertableGroups(
   availableComponents = [],
   { projectName = null, activeCircuitId = null } = {}
 ) {
-  const staticBranches = Object.entries(commandGroups)
-    .filter(([key]) => !VERB_GROUP_KEYS.includes(key))
-    .map(([key, group]) => ({
-      key,
-      labelKey: group.labelKey,
-      items: group.items.filter(item => !item.separator)
-    }))
+  const staticBranches = Object.entries(commandGroups).map(([key, group]) => ({
+    key,
+    labelKey: group.labelKey,
+    items: group.items.filter(item => !item.separator)
+  }))
 
   const customBranch = {
     key: 'customCircuits',

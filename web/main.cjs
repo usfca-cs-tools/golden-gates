@@ -184,6 +184,13 @@ if (!gotTheLock) {
     // Native menu bar. On macOS the first submenu is the app menu (Golden Gates);
     // that's where About belongs. Windows/Linux have no app menu, so About goes
     // under Help. Either way it opens the same channel-aware About dialog.
+    // Send a one-off event to the renderer for a menu click (guards the window lifecycle).
+    const sendMenu = channel => () => {
+      if (mainWindow && !mainWindow.isDestroyed()) {
+        mainWindow.webContents.send(channel)
+      }
+    }
+
     const menuTemplate = [
       ...(isMac
         ? [
@@ -265,7 +272,24 @@ if (!gotTheLock) {
           { role: 'cut' },
           { role: 'copy' },
           { role: 'paste' },
-          { role: 'selectAll' }
+          { role: 'selectAll' },
+          { type: 'separator' },
+          {
+            // No accelerator on purpose: clearing a circuit is destructive, so it must be a
+            // deliberate menu choice, never a stray keystroke.
+            label: 'Clear Circuit',
+            click: sendMenu('menu-clear-circuit')
+          }
+        ]
+      },
+      {
+        label: 'Simulation',
+        submenu: [
+          { label: 'Run', accelerator: 'CmdOrCtrl+R', click: sendMenu('menu-run') },
+          { label: 'Step Clock', accelerator: 'CmdOrCtrl+K', click: sendMenu('menu-step-clock') },
+          { label: 'Stop', accelerator: 'CmdOrCtrl+.', click: sendMenu('menu-stop') },
+          { type: 'separator' },
+          { label: 'Run Tests', accelerator: 'CmdOrCtrl+T', click: sendMenu('menu-run-tests') }
         ]
       },
       {

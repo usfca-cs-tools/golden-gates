@@ -22,5 +22,10 @@ contextBridge.exposeInMainWorld('electronAPI', {
   onOpenProject: (callback) => ipcRenderer.on('open-project', (_event, payload) => callback(payload)),
   onMenuNewCircuit: (callback) => ipcRenderer.on('menu-new-circuit', () => callback()),
   onMenuSaveCircuit: (callback) => ipcRenderer.on('menu-save-circuit', () => callback()),
-  onMenuSaveCircuitAs: (callback) => ipcRenderer.on('menu-save-circuit-as', () => callback())
+  onMenuSaveCircuitAs: (callback) => ipcRenderer.on('menu-save-circuit-as', () => callback()),
+  onMenuClearCircuit: (callback) => ipcRenderer.on('menu-clear-circuit', () => callback()),
+  onMenuRun: (callback) => ipcRenderer.on('menu-run', () => callback()),
+  onMenuStepClock: (callback) => ipcRenderer.on('menu-step-clock', () => callback()),
+  onMenuStop: (callback) => ipcRenderer.on('menu-stop', () => callback()),
+  onMenuRunTests: (callback) => ipcRenderer.on('menu-run-tests', () => callback())
 })

@@ -57,20 +57,12 @@ const mockCircuitOperations = {
   confirmDialog: {}
 }
 
-const mockCommandPalette = {
-  isVisible: false
-}
-
 vi.mock('../../src/composables/useCircuitModel', () => ({
   useCircuitModel: () => mockCircuitManager
 }))
 
 vi.mock('../../src/composables/useAppController', () => ({
   useAppController: () => mockCircuitOperations
-}))
-
-vi.mock('../../src/composables/useCommandPalette', () => ({
-  useCommandPalette: () => mockCommandPalette
 }))
 
 vi.mock('../../src/composables/useKeyboardShortcuts', () => ({

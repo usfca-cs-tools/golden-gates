@@ -11,12 +11,10 @@
         @accept="confirmDialog.acceptCallback"
         @reject="confirmDialog.rejectCallback"
       />
-      <CommandPalette v-model="commandPaletteVisible" @command="handleCommand" />
       <AppToolbar
         :circuitTabs="circuitTabs"
         :activeTabId="activeTabId"
         :circuitManager="circuitManager"
-        @openCommandPalette="commandPaletteVisible = true"
         @switchToTab="switchToTab"
         @closeTab="handleCloseTab"
         @showConfirmation="showConfirmation"
@@ -107,7 +105,6 @@ import CircuitCanvas from './components/CircuitCanvas.vue'
 import ComponentInspector from './components/ComponentInspector.vue'
 import ComponentIcon from './components/ComponentIcon.vue'
 import ConfirmationDialog from './components/ConfirmationDialog.vue'
-import CommandPalette from './components/CommandPalette.vue'
 import AppToolbar from './components/AppToolbar.vue'
 import Sidebar from './components/Sidebar.vue'
 import BrowserCompatibilityGuard from './components/BrowserCompatibilityGuard.vue'
@@ -118,7 +115,6 @@ import { useFileService } from './composables/useFileService'
 import { useCircuitModel } from './composables/useCircuitModel'
 import { useAppController } from './composables/useAppController'
 import { useAutosave } from './composables/useAutosave'
-import { useCommandPalette } from './composables/useCommandPalette'
 import { useKeyboardShortcuts } from './composables/useKeyboardShortcuts'
 import './styles/themes.css'
 
@@ -129,7 +125,6 @@ export default {
     ComponentIcon,
     ComponentInspector,
     ConfirmationDialog,
-    CommandPalette,
     AppToolbar,
     Sidebar,
     BrowserCompatibilityGuard
@@ -179,9 +174,6 @@ export default {
       confirmDialog
     } = circuitOperations
 
-    // Initialize command palette
-    const { isVisible: commandPaletteVisible } = useCommandPalette()
-
     // Set up keyboard shortcuts - we'll set command actions in mounted
     const { setCommandActions } = useKeyboardShortcuts(null)
 
@@ -221,7 +213,6 @@ export default {
       pyodide,
       showConfirmDialog,
       confirmDialog,
-      commandPaletteVisible,
       setCommandActions
     }
   },
@@ -255,16 +246,9 @@ export default {
     }
   },
   methods: {
+    // Component insertion from the sidebar (@insert). Records the last insert so the "Again"
+    // keyboard shortcut (useKeyboardShortcuts) can replay it.
     handleCommand({ action, params }) {
-      // "Again" replays the last insert — resolve it before the switch, then fall through.
-      if (action === 'again') {
-        const last = this.readLastCommand()
-        if (!last) return
-        action = last.action
-        params = last.params
-      }
-
-      // Record inserts (from either the sidebar or the palette) so "Again" can replay them.
       if (action === 'addComponent' || action === 'addCircuitComponent') {
         try {
           localStorage.setItem('gg.lastCommand', JSON.stringify({ action, params }))
@@ -273,31 +257,12 @@ export default {
         }
       }
 
-      // Handle command palette commands by calling the appropriate method directly
       switch (action) {
         case 'addComponent':
           this.addComponent(...params)
           break
         case 'addCircuitComponent':
           this.addCircuitComponent(...params)
-          break
-        case 'createNewCircuit':
-          this.createNewCircuit()
-          break
-        case 'clearCircuit':
-          this.clearCircuit()
-          break
-        case 'runSimulation':
-          this.runSimulation(this.$refs.canvas)
-          break
-        case 'runTests':
-          this.runTests(this.$refs.canvas)
-          break
-        case 'stopSimulation':
-          this.stopSimulation()
-          break
-        case 'stepClock':
-          this.stepClock()
           break
       }
     },
@@ -351,16 +316,6 @@ export default {
         }
       }
       this.pendingPlace = null
-    },
-
-    // The last insert command, for "Again". Null if none recorded / storage unavailable.
-    readLastCommand() {
-      try {
-        const raw = localStorage.getItem('gg.lastCommand')
-        return raw ? JSON.parse(raw) : null
-      } catch (e) {
-        return null
-      }
     },
 
     addComponent(type) {
@@ -759,6 +714,24 @@ export default {
     }
     if (window.electronAPI?.onMenuSaveCircuitAs) {
       window.electronAPI.onMenuSaveCircuitAs(() => this.saveCircuitAs(this.$refs.canvas))
+    }
+    if (window.electronAPI?.onMenuClearCircuit) {
+      window.electronAPI.onMenuClearCircuit(() => this.clearCircuit())
+    }
+
+    // Native menu bar Simulation actions (Electron). These replace the old command palette
+    // entries; the actions self-gate (e.g. Step Clock / Stop only act while running).
+    if (window.electronAPI?.onMenuRun) {
+      window.electronAPI.onMenuRun(() => this.runSimulation(this.$refs.canvas))
+    }
+    if (window.electronAPI?.onMenuStepClock) {
+      window.electronAPI.onMenuStepClock(() => this.stepClock())
+    }
+    if (window.electronAPI?.onMenuStop) {
+      window.electronAPI.onMenuStop(() => this.stopSimulation())
+    }
+    if (window.electronAPI?.onMenuRunTests) {
+      window.electronAPI.onMenuRunTests(() => this.runTests(this.$refs.canvas))
     }
 
     // Save-on-quit bridge (Electron): main.cjs queries these globals when the window is

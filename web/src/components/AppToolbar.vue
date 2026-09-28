@@ -2,14 +2,6 @@
   <Toolbar class="app-toolbar">
     <template #start>
       <Button
-        class="p-button-sm golden-gate-button"
-        @click="$emit('openCommandPalette')"
-        v-tooltip.right="commandPaletteTooltip"
-      >
-        <GoldenGateLogo :width="48" :height="24" />
-      </Button>
-
-      <Button
         icon="pi pi-sidebar"
         class="p-button-text p-button-sm toolbar-toggle"
         @click="$emit('toggleSidebar')"
@@ -38,14 +30,11 @@
 
 <script>
 import CircuitTabsBar from './CircuitTabsBar.vue'
-import GoldenGateLogo from './GoldenGateLogo.vue'
-import { useI18n } from 'vue-i18n'
 
 export default {
   name: 'AppToolbar',
   components: {
-    CircuitTabsBar,
-    GoldenGateLogo
+    CircuitTabsBar
   },
   props: {
     circuitTabs: {
@@ -61,23 +50,7 @@ export default {
       required: true
     }
   },
-  emits: [
-    'openCommandPalette',
-    'switchToTab',
-    'closeTab',
-    'showConfirmation',
-    'toggleInspector',
-    'toggleSidebar'
-  ],
-  setup() {
-    const { t } = useI18n()
-
-    const commandPaletteTooltip = `${t('commands.commandPalette.title')} (G)`
-
-    return {
-      commandPaletteTooltip
-    }
-  }
+  emits: ['switchToTab', 'closeTab', 'showConfirmation', 'toggleInspector', 'toggleSidebar']
 }
 </script>
 
@@ -110,50 +83,5 @@ export default {
   color: var(--color-text-primary) !important;
   background-color: var(--color-component-hover-fill) !important;
   border-color: transparent !important;
-}
-
-/* Golden Gate button styling with USF colors */
-.golden-gate-button {
-  padding: 0.375rem 0.875rem !important;
-  min-width: auto !important;
-  background-color: #00543c !important; /* USF Green */
-  border-color: #00543c !important;
-  color: #ffcc02 !important; /* USF Gold */
-}
-
-.golden-gate-button:hover {
-  background-color: #004832 !important; /* Darker USF Green */
-  border-color: #004832 !important;
-  color: #ffd633 !important; /* Brighter USF Gold */
-}
-
-.golden-gate-button .golden-gate-logo {
-  color: #ffcc02; /* USF Gold */
-  transition: color 0.2s ease;
-}
-
-.golden-gate-button:hover .golden-gate-logo {
-  color: #ffd633; /* Brighter USF Gold */
-}
-
-.golden-gate-button .logo-tower-left,
-.golden-gate-button .logo-tower-right {
-  fill: #ffcc02; /* USF Gold towers */
-}
-
-.golden-gate-button:hover .logo-tower-left,
-.golden-gate-button:hover .logo-tower-right {
-  fill: #ffd633; /* Brighter USF Gold towers */
-}
-
-/* Dark mode support */
-.p-dark .golden-gate-button {
-  background-color: #006b4d !important; /* Lighter USF Green for dark mode */
-  border-color: #006b4d !important;
-}
-
-.p-dark .golden-gate-button:hover {
-  background-color: #007d58 !important;
-  border-color: #007d58 !important;
 }
 </style>

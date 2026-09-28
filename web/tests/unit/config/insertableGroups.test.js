@@ -1,13 +1,7 @@
 import { describe, it, expect } from 'vitest'
-import { getInsertableGroups, getVerbGroups } from '@/config/commands'
+import { getInsertableGroups } from '@/config/commands'
 
 describe('getInsertableGroups', () => {
-  it('excludes the verb groups (file / simulation)', () => {
-    const keys = getInsertableGroups().map(g => g.key)
-    expect(keys).not.toContain('file')
-    expect(keys).not.toContain('simulation')
-  })
-
   it('includes the seven insertable-element categories with insertable items', () => {
     const groups = getInsertableGroups()
     const staticGroups = groups.filter(g => !g.isCustom)
@@ -60,11 +54,5 @@ describe('getInsertableGroups', () => {
     const custom = getInsertableGroups().find(g => g.isCustom)
     expect(custom.label).toBeNull()
     expect(custom.items).toEqual([])
-  })
-})
-
-describe('getVerbGroups', () => {
-  it('returns only the file and simulation groups', () => {
-    expect(getVerbGroups().map(g => g.key)).toEqual(['file', 'simulation'])
   })
 })
