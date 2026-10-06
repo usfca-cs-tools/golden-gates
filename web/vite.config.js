@@ -18,6 +18,11 @@ export default defineConfig({
           // package files at runtime exactly as before.
           src: 'ggl-engine/src/ggl/*',
           dest: 'ggl'
+        },
+        {
+          // GG assembler, sourced from 'gg-asm' submodule (web/gg-asm)
+          src: 'gg-asm/src/ggasm/*',
+          dest: 'ggasm'
         }
       ]
     })

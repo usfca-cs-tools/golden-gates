@@ -1,3 +1,7 @@
 [submodule "web/ggl-engine"]
 	path = web/ggl-engine
 	url = git@github.com:usfca-cs-tools/ggl.git
+
+[submodule "web/gg-asm"]
+	path = web/gg-asm
+	url = git@github.com:usfca-cs-tools/gg-asm.git
