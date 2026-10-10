@@ -44,8 +44,9 @@ import sys
 import os
 from pyodide.http import pyfetch
 
-# Create a directory for the ggl module
+# Create a directory for the ggl and ggasm module
 os.makedirs('/home/pyodide/ggl', exist_ok=True)
+os.makedirs('/home/pyodide/ggasm', exist_ok=True)
 
 # Function to recursively fetch Python files
 async def fetch_python_files(base_url, target_dir):
