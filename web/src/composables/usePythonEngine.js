@@ -34,11 +34,12 @@ export function usePythonEngine() {
         window.pyodide = pyodideInstance.value
       }
 
-      // GGL engine files are served at /ggl/ by vite-plugin-static-copy,
-      // sourced from the `ggl` submodule (web/ggl-engine/src/ggl) — see vite.config.js.
+      // GGL engine and ggasm files are served at /ggl/ and /ggasm/ respectively by vite-plugin-static-copy,
+      // sourced from the `ggl` and 'ggasm' submodule (web/ggl-engine/src/ggl & web/gg-asm/src/ggasm) — see vite.config.js.
       const gglBaseUrl = new URL('ggl/', document.baseURI).href
-      
-      // Set up ggl module loading for Pyodide
+      const ggasmBaseUrl = new URL('ggasm/', document.baseURI).href
+
+      // Set up ggl amd ggasm module loading for Pyodide
       await pyodideInstance.value.runPythonAsync(`
 import sys
 import os
@@ -48,13 +49,12 @@ from pyodide.http import pyfetch
 os.makedirs('/home/pyodide/ggl', exist_ok=True)
 os.makedirs('/home/pyodide/ggasm', exist_ok=True)
 
-# Function to recursively fetch Python files
+# Function to fetch Python files
 async def fetch_python_files(base_url, target_dir):
-    """
-    Fetch __init__.py first, which should contain imports that tell us
-    what other files we need to fetch.
-    """
-    # Start with __init__.py
+    
+    # Fetch __init__.py first, which should contain imports that tell us
+    # what other files we need to fetch.
+    
     try:
         response = await pyfetch(f"{base_url}__init__.py")
         if response.status == 200:
@@ -78,10 +78,6 @@ async def fetch_python_files(base_url, target_dir):
                     module_name = node.module.split('.')[0]
                     required_files.add(f"{module_name}.py")
             
-            # Also add any additional known files that might not be imported
-            additional_files = ['ggl_logging.py']
-            required_files.update(additional_files)
-            
             # Fetch each required file
             for filename in required_files:
                 try:
@@ -101,11 +97,12 @@ async def fetch_python_files(base_url, target_dir):
 
 # Fetch the ggl module files
 await fetch_python_files('${gglBaseUrl}', '/home/pyodide/ggl')
+await fetch_python_files('${ggasmBaseUrl}', '/home/pyodide/ggasm')
 
 # Add to Python path
 sys.path.insert(0, '/home/pyodide')
 
-# Test import
+# Test imports
 try:
     import ggl
     if not hasattr(ggl, 'circuit'):
@@ -113,6 +110,14 @@ try:
     print("GGL module imported successfully")
 except ImportError as e:
     print(f"Warning: Could not import ggl: {e}")
+
+try:
+    import ggasm
+    if not hasattr(ggasm, 'assemble'):
+        raise ImportError("ggasm loaded as empty namespace package — ggasn files may not have been fetched")
+    print("ggasm module imported successfully")
+except ImportError as e:
+    print(f"Warning: Could not import ggasm: {e}")
       `)
 
       isReady.value = true
@@ -128,7 +133,7 @@ except ImportError as e:
   }
 
   /**
-   * Execute Python code asynchronously
+    * Execute Python code asynchronously
    */
   async function runPython(code) {
     if (!pyodideInstance.value) {
