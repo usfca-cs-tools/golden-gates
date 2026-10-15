@@ -65,10 +65,6 @@ export default {
     projectName: {
       type: String,
       default: ''
-    },
-    activeCircuitId: {
-      type: String,
-      default: null
     }
   },
   emits: ['insert', 'openCircuit', 'placeStart', 'placeEnd'],
@@ -80,8 +76,7 @@ export default {
 
     const branches = computed(() =>
       getInsertableGroups(props.availableComponents, {
-        projectName: props.projectName || null,
-        activeCircuitId: props.activeCircuitId
+        projectName: props.projectName || null
       })
     )
 

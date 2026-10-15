@@ -4,6 +4,8 @@
     :y="y"
     :id="id"
     :selected="selected"
+    :has-error="hasError"
+    :has-warning="hasWarning"
     :label="''"
     :body-bounds="componentBounds"
     :base-fill="bodyColor"

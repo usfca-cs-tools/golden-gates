@@ -27,7 +27,6 @@
           v-if="sidebarVisible"
           :availableComponents="availableComponentsArray"
           :projectName="projectName"
-          :activeCircuitId="activeTabId"
           @insert="handleCommand"
           @openCircuit="handleOpenCircuit"
           @placeStart="handlePlaceStart"

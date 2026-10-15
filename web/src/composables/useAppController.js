@@ -7,7 +7,7 @@ import { componentRegistry } from '../utils/componentRegistry'
 // Errors whose message is already a full, self-contained sentence (naming the circuit, the
 // port, and the fix). The notification shows these verbatim rather than wrapping them in the
 // generic "Error in <component> in circuit X: " prefix, which would just repeat the context.
-const SELF_CONTAINED_ERROR_CODES = new Set(['portNotFullyConnected'])
+const SELF_CONTAINED_ERROR_CODES = new Set(['portNotFullyConnected', 'recursiveSubcircuit'])
 
 /**
  * A circuit's runtime id, derived from its filename. Making the id a pure function of the

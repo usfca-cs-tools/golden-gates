@@ -375,16 +375,6 @@ export function useCircuitModel() {
     return clearCircuit(activeTabId.value)
   }
 
-  // Check if a circuit can be used as a component in another circuit
-  // (prevents circular references)
-  function canUseCircuitAsComponent(circuitId, targetCircuitId) {
-    if (circuitId === targetCircuitId) return false
-
-    // TODO: Implement full circular reference detection
-    // For now, simple check
-    return true
-  }
-
   // Save a circuit as a reusable component
   function saveCircuitAsComponent(circuitId) {
     const circuit = allCircuits.value.get(circuitId)
@@ -597,7 +587,6 @@ export function useCircuitModel() {
     removeCircuitComponent,
 
     // Schematic components
-    canUseCircuitAsComponent,
     createSchematicComponent,
 
     // Import/Export
