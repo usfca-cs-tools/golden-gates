@@ -21,7 +21,7 @@ describe('Sidebar', () => {
 
   const createWrapper = (props = {}) =>
     mount(Sidebar, {
-      props: { availableComponents: [], projectName: '', activeCircuitId: null, ...props },
+      props: { availableComponents: [], projectName: '', ...props },
       global: { mocks: { $t: mockT }, stubs: { ComponentIcon: true } }
     })
 

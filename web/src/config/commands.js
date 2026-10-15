@@ -284,12 +284,10 @@ export function getDynamicComponentCommands(availableComponents) {
 // commandGroups (every group is an insertable-element category now) — this reuses the existing
 // commands.groups.* i18n labels and the {componentType, action, params} insert shape, and
 // automatically excludes the generic schematic-component. The project's own circuits are appended
-// as a final "custom" branch (single-click inserts them as a subcircuit); the active circuit is
-// filtered out so it can't be inserted into itself.
-export function getInsertableGroups(
-  availableComponents = [],
-  { projectName = null, activeCircuitId = null } = {}
-) {
+// as a final "custom" branch (single-click inserts them as a subcircuit). Every circuit is listed,
+// including the active one: a circuit that would contain itself is reported by the GGL engine
+// (recursiveSubcircuit) when it runs, not hidden here.
+export function getInsertableGroups(availableComponents = [], { projectName = null } = {}) {
   const staticBranches = Object.entries(commandGroups).map(([key, group]) => ({
     key,
     labelKey: group.labelKey,
@@ -300,9 +298,7 @@ export function getInsertableGroups(
     key: 'customCircuits',
     label: projectName || null,
     isCustom: true,
-    items: getDynamicComponentCommands(availableComponents).filter(
-      c => c.params[0] !== activeCircuitId
-    )
+    items: getDynamicComponentCommands(availableComponents)
   }
 
   return [...staticBranches, customBranch]

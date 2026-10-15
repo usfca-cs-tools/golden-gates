@@ -39,15 +39,16 @@ describe('getInsertableGroups', () => {
     expect(custom.items.every(i => i.action === 'addCircuitComponent')).toBe(true)
   })
 
-  it('filters the active circuit out of the custom branch (no inserting a circuit into itself)', () => {
+  it('lists every saved circuit, including the one being edited', () => {
+    // Recursion (a circuit placed inside itself) is reported by the GGL engine at run time,
+    // so the sidebar doesn't hide the active circuit.
     const available = [
       { id: 'circuit_2', name: 'Half Adder' },
       { id: 'circuit_3', name: 'Full Adder' }
     ]
-    const groups = getInsertableGroups(available, { activeCircuitId: 'circuit_2' })
-    const custom = groups[groups.length - 1]
+    const custom = getInsertableGroups(available).find(g => g.isCustom)
 
-    expect(custom.items.map(i => i.params[0])).toEqual(['circuit_3'])
+    expect(custom.items.map(i => i.params[0])).toEqual(['circuit_2', 'circuit_3'])
   })
 
   it('leaves the custom branch label null when no project is open', () => {
