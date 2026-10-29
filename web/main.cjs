@@ -358,6 +358,13 @@ function createWindow() {
     ...(Number.isFinite(savedState?.x) && Number.isFinite(savedState?.y)
       ? { x: savedState.x, y: savedState.y }
       : {}),
+    // macOS: hide the native title bar and let AppToolbar act as the drag region (issue #141).
+    // With the native title bar, Electron clamps a drag at the top of the current display, so the
+    // window can't be dragged onto a monitor arranged above it; a CSS drag region isn't clamped.
+    // The traffic lights are centered in the 48px toolbar, which pads its left edge to clear them.
+    ...(process.platform === 'darwin'
+      ? { titleBarStyle: 'hidden', trafficLightPosition: { x: 16, y: 17 } }
+      : {}),
     icon: path.join(__dirname, 'assets/icon.icns'),
     webPreferences: {
       preload: path.join(__dirname, 'preload.cjs')
