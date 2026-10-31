@@ -343,3 +343,12 @@
 .has-error.error-pulse {
   animation: errorPulse 1.5s ease-in-out infinite;
 }
+
+/* Full-window overlays sit on top of the toolbar, which is the window drag region in the macOS
+   desktop app (issue #141). Exempt them so a click on the backdrop reaches the overlay instead of
+   dragging the window. No effect outside Electron. */
+.modal-overlay,
+.browser-compatibility-overlay,
+.compatibility-checking {
+  -webkit-app-region: no-drag;
+}

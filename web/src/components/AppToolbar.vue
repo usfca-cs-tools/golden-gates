@@ -1,5 +1,5 @@
 <template>
-  <Toolbar class="app-toolbar">
+  <Toolbar :class="['app-toolbar', { 'mac-title-bar': macTitleBar }]">
     <template #start>
       <Button
         icon="pi pi-sidebar"
@@ -50,7 +50,17 @@ export default {
       required: true
     }
   },
-  emits: ['switchToTab', 'closeTab', 'showConfirmation', 'toggleInspector', 'toggleSidebar']
+  emits: ['switchToTab', 'closeTab', 'showConfirmation', 'toggleInspector', 'toggleSidebar'],
+  data() {
+    return {
+      // The macOS desktop app hides the native title bar (main.cjs), so this toolbar becomes the
+      // window's drag region and makes room for the traffic lights. Web and Windows are unchanged.
+      macTitleBar:
+        typeof window !== 'undefined' &&
+        !!window.electronAPI &&
+        navigator.platform.toUpperCase().indexOf('MAC') >= 0
+    }
+  }
 }
 </script>
 
@@ -62,6 +72,18 @@ export default {
   background: var(--color-toolbar-bg);
   box-shadow: var(--shadow-small);
   height: 48px;
+}
+
+/* macOS desktop: the toolbar stands in for the hidden title bar (issue #141). Empty toolbar space
+   drags the window; every control is a <button> (the tab close box sits inside its tab's button),
+   so exempting buttons keeps them all clickable. The left padding clears the traffic lights. */
+.app-toolbar.mac-title-bar {
+  -webkit-app-region: drag;
+  padding-left: 80px !important;
+}
+
+.app-toolbar.mac-title-bar :deep(button) {
+  -webkit-app-region: no-drag;
 }
 
 /* Inspector toggle button styling */
