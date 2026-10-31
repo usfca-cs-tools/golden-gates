@@ -239,6 +239,13 @@ export const commandGroups = {
         params: ['rom']
       },
       {
+        id: 'insert-chips-rom',
+        labelKey: 'commands.insert.chipsROM',
+        componentType: 'chipsROM',
+        action: 'addComponent',
+        params: ['chipsROM']
+      },
+      {
         id: 'insert-ram',
         labelKey: 'commands.insert.ram',
         componentType: 'ram',

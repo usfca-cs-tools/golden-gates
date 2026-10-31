@@ -37,7 +37,7 @@
       class="table-container"
       @dragover.prevent="handleDragOver"
       @drop.prevent="handleDrop"
-      @dragenter.prevent="isDragging = true"
+      @dragenter.prevent="isDragging = editable"
       @dragleave.prevent="isDragging = false"
       :class="{ 'drag-over': isDragging }"
     >
@@ -102,6 +102,10 @@ const props = defineProps({
   editable: {
     type: Boolean,
     default: true
+  },
+  fixedColumns: {
+    type: Number,
+    default: 0
   }
 })
 
@@ -119,6 +123,7 @@ const totalCells = computed(() => Math.pow(2, props.addressBits))
 // Columns per row: fewer for wider data so a full cell (e.g. 16 hex digits for 64-bit) isn't
 // clipped and the table stays a reasonable width.
 const columns = computed(() => {
+  if (props.fixedColumns > 0) return props.fixedColumns
   const hexDigits = Math.ceil(props.dataBits / 4)
   return hexDigits <= 8 ? 8 : hexDigits <= 16 ? 4 : 2
 })
@@ -131,7 +136,7 @@ const maxDataValue = computed(() => 2n ** BigInt(props.dataBits) - 1n)
 
 // Initialize data array if empty
 const data = ref([...props.modelValue])
-if (data.value.length === 0) {
+if (data.value.length === 0 && props.editable) {
   data.value = new Array(totalCells.value).fill(0)
   emit('update:modelValue', data.value)
 }
@@ -149,6 +154,7 @@ watch(
 watch(
   () => props.addressBits,
   newBits => {
+    if (!props.editable) return
     const newSize = Math.pow(2, newBits)
     if (data.value.length < newSize) {
       // Expand array
@@ -247,11 +253,13 @@ function handleFileInput(event) {
 }
 
 function handleDragOver(event) {
+  if (!props.editable) {event.dataTransfer.dropEffect = 'none'; return }
   event.dataTransfer.dropEffect = 'copy'
 }
 
 function handleDrop(event) {
   isDragging.value = false
+  if (!props.editable) return
   const file = event.dataTransfer.files?.[0]
   if (file) {
     importFile(file)
@@ -259,6 +267,7 @@ function handleDrop(event) {
 }
 
 function clearData() {
+  if (!props.editable) return
   const newData = new Array(totalCells.value).fill(0)
   data.value = newData
   emit('update:modelValue', newData)

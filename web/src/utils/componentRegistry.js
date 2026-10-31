@@ -57,6 +57,7 @@ import Register from '../components/Register.vue'
 import PriorityEncoder from '../components/PriorityEncoder.vue'
 import SchematicComponent from '../components/SchematicComponent.vue'
 import ROM from '../components/ROM.vue'
+import chipsROM from '../components/ChipsROM.vue'
 import RAM from '../components/RAM.vue'
 import Adder from '../components/Adder.vue'
 import Subtract from '../components/Subtract.vue'
@@ -700,6 +701,41 @@ export const componentRegistry = {
       instance.props.data = new Array(totalCells).fill(0)
     }
   },
+
+  chipsROM: {
+    component: chipsROM,
+    label: 'ChipsROM',
+    icon: 'pi pi-database',
+    category: 'memory',
+    requiresNamedPorts: true,
+    prefersWideInspector: true,
+    defaultProps: {
+      addressBits: 6,
+      sources: [],
+      words: [],
+      label: 'ChipsROM'
+    },
+    getConnections: props => {
+      const addressBits = props.addressBits || 6
+      // Dynamic size based on address bits (min 4x5 to accommodate 2 grid unit spacing)
+      const width = Math.max(4, Math.ceil(addressBits / 2))
+      const height = Math.max(5, Math.ceil(addressBits / 2) + 1)
+      return {
+        inputs: [
+          { name: 'A', x: 0, y: 1 },
+          {name: 'sel', x: 0, y: 3},
+        ],
+        outputs: [{name: 'D', x: width, y: Math.floor(height / 2)}]
+      }
+    },
+    getDimensions: props => {
+      const addressBits = props.addressBits || 6
+      const width = Math.max(4, Math.ceil(addressBits / 2))
+      const height = Math.max(4, Math.ceil(addressBits / 2))
+      return { width: width * GRID_SIZE, height: height * GRID_SIZE }
+    },
+  },
+
   ram: {
     component: RAM,
     label: 'RAM',

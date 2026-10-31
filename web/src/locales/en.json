@@ -36,8 +36,15 @@
     "merger": "Merger",
     "multiplexer": "Multiplexer",
     "schematic": "Schematic",
-    "rom": "ROM"
+    "rom": "ROM",
+    "chipsROM": "CHIPS ROM"
   },
+
+  "chipsROM": {
+    "noProgram": "no program",
+    "moreFiles": "{name} + {count}"
+  },
+
   "componentRegistry": {
     "addInput": "Add Input",
     "addOutput": "Add Output",
@@ -191,6 +198,7 @@
       "priorityEncoder": "Priority Encoder",
       "register": "Register",
       "rom": "ROM",
+      "chipsROM": "CHIPS ROM",
       "ram": "RAM",
       "adder": "Adder",
       "subtract": "Subtract",
@@ -265,7 +273,9 @@
       "testRowWidth": "Test row {row} has {actual} values, expected {expected}",
       "testFailed": "For {inputs}: expected {output}={expected}, got {actual}",
       "testNoClock": "This test uses 'stop when output reaches value', but the circuit has no clock",
-      "testStopNotReached": "Output '{name}' did not reach {value} within {cycles} cycles"
+      "testStopNotReached": "Output '{name}' did not reach {value} within {cycles} cycles",
+      "chipsRomNoProgram": "CHIPS ROM '{label}' has no program: import a .s file",
+      "chipsRomOverflow": "CHIPS ROM '{label}': {words} instructions do not fit in {addressBits} address bits ({capacity} words)."
     },
     "warnings": {
       "unusedInput": "Input '{inputName}' is not used",

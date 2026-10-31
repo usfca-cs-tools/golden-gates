@@ -497,7 +497,39 @@ export const componentPropertySchema = {
       }
     ]
   },
-
+  // CHIPS ROM properties
+  chipsROM: {
+    title: 'CHIPS ROM Properties',
+    properties: [
+      {...commonProperties.label, default: 'ChipsROM'},
+      {
+        name: 'addressBits',
+        type: 'number',
+        label: 'Address Bits',
+        default: 6,
+        min: 1,
+        max: 16,
+        showButtons: true
+      },
+      {
+        name: 'dataBits',
+        type: 'number',
+        label: 'Data Bits',
+        default: 32,
+        disabled: true,
+        showButtons: false
+      },
+      {
+        name: 'words',
+        type: 'memory-data-table',
+        label: 'Instruction Words',
+        editable: false,
+        dataBits: 32,
+        padToAddressSpace: true,
+        columns: { collapsed: 2, expanded: 4 }
+      }
+    ]
+  },
   // RAM properties
   ram: {
     title: 'RAM Properties',

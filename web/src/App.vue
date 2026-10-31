@@ -81,6 +81,7 @@
             @update:component="updateComponent"
             @update:circuit="updateCircuit"
             @action="e => handleInspectorAction(e, $refs.canvas)"
+            :expanded="inspectorExpanded"
           />
         </div>
 
@@ -116,6 +117,7 @@ import { useCircuitModel } from './composables/useCircuitModel'
 import { useAppController } from './composables/useAppController'
 import { useAutosave } from './composables/useAutosave'
 import { useKeyboardShortcuts } from './composables/useKeyboardShortcuts'
+import { componentRegistry } from './utils/componentRegistry'
 import './styles/themes.css'
 
 export default {
@@ -220,6 +222,7 @@ export default {
     return {
       inspectorVisible: true,
       inspectorExpanded: false,
+      inspectorExpandedBeforeSelect: null,
       // Sidebar visibility persists across sessions (default open). gg.-prefixed so
       // clearAllCircuitData() leaves it alone.
       sidebarVisible: localStorage.getItem('gg.sidebarVisible') !== 'false',
@@ -763,6 +766,18 @@ export default {
         localStorage.setItem('gg.sidebarVisible', String(visible))
       } catch (e) {
         /* localStorage unavailable — visibility just won't persist */
+      }
+    },
+    'selectedComponent.id'(newId, oldId) {
+      if (newId === oldId) return
+      if (this.inspectorExpandedBeforeSelect !== null) {
+        this.inspectorExpanded = this.inspectorExpandedBeforeSelect
+        this.inspectorExpandedBeforeSelect = null
+      }
+      const config = this.selectedComponent && componentRegistry[this.selectedComponent.type]
+      if (config?.prefersWideInspector) {
+        this.inspectorExpandedBeforeSelect = this.inspectorExpanded
+        this.inspectorExpanded = true
       }
     }
   },

@@ -155,6 +155,7 @@
             :min="prop.min || 0"
             :max="getMaxValue(prop)"
             :showButtons="prop.showButtons !== false"
+            :disabled="!!prop.disabled"
           />
 
           <!-- Base selector (Probe's schema entry sets includeAscii to also offer ASCII) -->
@@ -216,13 +217,14 @@
             @update:modelValue="updateProp('table', $event)"
           />
 
-          <!-- Memory data table for ROM/RAM -->
+          <!-- Memory data table for ROM/RAM/ChipsROM -->
           <MemoryDataTable
             v-else-if="prop.type === 'memory-data-table'"
-            :modelValue="getPropValue(prop.name, [])"
+            :modelValue="prop.padToAddressSpace ? paddedPropValue(prop.name) : getPropValue(prop.name, [])"
             :addressBits="getPropValue('addressBits', 4)"
-            :dataBits="getPropValue('dataBits', 8)"
+            :dataBits="prop.dataBits ?? getPropValue('dataBits', 8)"
             :editable="prop.editable !== false"
+            :fixedColumns="prop.columns ? (expanded ? prop.columns.expanded : prop.columns.collapsed) : 0"
             @update:modelValue="updateProp(prop.name, $event)"
           />
         </div>
@@ -293,6 +295,10 @@ export default {
     isRunning: {
       type: Boolean,
       default: false
+    },
+    expanded: {
+      type: Boolean,
+      default: false
     }
   },
   emits: ['update:component', 'update:circuit', 'action'],
@@ -338,6 +344,11 @@ export default {
       // Return the actual value if it exists (including empty string)
       // Only use default if value is null or undefined
       return value !== null && value !== undefined ? value : defaultValue
+    },
+
+    paddedPropValue(propName) {
+      const words = this.getPropValue(propName, [])
+      return Array.from({ length: 1 << this.getPropValue('addressBits', 4) }, (_, i) => words[i] ?? 0)
     },
 
     getMaxValue(prop) {

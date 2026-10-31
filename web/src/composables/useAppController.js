@@ -9,6 +9,10 @@ import { componentRegistry } from '../utils/componentRegistry'
 // generic "Error in <component> in circuit X: " prefix, which would just repeat the context.
 const SELF_CONTAINED_ERROR_CODES = new Set(['portNotFullyConnected'])
 
+// To prevent raw keys displaying an additional prefix
+const errorKey = code =>
+  code.startsWith('simulation.errors.') ? code : `simulation.errors.${code}`
+
 /**
  * A circuit's runtime id, derived from its filename. Making the id a pure function of the
  * filename means it's STABLE across loads (a reload can't reshuffle ids the way the old
@@ -434,7 +438,7 @@ export function useAppController(circuitManager) {
         outputName: result.port_name || 'unknown',
         ...result
       }
-      const message = t(`simulation.errors.${errorCode}`, templateVars)
+      const message = t(errorKey(errorCode), templateVars)
       canvasRef.showErrorNotification(
         SELF_CONTAINED_ERROR_CODES.has(errorCode) ? message : `Error in ${description}: ${message}`
       )
@@ -580,7 +584,7 @@ export function useAppController(circuitManager) {
           ...errorData // Include all additional fields (expectedBits, actualBits, etc.)
         }
 
-        const errorMessage = t(`simulation.errors.${errorData.error_code}`, templateVars)
+        const errorMessage = t(errorKey(errorData.error_code), templateVars)
         canvasRef.showErrorNotification(
           SELF_CONTAINED_ERROR_CODES.has(errorData.error_code)
             ? errorMessage
@@ -644,7 +648,7 @@ export function useAppController(circuitManager) {
       ...errorData // Include all additional fields (expectedBits, actualBits, etc.)
     }
 
-    const errorMessage = t(`simulation.errors.${errorData.error_code}`, templateVars)
+    const errorMessage = t(errorKey(errorData.error_code), templateVars)
     const notification = SELF_CONTAINED_ERROR_CODES.has(errorData.error_code)
       ? errorMessage
       : `Error in ${componentDescription}: ${errorMessage}`
