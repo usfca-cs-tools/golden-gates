@@ -542,7 +542,15 @@ export const componentPropertySchema = {
         label: 'Stop when output reaches value (clocked)'
       },
       { name: 'stop_output_name', type: 'text', label: 'Stop output' },
-      { name: 'stop_output_value', type: 'number', label: 'Stop value', default: 1 },
+      // wide-number: exact up to 64 bits (stored as a decimal string when large), so a stop value
+      // like 0xFFFFFFFFFFFFFFFF (-1) survives; a plain 'number' field caps and rounds it.
+      {
+        name: 'stop_output_value',
+        type: 'wide-number',
+        bits: 64,
+        label: 'Stop value',
+        default: 1
+      },
       {
         name: 'max_cycles',
         type: 'number',

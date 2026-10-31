@@ -148,6 +148,14 @@
             :min="prop.min || 0"
             :max="getMaxValue(prop)"
           />
+          <!-- Wide number (up to 64 bits, exact): accepts decimal, 0x hex or 0b binary and
+               stores large values as a decimal string, like Input/Constant values above -->
+          <MultibaseNumberInput
+            v-else-if="prop.type === 'wide-number'"
+            :modelValue="getPropValue(prop.name, prop.default)"
+            :bits="prop.bits"
+            @update:both="updateProp(prop.name, $event.value)"
+          />
           <InputNumber
             v-else-if="prop.type === 'number'"
             :modelValue="getPropValue(prop.name, prop.default)"
