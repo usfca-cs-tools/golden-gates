@@ -42,7 +42,7 @@
 
   "chipsROM": {
     "noProgram": "no program",
-    "moreFiles": "{name} + {count}"
+    "moreFiles": "{name} +{count}"
   },
 
   "componentRegistry": {
