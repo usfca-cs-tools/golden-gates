@@ -50,6 +50,7 @@
 
 <script>
 import { useTabManagement } from '../composables/useTabManagement'
+import { projectFolderName } from '../utils/projectFolder'
 
 // The project's circuit list. Lists EVERY circuit in the open folder (not just the ones in tabs),
 // so a closed circuit can be reopened. It's derived from the in-memory circuitManager — read when
@@ -75,7 +76,7 @@ export default {
     projectName() {
       const dir = this.projectDir
       if (!dir) return this.$t('ui.noFolderOpen')
-      return dir.split(/[\\/]/).filter(Boolean).pop() || dir
+      return projectFolderName(dir)
     },
     circuits() {
       const openIds = new Set((this.circuitManager.openTabs?.value || []).map(t => t.id))

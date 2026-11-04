@@ -132,6 +132,40 @@ describe('Clipboard Integration Tests', () => {
     })
   })
 
+  describe('Paste across windows', () => {
+    // Each desktop window has its own internal clipboard; the OS clipboard is shared.
+    function copyInOtherWindow(component) {
+      const otherWindowClipboard = useClipboard()
+      otherWindowClipboard.copyToClipboard({ components: [component], wires: [], junctions: [] })
+      return navigator.clipboard.writeText(otherWindowClipboard.getClipboardDataForOS())
+    }
+
+    it("pastes what was last copied in another window, not this window's older copy", async () => {
+      await canvasController.copySelected() // this window copies input "A"
+      await copyInOtherWindow({ id: 'other_1', type: 'output', x: 0, y: 0, props: { label: 'Z' } })
+
+      mockSelection.clearSelection()
+      expect(await canvasController.pasteFromClipboard()).toBe(true)
+
+      const pasted = activeCircuit.value.components[1]
+      expect(pasted.type).toBe('output')
+      expect(pasted.props.label).toBe('Z')
+    })
+
+    it("falls back to this window's copy when the OS clipboard holds ordinary text", async () => {
+      await canvasController.copySelected()
+      await navigator.clipboard.writeText('just some text')
+      const warn = vi.spyOn(console, 'warn').mockImplementation(() => {})
+
+      mockSelection.clearSelection()
+      expect(await canvasController.pasteFromClipboard()).toBe(true)
+
+      expect(activeCircuit.value.components[1].props.label).toBe('A')
+      expect(warn).not.toHaveBeenCalled()
+      warn.mockRestore()
+    })
+  })
+
   describe('Cut and Paste', () => {
     it('should cut and paste a component', async () => {
       const originalId = activeCircuit.value.components[0].id

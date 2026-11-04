@@ -440,7 +440,19 @@ export default {
     },
 
     async openProject({ dirPath, activeFile = null } = {}) {
-      await this.openProjectInternal(this.$refs.canvas, dirPath, activeFile)
+      try {
+        await this.openProjectInternal(this.$refs.canvas, dirPath, activeFile)
+      } finally {
+        // Main reserves a folder while it's being opened; confirm which folder this window really
+        // ended up with (the open may have failed or be waiting on a "replace work?" prompt).
+        this.reportProjectDir()
+      }
+    },
+
+    // Tell the main process (desktop only) which project folder this window has open, so the
+    // same folder can't be opened in a second window and the window title shows the project.
+    reportProjectDir() {
+      window.electronAPI?.reportProjectDir?.(this.circuitManager.currentProjectDir.value || null)
     },
 
     handleDragEnter(event) {
@@ -731,6 +743,14 @@ export default {
     }
     if (window.electronAPI?.onMenuRunTests) {
       window.electronAPI.onMenuRunTests(() => this.runTests(this.$refs.canvas))
+    }
+
+    // Keep main's one-window-per-folder bookkeeping current (opening a project, Save As).
+    if (window.electronAPI?.reportProjectDir) {
+      this.$watch(
+        () => this.circuitManager.currentProjectDir.value,
+        () => this.reportProjectDir()
+      )
     }
 
     // Save-on-quit bridge (Electron): main.cjs queries these globals when the window is

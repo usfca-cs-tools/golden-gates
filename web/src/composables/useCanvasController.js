@@ -199,18 +199,18 @@ export function useCanvasController(
     // Save state before paste so it can be undone
     undoCallbacks.pushSnapshot?.()
 
-    if (!clipboardController.hasClipboardData.value) {
-      // Try to get data from OS clipboard
-      const osData = await getFromOSClipboard()
-      if (osData) {
-        if (!clipboardController.setClipboardDataFromOS(osData)) {
-          console.warn('No valid clipboard data available')
-          return false
-        }
-      } else {
-        console.warn('No clipboard data available')
-        return false
-      }
+    // Prefer the OS clipboard. Each desktop window has its own internal clipboard, so a copy made
+    // in another Golden Gates window only reaches this one through the OS clipboard; reading the
+    // internal one first would paste this window's older copy instead. Text that isn't Golden
+    // Gates clipboard data (e.g. a copied label) is ignored and the internal clipboard is used.
+    const osData = await getFromOSClipboard()
+    const loadedFromOS = isGoldenGatesClipboardText(osData)
+      ? clipboardController.setClipboardDataFromOS(osData)
+      : false
+
+    if (!loadedFromOS && !clipboardController.hasClipboardData.value) {
+      console.warn(osData ? 'No valid clipboard data available' : 'No clipboard data available')
+      return false
     }
 
     try {
@@ -434,6 +434,20 @@ export function useCanvasController(
     return {
       x: lastComponentPosition.value.x,
       y: lastComponentPosition.value.y + 3
+    }
+  }
+
+  /**
+   * Cheap pre-check that OS clipboard text is a Golden Gates clipboard payload (a JSON object
+   * with `version` and `elements`), so ordinary copied text doesn't get parsed and warned about.
+   */
+  function isGoldenGatesClipboardText(text) {
+    if (typeof text !== 'string' || !text.trimStart().startsWith('{')) return false
+    try {
+      const parsed = JSON.parse(text)
+      return !!(parsed && parsed.version && parsed.elements)
+    } catch {
+      return false
     }
   }
 

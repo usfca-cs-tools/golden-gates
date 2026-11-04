@@ -774,6 +774,10 @@ export function useAppController(circuitManager) {
   async function saveCircuitAs(canvasRef) {
     const newDir = await window.electronAPI.pickProjectDirectory()
     if (!newDir) return
+    // A folder can be open in only one window; main shows "Folder already open" if it is.
+    if (window.electronAPI.checkProjectDirAvailable && newDir !== circuitManager.currentProjectDir.value) {
+      if (!(await window.electronAPI.checkProjectDirAvailable(newDir))) return
+    }
     circuitManager.currentProjectDir.value = newDir
     for (const [, circuit] of circuitManager.allCircuits.value) {
       if (!circuit.sourceFilename) {
@@ -913,12 +917,14 @@ export function useAppController(circuitManager) {
 
       const { dirPath: resolvedDirPath, topLevelFilename, allFiles } = project
 
-      circuitManager.currentProjectDir.value = resolvedDirPath
-      circuitManager.projectCircuitFiles.value = allFiles
-
       const hasExistingWork = canvasRef?.components?.length > 0 || canvasRef?.wires?.length > 0
 
       const doLoad = async () => {
+        // Switch folders only once the load is actually happening: if the user cancels the
+        // "replace your current work?" prompt, the window must keep its current folder (otherwise
+        // a later Save would write the old project's circuits into the new folder).
+        circuitManager.currentProjectDir.value = resolvedDirPath
+        circuitManager.projectCircuitFiles.value = allFiles
         restoringTabs = true
         // Clear canvas and reset circuits
         canvasRef?.clearCircuit?.()

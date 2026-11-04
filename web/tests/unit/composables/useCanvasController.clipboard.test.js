@@ -262,7 +262,9 @@ describe('useCanvasController - Clipboard Integration', () => {
 
       it('should try OS clipboard when internal clipboard is empty', async () => {
         canvasController.clipboardController.hasClipboardData.value = false
-        global.navigator.clipboard.readText.mockResolvedValue('{"test": "data"}')
+        global.navigator.clipboard.readText.mockResolvedValue(
+          '{"version": "1.0", "elements": {"components": [], "wires": [], "junctions": []}}'
+        )
 
         const result = await canvasController.pasteFromClipboard()
 
@@ -431,13 +433,13 @@ describe('useCanvasController - Clipboard Integration', () => {
   })
 
   describe('positioning calculations', () => {
-    it('should calculate paste position relative to selected components', () => {
+    it('should calculate paste position relative to selected components', async () => {
       // Mock selected components with bounds
       mockSelection.selectedComponents.value = mockSelectionStates.singleComponent
 
       // Test positioning function through paste operation
       canvasController.clipboardController.hasClipboardData.value = true
-      canvasController.pasteFromClipboard()
+      await canvasController.pasteFromClipboard()
 
       // Should call calculateBounds to determine position
       expect(canvasController.clipboardController.calculateBounds).toHaveBeenCalled()
