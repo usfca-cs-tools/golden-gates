@@ -5,7 +5,11 @@ const { parseAndValidateJSON } = useFileService()
 const doc = extra => JSON.stringify({ components: [], wires: [], ...extra })
 
 describe('parseAndValidateJSON — strict version gate', () => {
-  it('accepts the current format (1.6)', () => {
+  it('accepts the current format (1.7)', () => {
+    expect(() => parseAndValidateJSON(doc({ version: '1.7' }))).not.toThrow()
+  })
+
+  it('still accepts 1.6 — 1.7 only adds the chipsROM type', () => {
     expect(() => parseAndValidateJSON(doc({ version: '1.6' }))).not.toThrow()
   })
 

@@ -82,7 +82,7 @@ function buildCircuitData(
   // components, so the serialized component array must be in that same order for the engine's
   // positional port-name resolution to line up (see componentRegistry.reorderInterfaceComponents).
   // For a 1.5 circuit this is a no-op — insertion order is preserved untouched.
-  const version = circuitMetadata.formatVersion || '1.6'
+  const version = circuitMetadata.formatVersion || '1.7'
   const sanitizedComponents = reorderInterfaceComponents(components || [], {
     formatVersion: version
   }).map(stripTransient)

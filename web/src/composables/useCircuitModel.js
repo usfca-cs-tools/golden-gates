@@ -38,7 +38,7 @@ export function useCircuitModel() {
         hasUnsavedChanges: false,
         // Born in a current build → newest format (geometric ports). Loaded circuits are stamped
         // with their file's version instead, so an opened 1.5 file keeps insertion-order ports.
-        formatVersion: '1.6',
+        formatVersion: '1.7',
         properties: {
           name: 'Circuit1',
           label: 'Circuit 1'
@@ -99,7 +99,7 @@ export function useCircuitModel() {
       sourceFilename: options.sourceFilename || null, // NEW: which .ggc file this came from
       // Newest format by default; loaders pass the file's version so a 1.5 circuit keeps its
       // insertion-order ports (see useAppController load paths).
-      formatVersion: options.formatVersion || '1.6',
+      formatVersion: options.formatVersion || '1.7',
       // Circuit properties that appear in inspector
       properties: {
         name: name || `Circuit${nextCircuitId.value - 1}`,

@@ -103,7 +103,7 @@ describe('computeComponentPorts', () => {
 describe('buildCircuitData port serialization', () => {
   const { buildCircuitData } = useFileService()
 
-  it('attaches ports to each component and writes the current version (1.6) by default', () => {
+  it('attaches ports to each component and writes the current version (1.7) by default', () => {
     const data = buildCircuitData(
       [
         { id: 'a', type: 'input', x: 2, y: 3, props: { bits: 1 } },
@@ -112,7 +112,7 @@ describe('buildCircuitData port serialization', () => {
       [],
       []
     )
-    expect(data.version).toBe('1.6')
+    expect(data.version).toBe('1.7')
     expect(Array.isArray(data.components[0].ports)).toBe(true)
     expect(data.components[0].ports).toContainEqual(
       expect.objectContaining({ name: '0', direction: 'output' })
