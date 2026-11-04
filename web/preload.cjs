@@ -15,6 +15,12 @@ contextBridge.exposeInMainWorld('electronAPI', {
   writeCircuitFile: (dirPath, filename, content) => ipcRenderer.invoke('write-circuit-file', { dirPath, filename, content }),
   deleteCircuitFile: (dirPath, filename) => ipcRenderer.invoke('delete-circuit-file', { dirPath, filename }),
 
+  // Multiple windows: a project folder may be open in only one window at a time.
+  // checkProjectDirAvailable resolves false (after main shows "Folder already open") if another
+  // window has the folder; reportProjectDir tells main which folder this window now has open.
+  checkProjectDirAvailable: (dirPath) => ipcRenderer.invoke('check-project-dir-available', dirPath),
+  reportProjectDir: (dirPath) => ipcRenderer.send('report-project-dir', dirPath),
+
   // Fallback save-as for no-project state
   saveCircuitAs: (content, defaultName) => ipcRenderer.invoke('save-circuit', { content, defaultName }),
 

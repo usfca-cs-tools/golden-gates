@@ -260,14 +260,23 @@ export const mockCircuitModel = {
 // Mock browser clipboard API
 export const mockClipboardAPI = {
   // Mock modern clipboard API
-  createMockNavigatorClipboard: (shouldFail = false) => ({
-    writeText: shouldFail
-      ? vi.fn().mockRejectedValue(new Error('Clipboard write failed'))
-      : vi.fn().mockResolvedValue(),
-    readText: shouldFail
-      ? vi.fn().mockRejectedValue(new Error('Clipboard read failed'))
-      : vi.fn().mockResolvedValue(JSON.stringify(mockClipboardData.validClipboard))
-  }),
+  // Stateful like a real OS clipboard: readText returns whatever was last written (starting
+  // with a valid sample payload), so a copy followed by a paste round-trips.
+  createMockNavigatorClipboard: (shouldFail = false) => {
+    if (shouldFail) {
+      return {
+        writeText: vi.fn().mockRejectedValue(new Error('Clipboard write failed')),
+        readText: vi.fn().mockRejectedValue(new Error('Clipboard read failed'))
+      }
+    }
+    let contents = JSON.stringify(mockClipboardData.validClipboard)
+    return {
+      writeText: vi.fn(async text => {
+        contents = text
+      }),
+      readText: vi.fn(async () => contents)
+    }
+  },
 
   // Mock execCommand for fallback
   createMockExecCommand: (shouldFail = false) => vi.fn().mockReturnValue(!shouldFail)

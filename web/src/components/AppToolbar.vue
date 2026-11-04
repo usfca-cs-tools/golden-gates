@@ -18,6 +18,17 @@
       />
     </template>
     <template #end>
+      <!-- Desktop: which project folder this window has open, so several Golden Gates windows can
+           be told apart at a glance. Hover for the full path. -->
+      <div
+        v-if="isDesktop"
+        class="project-folder"
+        :class="{ 'no-folder': !projectDir }"
+        :title="projectDir || undefined"
+      >
+        <i class="pi pi-folder"></i>
+        <span class="project-folder-name">{{ projectDisplayName }}</span>
+      </div>
       <Button
         icon="pi pi-sliders-h"
         class="p-button-text p-button-sm toolbar-toggle"
@@ -30,6 +41,7 @@
 
 <script>
 import CircuitTabsBar from './CircuitTabsBar.vue'
+import { projectFolderName } from '../utils/projectFolder'
 
 export default {
   name: 'AppToolbar',
@@ -51,8 +63,18 @@ export default {
     }
   },
   emits: ['switchToTab', 'closeTab', 'showConfirmation', 'toggleInspector', 'toggleSidebar'],
+  computed: {
+    projectDir() {
+      return this.circuitManager.currentProjectDir?.value || ''
+    },
+    projectDisplayName() {
+      return this.projectDir ? projectFolderName(this.projectDir) : this.$t('ui.noFolderOpen')
+    }
+  },
   data() {
     return {
+      // Project folders only exist in the desktop app; the web build has none to show.
+      isDesktop: typeof window !== 'undefined' && !!window.electronAPI,
       // The macOS desktop app hides the native title bar (main.cjs), so this toolbar becomes the
       // window's drag region and makes room for the traffic lights. Web and Windows are unchanged.
       macTitleBar:
@@ -83,6 +105,44 @@ export default {
 }
 
 .app-toolbar.mac-title-bar :deep(button) {
+  -webkit-app-region: no-drag;
+}
+
+/* Project folder label (desktop). Matches the All Circuits menu header: brand-colored folder
+   icon + name. Long names truncate; the full path is in the hover tooltip. */
+.project-folder {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  max-width: 260px;
+  margin-right: 8px;
+  padding: 4px 8px;
+  border-radius: 6px;
+  font-size: 12.5px;
+  font-weight: 650;
+  color: var(--color-text-primary);
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+.project-folder .pi-folder {
+  font-size: 13px;
+  color: var(--color-brand-primary);
+}
+.project-folder-name {
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.project-folder.no-folder {
+  font-weight: 500;
+  color: var(--color-text-secondary);
+}
+.project-folder.no-folder .pi-folder {
+  color: var(--color-text-secondary);
+}
+
+/* The mac title bar is a drag region, which swallows hover; opt the label out so its full-path
+   tooltip still shows. */
+.app-toolbar.mac-title-bar .project-folder {
   -webkit-app-region: no-drag;
 }
 

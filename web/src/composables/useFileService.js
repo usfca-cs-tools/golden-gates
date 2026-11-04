@@ -224,7 +224,9 @@ export function useFileService() {
       if (!resolvedDirPath) return null
     }
 
-    const { files } = await window.electronAPI.openProject(resolvedDirPath)
+    const { files, alreadyOpenElsewhere } = await window.electronAPI.openProject(resolvedDirPath)
+    // Another window has this folder open; the main process has already told the user.
+    if (alreadyOpenElsewhere) return null
     const topLevelFilename = deriveTopLevelFilename(resolvedDirPath)
 
     // Read top-level circuit (create blank if it doesn't exist yet)

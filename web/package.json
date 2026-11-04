@@ -106,6 +106,7 @@
       "dist/**/*",
       "main.cjs",
       "preload.cjs",
+      "electron/**/*",
       "build-info.json",
       "assets/**/*"
     ]
