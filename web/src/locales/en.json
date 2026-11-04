@@ -42,7 +42,17 @@
 
   "chipsROM": {
     "noProgram": "no program",
-    "moreFiles": "{name} +{count}"
+    "moreFiles": "{name} +{count}",
+    "emptyProgram": "{name} contains no instructions",
+    "overflow": "{name}: {words} instructions do not fit in {addressBits} address bits ({capacity} words)",
+    "importFailed": "Could not assemble {name}. See the console for details.",
+    "importButton": "Import…",
+    "loadingPython": "Loading Python…",
+    "assembling": "Assembling…",
+    "errorCount": "{count} error | {count} errors",
+    "dropHint": "Drop a .s file here",
+    "asmFilesOnly": "Only .s files can be imported",
+    "oneFileOnly": "Only one file per CHIPS ROM: imported {name}"
   },
 
   "componentRegistry": {

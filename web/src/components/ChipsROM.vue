@@ -89,7 +89,7 @@
       dominant-baseline="middle"
       class="port-label"
       font-size="9"
-      opacity="sources.length ? 1 : 0.5"
+      :opacity="sources.length ? 1 : 0.5"
     >
     <title v-if="sources.length">{{  programNames }}</title>
       {{ programLine }}

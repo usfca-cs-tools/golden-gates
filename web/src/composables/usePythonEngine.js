@@ -256,6 +256,29 @@ __ggl_program
   }
 
   /**
+   * Assembles .s source files with ggasm in the same Pyodide instance that runs ggl.
+   */
+  async function assembleFiles(files) {
+    if (!pyodideInstance.value) {
+      throw new Error('Pyodide not initialized. Call initialize() first.')
+    }
+    const code = `
+import json
+import ggasm
+__asm_files = [(f["name"], f["text"]) for f in json.loads(${JSON.stringify(JSON.stringify(files))})]
+try:
+    __asm_result = {"words": ggasm.assemble_files(__asm_files).words}
+except ggasm.AsmError as e:
+    __asm_result = {"diagnostics": [
+        {"filename": d.filename, "line": d.line, "column": d.column, "message": d.message}
+        for d in e.diagnostics
+    ]}
+json.dumps(__asm_result)
+`
+    return JSON.parse(await pyodideInstance.value.runPythonAsync(code))
+  }
+
+  /**
    * Stop the running circuit simulation by calling circuit0.stop() in Python
    */
   async function stopSimulation() {
@@ -326,6 +349,7 @@ __ggl_program
     // Python execution
     executePythonProgram,
     generateProgramFromModel,
+    assembleFiles,
 
     // Simulation control
     stopSimulation,

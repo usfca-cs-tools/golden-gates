@@ -520,6 +520,11 @@ export const componentPropertySchema = {
         showButtons: false
       },
       {
+        name: 'sources',
+        label: 'Program',
+        type: 'asm-source'
+      },
+      {
         name: 'words',
         type: 'memory-data-table',
         label: 'Instruction Words',

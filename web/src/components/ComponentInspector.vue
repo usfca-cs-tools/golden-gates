@@ -227,6 +227,19 @@
             :fixedColumns="prop.columns ? (expanded ? prop.columns.expanded : prop.columns.collapsed) : 0"
             @update:modelValue="updateProp(prop.name, $event)"
           />
+
+          <!-- RISCV Assembly language source view for ChipsROM -->
+          <AsmSourceView
+          v-else-if="prop.type === 'asm-source'"
+          :sources="getPropValue('sources', [])"
+          :words="getPropValue('words', [])"
+          :addressBits="getPropValue('addressBits', 6)"
+          :status="importStatus"
+          :errors="importErrors"
+          :disabled="isRunning"
+          :key="component.id"
+          @import-file="handleImportFile"
+          />
         </div>
       </div>
 
@@ -260,6 +273,8 @@ import Textarea from 'primevue/textarea'
 import Dropdown from 'primevue/dropdown'
 import Checkbox from 'primevue/checkbox'
 import ColorField from './ColorField.vue'
+import AsmSourceView from './AsmSourceView.vue'
+import { useChipsRomImport } from '../composables/useChipsRomImport'
 
 export default {
   name: 'ComponentInspector',
@@ -272,6 +287,7 @@ export default {
     TruthTableEditor,
     PythonIdentifierInput,
     MemoryDataTable,
+    AsmSourceView,
     Textarea,
     Dropdown,
     Checkbox,
@@ -302,6 +318,10 @@ export default {
     }
   },
   emits: ['update:component', 'update:circuit', 'action'],
+  setup() {
+    const { status: importStatus, importFile } = useChipsRomImport()
+    return { importStatus, importFile }
+  },
   data() {
     // Focus-return hint dismissal (issue #132), remembered via localStorage — following the
     // app's direct-localStorage convention (cf. useKeyboardShortcuts 'recentCommands').
@@ -312,7 +332,12 @@ export default {
     } catch (e) {
       focusHintDismissed = false
     }
-    return { focusHintDismissed }
+    return { focusHintDismissed, importErrors: [] }
+  },
+  watch: {
+    'component.id'() {
+      this.importErrors = []
+    }
   },
   computed: {
     componentSchema() {
@@ -428,7 +453,21 @@ export default {
         circuit: this.circuit,
         component: this.component
       })
-    }
+    },
+    // handle file import
+    async handleImportFile(file) {
+      const target = this.component
+      this.importErrors = []
+      const result = await this.importFile(file, target.props.addressBits, this.$t)
+      if (!result.ok) {
+        if (this.component?.id === target.id) this.importErrors = result.errors
+        return
+      }
+      this.$emit('update:component', {
+        ...target,
+        props: { ...target.props, sources: result.sources, words: result.words }
+      })
+    },
   }
 }
 </script>
