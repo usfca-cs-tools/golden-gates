@@ -1,4 +1,4 @@
-import { GRID_SIZE, PORT_PITCH } from './constants'
+import { GRID_SIZE, PORT_PITCH, chipsRomWidth } from './constants'
 import {
   createGateRegistryEntry,
   rotateConnections,
@@ -717,8 +717,8 @@ export const componentRegistry = {
     },
     getConnections: props => {
       const addressBits = props.addressBits || 6
-      // Dynamic size based on address bits (min 4x5 to accommodate 2 grid unit spacing)
-      const width = Math.max(4, Math.ceil(addressBits / 2))
+      // Wider than ROM so the program filename fits (see chipsRomWidth); height as ROM
+      const width = chipsRomWidth(addressBits)
       const height = Math.max(5, Math.ceil(addressBits / 2) + 1)
       return {
         inputs: [
@@ -730,7 +730,7 @@ export const componentRegistry = {
     },
     getDimensions: props => {
       const addressBits = props.addressBits || 6
-      const width = Math.max(4, Math.ceil(addressBits / 2))
+      const width = chipsRomWidth(addressBits)
       const height = Math.max(4, Math.ceil(addressBits / 2))
       return { width: width * GRID_SIZE, height: height * GRID_SIZE }
     },

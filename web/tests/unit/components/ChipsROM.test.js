@@ -36,6 +36,12 @@ describe('ChipsROM', () => {
     expect(wrapper.text()).toContain('a.s +1')
   })
 
+  it('shows the longest course program name in full', () => {
+    const wrapper = mountRom({ sources: [{ name: 'get_bitseq_signed_s.s', text: '' }] })
+    expect(wrapper.text()).toContain('get_bitseq_signed_s.s')
+    expect(wrapper.text()).not.toContain('…')
+  })
+
   it('truncates a name wider than the body', () => {
     const wrapper = mountRom({ sources: [{ name: 'a_very_long_program_name_here.s', text: '' }] })
     expect(wrapper.text()).toContain('…')

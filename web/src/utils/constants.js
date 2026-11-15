@@ -9,6 +9,13 @@ export const CONNECTION_DOT_RADIUS = 3
 // output always lands between two inputs on a vertex (see LogicGate.vue / componentFactory.js).
 export const PORT_PITCH = 1
 
+// chipsROM body width (grid units). ChipsROM.vue fits floor((width * GRID_SIZE - 8) / 5.5) characters
+// of filename before it ellipsises. 9 units = 23 characters, enough for the longest course program,
+// get_bitseq_signed_s.s (21). ROM's minimum is 4 (10 characters).
+export const CHIPS_ROM_MIN_WIDTH = 9
+export const chipsRomWidth = addressBits =>
+  Math.max(CHIPS_ROM_MIN_WIDTH, Math.ceil(addressBits / 2))
+
 // Coordinate conversion utilities
 export function gridToPixel(gridCoord) {
   if (typeof gridCoord === 'number') {

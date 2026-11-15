@@ -100,7 +100,7 @@
 <script lang="ts">
 import { defineComponent, type PropType } from 'vue'
 import { useComponentView, draggableProps } from '../composables/useComponentView'
-import { COLORS, CONNECTION_DOT_RADIUS, GRID_SIZE } from '../utils/constants'
+import { COLORS, CONNECTION_DOT_RADIUS, GRID_SIZE, chipsRomWidth } from '../utils/constants'
 import { useI18n } from 'vue-i18n';
 
 export default defineComponent({
@@ -155,9 +155,9 @@ export default defineComponent({
         const maxChars = Math.floor((this.width * GRID_SIZE - 8) / 5.5)
         return full.length > maxChars ? full.slice(0, maxChars - 1) + '…' : full
     },
-    // Dynamic size based on address bits (min 4x5 to accommodate 2 grid unit spacing)
+    // Wider than ROM so the program filename fits; shared with the registry entry
     width() {
-      return Math.max(4, Math.ceil(this.addressBits / 2))
+      return chipsRomWidth(this.addressBits)
     },
     height() {
       return Math.max(5, Math.ceil(this.addressBits / 2) + 1)
