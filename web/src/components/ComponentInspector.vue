@@ -105,7 +105,7 @@
         />
 
         <div
-          v-for="prop in componentSchema.properties.filter(p => !p.hidden)"
+          v-for="prop in visibleComponentProperties"
           :key="prop.name"
           class="property-group"
         >
@@ -234,6 +234,7 @@
           :sources="getPropValue('sources', [])"
           :words="getPropValue('words', [])"
           :addressBits="getPropValue('addressBits', 6)"
+          :wordLines="getPropValue('wordLines', [])"
           :status="importStatus"
           :errors="importErrors"
           :disabled="isRunning"
@@ -353,6 +354,12 @@ export default {
       return (this.circuitSchema?.properties || []).filter(
         p => !p.hidden && !(typeof p.hiddenWhen === 'function' && p.hiddenWhen(props))
       )
+    },
+    visibleComponentProperties() {
+      const props = this.component?.props || {}
+      return (this.componentSchema?.properties || []).filter(
+        p => !p.hidden && !(typeof p.hiddenWhen === 'function' && p.hiddenWhen(props))
+      )
     }
   },
   methods: {
@@ -465,7 +472,7 @@ export default {
       }
       this.$emit('update:component', {
         ...target,
-        props: { ...target.props, sources: result.sources, words: result.words }
+        props: { ...target.props, sources: result.sources, words: result.words, wordLines: result.wordLines }
       })
     },
   }

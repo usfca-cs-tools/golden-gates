@@ -7,7 +7,7 @@ export function useChipsRomImport() {
     const status = ref('idle')
 
     /**
-     * Resolves to { ok: true, sources, words } or { ok: false, errors: [string] }. Never rejects.
+     * Resolves to { ok: true, sources, words, wordLines } or { ok: false, errors: [string] }. Never rejects.
      */
     async function importFile(file, addressBits, t) {
         try {
@@ -19,7 +19,7 @@ export function useChipsRomImport() {
         }
 
         status.value = 'assembling'
-        const { words, diagnostics } = await assembleFiles([{ name: file.name, text }])
+        const { words, diagnostics, labels, wordLines } = await assembleFiles([{ name: file.name, text }])
 
         if (diagnostics) {
             return {
@@ -40,7 +40,7 @@ export function useChipsRomImport() {
             }
         }
 
-            return { ok: true, sources: [{ name: file.name, text }], words }
+            return { ok: true, sources: [{ name: file.name, text, labels }], words, wordLines }
         } catch (err) {
             console.error('CHIPS ROM import failed:', err)
             return { ok: false, errors: [t('chipsROM.importFailed', { name: file.name })] }

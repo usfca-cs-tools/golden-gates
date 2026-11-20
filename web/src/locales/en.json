@@ -52,7 +52,10 @@
     "errorCount": "{count} error | {count} errors",
     "dropHint": "Drop a .s file here",
     "asmFilesOnly": "Only .s files can be imported",
-    "oneFileOnly": "Only one file per CHIPS ROM: imported {name}"
+    "oneFileOnly": "Only one file per CHIPS ROM: imported {name}",
+    "view": { "separate": "Separate", "listing": "Listing" },
+    "reimportForListing": "Re-import to see the listing",
+    "pseudoContinuation": "Second word of a pseudo-instruction"
   },
 
   "componentRegistry": {

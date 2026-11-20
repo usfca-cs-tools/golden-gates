@@ -267,7 +267,13 @@ import json
 import ggasm
 __asm_files = [(f["name"], f["text"]) for f in json.loads(${JSON.stringify(JSON.stringify(files))})]
 try:
-    __asm_result = {"words": ggasm.assemble_files(__asm_files).words}
+    __p = ggasm.assemble_files(__asm_files)
+    __asm_result = {
+        "words": __p.words,
+        "labels": sorted(([n, a // 4] for n, a in __p.labels[__asm_files[0][0]].items()),
+                         key=lambda la: la[1]),
+        "wordLines": [stmt.line for _, _, stmt in __p.listing],
+    }
 except ggasm.AsmError as e:
     __asm_result = {"diagnostics": [
         {"filename": d.filename, "line": d.line, "column": d.column, "message": d.message}

@@ -1,6 +1,8 @@
 // Configuration for component properties shown in the inspector
 // Each entry defines the properties available for a component type
 
+import { showsListing } from '../composables/useViewMode'
+
 // Common property definitions that can be reused across components
 const commonProperties = {
   label: {
@@ -531,7 +533,8 @@ export const componentPropertySchema = {
         editable: false,
         dataBits: 32,
         padToAddressSpace: true,
-        columns: { collapsed: 2, expanded: 4 }
+        columns: { collapsed: 2, expanded: 4 },
+        hiddenWhen: showsListing
       }
     ]
   },

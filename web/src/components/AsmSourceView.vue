@@ -16,6 +16,15 @@
         style="display: none"
       />
     </div>
+    
+    <div v-if="source" class="asm-view-toggle" role="group">
+      <button v-for="mode in ['separate', 'listing']" :key="mode"
+              :class="{ active: viewMode === mode }" :aria-pressed="viewMode === mode"
+              @click="setViewMode(mode)">
+        {{ $t(`chipsROM.view.${mode}`) }}
+      </button>
+    </div>
+    <p v-if="needsReimport" class="asm-reimport-hint">{{ $t('chipsROM.reimportForListing') }}</p>
 
     <p v-if="statusText" class="asm-status">
       <i class="pi pi-spin pi-spinner"></i>
@@ -45,8 +54,10 @@
       @dragleave.prevent="isDragging = false"
       @drop.prevent="handleDrop"
     >
-      <pre v-if="source" class="asm-source">{{ source.text }}</pre>
-      <p v-else class="asm-drop-hint">{{ $t('chipsROM.dropHint') }}</p>
+    <AsmListingView v-if="showListing" class="asm-source"
+                    :source="source" :words="words" :word-lines="wordLines" :address-bits="addressBits" />
+    <pre v-else-if="source" class="asm-source">{{ source.text }}</pre>
+    <p v-else class="asm-drop-hint">{{ $t('chipsROM.dropHint') }}</p>
     </div>
   </div>
 </template>
@@ -54,6 +65,9 @@
 <script setup>
 import { computed, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
+import AsmListingView from './AsmListingView.vue'
+import { useViewMode, hasListing } from '../composables/useViewMode'
+
 
 const props = defineProps({
   sources: {
@@ -79,6 +93,10 @@ const props = defineProps({
   disabled: {
     type: Boolean,
     default: false
+  },
+  wordLines: { 
+    type: Array,
+    default: () => [] 
   }
 })
 
@@ -98,6 +116,12 @@ const notice = ref('')
 // Computed
 // One file per component for now; sources stays an array so saved files don't change.
 const source = computed(() => props.sources[0])
+const { viewMode, setViewMode } = useViewMode()
+const listingAvailable = computed(() => hasListing(props))
+const showListing = computed(() => viewMode.value === 'listing' && listingAvailable.value)
+
+// Listing chosen, a program loaded
+const needsReimport = computed(() => viewMode.value === 'listing' && !!source.value && !listingAvailable.value)
 const busy = computed(() => props.disabled || props.status !== 'idle')
 const statusText = computed(() => {
   const key = STATUS_KEYS[props.status]
@@ -177,14 +201,16 @@ function handleDrop(event) {
 
 .asm-import-button {
   flex-shrink: 0;
-  padding: 0.25rem 0.5rem;
+  height: 28px;
+  padding: 0 0.625rem;
   border: 1px solid var(--color-border-medium);
   border-radius: 4px;
-  background: transparent;
+  background: var(--color-panel-bg);
   color: var(--color-text-secondary);
   font-size: 0.75rem;
   cursor: pointer;
 }
+
 
 .asm-import-button:hover:not(:disabled) {
   background-color: var(--color-component-hover-fill);
@@ -196,14 +222,50 @@ function handleDrop(event) {
   cursor: default;
 }
 
+
+.asm-view-toggle {
+  display: flex;
+  width: 100%;
+  border: 1px solid var(--color-border-medium);
+  border-radius: 4px;
+  overflow: hidden;
+}
+
+.asm-view-toggle button {
+  flex: 1;
+  height: 28px;
+  border: none;
+  background: var(--color-panel-bg);
+  color: var(--color-text-secondary);
+  font-size: 0.75rem;
+  cursor: pointer;
+}
+
+.asm-view-toggle button + button {
+  border-left: 1px solid var(--color-border-medium);
+}
+
+.asm-view-toggle button:hover:not(.active) {
+  background: var(--color-component-hover-fill);
+  color: var(--color-text-primary);
+}
+
+.asm-view-toggle button.active {
+  background: var(--color-component-selected-fill);
+  color: var(--color-component-selected-stroke);
+  font-weight: 600;
+}
+
 .asm-status,
+.asm-reimport-hint,
 .asm-warning,
 .asm-error-count {
   margin: 0;
   font-size: 0.75rem;
 }
 
-.asm-status {
+.asm-status,
+.asm-reimport-hint {
   color: var(--color-text-secondary);
 }
 
@@ -234,7 +296,7 @@ function handleDrop(event) {
 }
 
 .asm-drop-zone.drag-over {
-  border-color: var(--primary-color);
+  border-color: var(--color-component-selected-stroke);
   background: var(--color-component-hover-fill);
 }
 
