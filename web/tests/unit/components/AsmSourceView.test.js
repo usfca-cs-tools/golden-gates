@@ -1,4 +1,4 @@
-import { describe, it, expect, vi } from 'vitest'
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { mount } from '@vue/test-utils'
 
 // Echo the key and its fields, so a test can check both without loading en.json.
@@ -7,6 +7,7 @@ const t = (key, fields) =>
 vi.mock('vue-i18n', () => ({ useI18n: () => ({ t }) }))
 
 import AsmSourceView from '@/components/AsmSourceView.vue'
+import { useViewMode } from '@/composables/useViewMode'
 
 const SOURCE = { name: 'fib_rec_s.s', text: 'li a0, 5\nret\n' }
 const asmFile = name => new File(['nop\n'], name)
@@ -161,4 +162,60 @@ describe('AsmSourceView listing', () => {
     expect(wrapper.find('pre.asm-source').exists()).toBe(false)
   })
 })
+
+
+describe('AsmSourceView view toggle', () => {
+  const { viewMode, setViewMode } = useViewMode()
+  const toggle = wrapper => wrapper.find('.asm-view-toggle')
+  const button = (wrapper, label) => toggle(wrapper).findAll('button').find(b => b.text() === label)
+
+  beforeEach(() => setViewMode('listing'))
+  afterEach(() => vi.unstubAllGlobals())
+
+  it('is hidden until a program is loaded', () => {
+    expect(toggle(mountView({ sources: [], words: [] })).exists()).toBe(false)
+    expect(toggle(mountView()).exists()).toBe(true)
+  })
+
+  it('defaults to Listing and marks it pressed', () => {
+    const wrapper = mountView({ wordLines: [1, 2] })
+    expect(button(wrapper, 'chipsROM.view.listing').attributes('aria-pressed')).toBe('true')
+    expect(button(wrapper, 'chipsROM.view.separate').attributes('aria-pressed')).toBe('false')
+  })
+
+  it('Separate shows the source text instead of the listing', async () => {
+    const wrapper = mountView({ wordLines: [1, 2] })
+    await button(wrapper, 'chipsROM.view.separate').trigger('click')
+    expect(wrapper.find('.asm-listing').exists()).toBe(false)
+    expect(wrapper.find('pre.asm-source').text()).toBe(SOURCE.text.trimEnd())
+  })
+
+  it('saves the choice to localStorage', async () => {
+    const setItem = vi.fn()
+    vi.stubGlobal('localStorage', { getItem: () => null, setItem })
+    const wrapper = mountView({ wordLines: [1, 2] })
+    await button(wrapper, 'chipsROM.view.separate').trigger('click')
+    expect(setItem).toHaveBeenCalledWith('gg.chipsRomViewMode', 'separate')
+  })
+
+  it('still switches when localStorage throws', async () => {
+    vi.stubGlobal('localStorage', { getItem: () => null, setItem: () => { throw new Error('blocked') } })
+    const wrapper = mountView({ wordLines: [1, 2] })
+    await button(wrapper, 'chipsROM.view.separate').trigger('click')
+    expect(viewMode.value).toBe('separate')
+    expect(wrapper.find('pre.asm-source').exists()).toBe(true)
+  })
+
+  it('asks for a re-import when a program has no wordLines (1.7 file)', () => {
+    const wrapper = mountView()
+    expect(wrapper.find('.asm-reimport-hint').exists()).toBe(true)
+    expect(wrapper.find('pre.asm-source').exists()).toBe(true)
+  })
+
+  it('shows no re-import hint in Separate', () => {
+    setViewMode('separate')
+    expect(mountView().find('.asm-reimport-hint').exists()).toBe(false)
+  })
+})
+
 

@@ -14,6 +14,8 @@ vi.mock('@/composables/useChipsRomImport', async () => {
 
 import ComponentInspector from '@/components/ComponentInspector.vue'
 import AsmSourceView from '@/components/AsmSourceView.vue'
+import MemoryDataTable from '@/components/MemoryDataTable.vue'
+import { useViewMode } from '@/composables/useViewMode'
 
 const OLD = {
   sources: [{ name: 'old.s', text: 'nop\n', labels: [['old', 0]] }],
@@ -153,5 +155,26 @@ describe('ComponentInspector chipsROM import', () => {
   it('disables the source view while running', () => {
     const wrapper = mountInspector({ component: chipsROM(), isRunning: true })
     expect(view(wrapper).props('disabled')).toBe(true)
+  })
+})
+
+describe('ComponentInspector chipsROM view mode', () => {
+  const { setViewMode } = useViewMode()
+  const table = wrapper => wrapper.findComponent(MemoryDataTable)
+
+  beforeEach(() => setViewMode('listing'))
+
+  it('hides the words table in Listing', () => {
+    expect(table(mountInspector({ component: chipsROM() })).exists()).toBe(false)
+  })
+
+  it('shows the words table in Separate', () => {
+    setViewMode('separate')
+    expect(table(mountInspector({ component: chipsROM() })).exists()).toBe(true)
+  })
+
+  it('keeps the words table for a program without wordLines (1.7 file)', () => {
+    const wrapper = mountInspector({ component: chipsROM('c1', { wordLines: undefined }) })
+    expect(table(wrapper).exists()).toBe(true)
   })
 })
